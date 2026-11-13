@@ -61,29 +61,30 @@ graphics**. Switch **Headers and footers off**. Save as
 
 ## Page structure
 
-The report is 30 designed A4 pages, one `<section class="page">` each. Every
+The report is 32 designed A4 pages, one `<section class="page">` each. Every
 page carries its own running header (section name) and running footer (with a
-literal `Page n of 30`), so the page numbers are always correct and the
+literal `Page n of 32`), so the page numbers are always correct and the
 pagination is stable — no reliance on CSS page counters, which Chromium does
 not support outside `@page` margin boxes.
 
 | Page | Section | Page | Section |
 |---|---|---|---|
-| 1 | Cover | 16 | Day 1 — steps 4 to 8 |
-| 2 | Contents | 17 | HUD anatomy |
-| 3 | Executive summary I | 18 | Front end / main menu |
-| 4 | Executive summary II | 19 | Touch controls |
-| 5 | At-a-glance specification | 20 | Admin Office interior |
-| 6 | Porting method — translation map | 21 | The cast of sixty-four |
-| 7 | Port pairs — the main gate | 22 | Voice, subtitles, no music |
-| 8 | Port pairs — Admin Block and hall | 23 | Rendering — the desktop pipeline |
-| 9 | Port pairs — CSE and IT Blocks | 24 | Rendering — the Android quality ladder |
-| 10 | Port pairs — canteen and parade ground | 25 | Testing — the headless suite |
-| 11 | Campus layout — the coordinate system | 26 | Testing — the tour and the mobile preview |
-| 12 | Campus layout — the seventeen buildings | 27 | Known limitations and future work |
-| 13 | Campus layout — streets, kerbs, markings | 28 | Build and deploy |
-| 14 | Day 1 — the eight steps | 29 | Appendix A — controls reference |
-| 15 | Day 1 — the gate, the marker, the office | 30 | Appendix B / C — credits and file map |
+| 1 | Cover | 17 | Day 1 — completion |
+| 2 | Contents | 18 | HUD anatomy |
+| 3 | Executive summary I | 19 | Front end / main menu |
+| 4 | Executive summary II | 20 | Level select grid |
+| 5 | At-a-glance specification | 21 | Touch controls |
+| 6 | Porting method — translation map | 22 | Admin Office interior |
+| 7 | Port pairs — the main gate | 23 | The cast of sixty-four |
+| 8 | Port pairs — Admin Block and hall | 24 | Voice, subtitles, no music |
+| 9 | Port pairs — CSE and IT Blocks | 25 | Rendering — the desktop pipeline |
+| 10 | Port pairs — canteen and parade ground | 26 | Rendering — the Android quality ladder |
+| 11 | Campus layout — the coordinate system | 27 | Testing — the headless suite |
+| 12 | Campus layout — the seventeen buildings | 28 | Testing — the tour and the mobile preview |
+| 13 | Campus layout — streets, kerbs, markings | 29 | Known limitations and future work |
+| 14 | Campus layout — perimeter road and landmarks | 30 | Build and deploy |
+| 15 | Day 1 — the eight steps | 31 | Appendix A — controls reference |
+| 16 | Day 1 — the gate, the marker, the office | 32 | Appendix B / C — credits and file map |
 
 ---
 

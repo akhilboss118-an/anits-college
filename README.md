@@ -7,8 +7,8 @@ a stride-matched walk cycle and an adaptive 60 fps quality ladder.
 
 **Play in the browser:** <https://akhilboss118-an.github.io/anits-college/>
 
-**Android APK (v1.0):** see [Releases](https://github.com/akhilboss118-an/anits-college/releases)
-or build it locally with the command in [Build](#build).
+**Android APK (v1.0):** [download the signed arm64 APK](https://github.com/akhilboss118-an/anits-college/releases/download/v1.0/ANITS-College-Simulation-v1.0.apk)
+(111.5 MB) — or build it locally with the command in [Build](#build).
 
 ---
 
@@ -83,7 +83,8 @@ New-Item -ItemType File -Path "$PROJ\build\web\.nojekyll" -Force
 
 The shipped APK is `build/ANITS-College-Simulation-v1.0.apk`
 (111.5 MB, `com.akhilboss.anits`, version 1.0, minSdk 24, targetSdk 36,
-arm64-v8a, signed with the debug keystore).
+arm64-v8a, signed with the debug keystore). Its SHA-256 is
+`1bb242680b2de161bebf98c2a6c226eb30adce43ac653fa457a3cadca527544d`.
 
 ## Run and verify
 
