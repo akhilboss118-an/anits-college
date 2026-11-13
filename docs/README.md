@@ -21,11 +21,11 @@ dialogue system and the full Day 1 mission chain work end to end.**
 | Godot | **4.7.2 stable** — editor at `C:\Users\AKHILBOSS\Desktop\Godot_v4.7.2-stable_win64.exe` |
 | Project | `new-game-project/project.godot` — Forward+, **Jolt Physics**, D3D12, 1920×1080, main scene `src/main.tscn` |
 | Autoloads | `EventBus`, `GameState`, `Settings`, `SaveSystem`, `CampusDB`, `Mission`, `Dialogue` |
-| Campus | **V2 plan** (your new campus picture) in `src/data/campus_data.json` — 17 buildings, 7 roads, 5 zones, 6 walls, 2 gates, 259 × 188 m, 1 plan px = 0.2 m (main road = 12 m) |
+| Campus | **V2 plan** (your new campus picture) in `src/data/campus_data.json` — 17 buildings, 12 roads (including the perimeter ring around the whole college), 5 zones, 6 walls, 2 gates, 1 plan px = 0.7 m (main road = 12 m) |
 | NPCs | **64** in `src/data/npcs.json` (6 quest + 18 cadets + 9 route students + 3 basketball + 10 named walkers + 8 standing + Remy + 9 girls), all repositioned onto the V2 plan |
 | Economy | `src/data/economy.json` — 10 drinks, 4 dishes, 3 items |
-| Systems | world builder (ground/roads/kerbs/walls/gates/buildings/props/collision), player controller + third-person camera with building avoidance, NPC bodies + routes, dialogue with the original lines, mission runner, HUD (mission, dialogue, subtitles, wallet, energy, minimap, prompts, toasts), front-end menu (year → character → name → main) |
-| Tests | `tests/run_tests.gd` — **57 checks, 0 failures** (headless) |
+| Systems | world builder (ground/roads/kerbs/walls/gates/buildings/props/collision), player controller + third-person camera with building avoidance, NPC bodies + routes, dialogue with the original lines, mission runner, HUD (mission, dialogue, subtitles, wallet, energy, minimap, prompts, toasts), front-end menu (year → character → name → main → level select) |
+| Tests | `tests/run_tests.gd` — **61 checks, 0 failures** (headless) |
 | Day 1 | **plays start to finish**: guard → gate → Laksmi → Prof. Rao → Suresh → Arjun → salute → Colonel → *"Day 1 Complete!"* |
 
 ### Run it
