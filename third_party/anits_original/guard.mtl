@@ -1,0 +1,27 @@
+# Material library for guard.obj (the original web-game OBJ).
+# The Godot port repaints these by name with the web palette, so the colours
+# here only matter as a fallback.
+newmtl Vaquero
+Kd 0.176 0.251 0.380
+Ka 0.000 0.000 0.000
+d 1.0
+
+newmtl Piel
+Kd 0.973 0.706 0.553
+Ka 0.000 0.000 0.000
+d 1.0
+
+newmtl Botas
+Kd 0.102 0.102 0.118
+Ka 0.000 0.000 0.000
+d 1.0
+
+newmtl Camisa
+Kd 0.455 0.651 0.992
+Ka 0.000 0.000 0.000
+d 1.0
+
+newmtl Chaleco
+Kd 0.173 0.184 0.208
+Ka 0.000 0.000 0.000
+d 1.0

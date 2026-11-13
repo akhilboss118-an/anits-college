@@ -1,0 +1,168 @@
+{
+  "_comment": "ANITS campus - the WEB-GAME layout (V1), authored in plan pixels. 1 plan px = 0.7 m, origin (215,250) = campus centre. Values are verbatim from the original game's BLD/ROADS/SAND/BASK/NCC tables (js/game.js lines 55-63).",
+
+  "scale": 0.7,
+  "origin": [215, 250],
+  "extent_plan_px": [36, 36, 392, 458],
+
+  "buildings": [
+    { "name": "Mechanical Block", "rect": [101, 116, 226, 156], "height": 10, "color": "#d9a07c", "model": "lowpoly_row", "bays": 9, "face": "S" },
+    { "name": "Stair Auditorium", "rect": [115, 157, 156, 196], "height": 11, "color": "#e0a85a", "model": "stair_auditorium", "bays": 1, "face": "S" },
+    { "name": "Workshop", "rect": [183, 157, 222, 187], "height": 7, "color": "#8a9bb5", "model": "workshop", "bays": 1, "face": "S" },
+    { "name": "Chemical Block", "rect": [109, 205, 155, 239], "height": 11.5, "color": "#6fa56f", "model": "panel_block", "bays": 1, "face": "E", "tint": "#d6ecd6" },
+    { "name": "EEE Block", "rect": [172, 201, 232, 231], "height": 11.5, "color": "#d56a8a", "model": "panel_block", "bays": 1, "face": "W", "tint": "#f3d9e2" },
+    { "name": "CSE Block", "rect": [102, 246, 156, 281], "height": 11.5, "color": "#4a8fb8", "model": "panel_block", "bays": 1, "face": "E", "tint": "#cfe3ff" },
+    { "name": "ECE Block", "rect": [170, 244, 230, 279], "height": 11.5, "color": "#8e5fc0", "model": "panel_block", "bays": 1, "face": "W", "tint": "#e6d8ff" },
+    { "name": "ADMIN BLOCK", "rect": [97, 291, 232, 331], "height": 12, "color": "#d84b4b", "model": "admin_block", "bays": 1, "face": "NS", "model_scale": 0.98, "rendered_height": 16.954 },
+    { "name": "IT Block", "rect": [260, 143, 282, 237], "height": 11, "color": "#e8b098", "model": "lowpoly_row", "bays": 6, "face": "W" },
+    { "name": "Civil Block (N)", "rect": [276, 61, 358, 117], "height": 14, "color": "#8a5a45", "model": "lowpoly_row", "bays": 2, "face": "W" },
+    { "name": "Civil Block (S)", "rect": [288, 137, 356, 224], "height": 14, "color": "#8a5a45", "model": "lowpoly_row", "bays": 4, "face": "W" },
+    { "name": "CSM Block", "rect": [286, 226, 319, 246], "height": 7, "color": "#e8c070", "model": "lowpoly_row", "bays": 3, "face": "S" },
+    { "name": "Canteen", "rect": [286, 120, 314, 136], "height": 5, "color": "#c0704c", "model": "cafe", "bays": 1, "face": "WE" },
+    { "name": "Temple", "rect": [102, 331, 122, 349], "height": 4, "color": "#e89040", "model": "temple", "bays": 1, "face": "E" },
+    { "name": "Magic Spot", "rect": [62, 349, 80, 366], "height": 5, "color": "#e07ab0", "model": "noodle_bar", "bays": 1, "face": "E" },
+    { "name": "Gate Canteen", "rect": [62, 375, 80, 395], "height": 5, "color": "#c08060", "model": "cafe", "bays": 1, "face": "WE" },
+    { "name": "Bank", "rect": [62, 400, 80, 417], "height": 6, "color": "#5a78c0", "model": "bank", "bays": 1, "face": "E" }
+  ],
+
+  "roads": [
+    [64, 160, 98, 345],
+    [82, 345, 100, 432],
+    [96, 332, 256, 352],
+    [106, 345, 139, 445],
+    [234, 40, 252, 352],
+    [100, 239, 236, 246],
+    [100, 281, 236, 291],
+    [157, 157, 171, 285],
+    [40, 42, 388, 56],
+    [42, 42, 56, 448],
+    [368, 42, 382, 448],
+    [42, 434, 382, 448]
+  ],
+  "road_widths_m": [16.8, 12.6, 14.0, 23.1, 12.6, 4.9, 7.0, 9.8, 9.8, 9.8, 9.8, 9.8],
+
+  "zones": {
+    "parade_ground": [146, 357, 249, 427],
+    "basketball": [260, 251, 340, 314],
+    "power_supply": [250, 320, 365, 415],
+    "central_lawn": [95, 320, 150, 360],
+    "parking": [64, 160, 98, 290]
+  },
+
+  "walls": [
+    [58, 58, 58, 432],
+    [368, 58, 368, 432],
+    [58, 58, 234, 58],
+    [252, 58, 368, 58],
+    [58, 432, 100, 432],
+    [145, 432, 368, 432]
+  ],
+  "wall_height": 2.4,
+
+  "gates": [
+    { "id": "main", "type": "hinged", "rect": [100, 432, 145, 432], "leaf_height": 2.9, "pillar_height": 8.2, "locked_until_step": 1 },
+    { "id": "back", "type": "arch", "center": [236, 98], "half": 22, "pillar_size": [2.2, 9.0], "color": "#3a5f9a", "label": "Back Gate" }
+  ],
+
+  "props": {
+    "seed": 5,
+    "trees": 150,
+    "tree_pine_ratio": 0.26,
+    "bushes": 130,
+    "grass_instances": 4200,
+    "grass_chunks": 32,
+    "grass_radius": 95,
+    "cars": 91,
+    "lamps": 14,
+    "benches": 7,
+    "office_seats": 4,
+    "vending_machines": 4,
+    "gattu_trees": 2,
+    "compression_note": "grass 6923 -> 4200 in 32 chunks (95 m radius) for the mobile budget; every other count matches the web game"
+  },
+
+  "lamps": [
+    { "pos": [231, 80], "face": 1 }, { "pos": [231, 120], "face": 1 }, { "pos": [231, 160], "face": 1 },
+    { "pos": [231, 200], "face": 1 }, { "pos": [231, 262], "face": 1 }, { "pos": [231, 310], "face": 1 },
+    { "pos": [255, 100], "face": -1 }, { "pos": [255, 140], "face": -1 }, { "pos": [255, 180], "face": -1 },
+    { "pos": [255, 222], "face": -1 }, { "pos": [255, 262], "face": -1 }, { "pos": [255, 312], "face": -1 },
+    { "pos": [141, 372], "face": -1 }, { "pos": [141, 404], "face": -1 }
+  ],
+
+  "benches": [
+    { "pos": [292.7, 273.1], "yaw": 1.5708, "where": "basketball ground" },
+    { "pos": [292.7, 285.6], "yaw": 1.5708, "where": "basketball ground" },
+    { "pos": [292.7, 298.1], "yaw": 1.5708, "where": "basketball ground" },
+    { "pos": [292.4, 244.5], "yaw": -1.5708, "where": "IT block frontage" },
+    { "pos": [292.4, 258.0], "yaw": -1.5708, "where": "IT block frontage" },
+    { "pos": [292.4, 278.0], "yaw": -1.5708, "where": "IT block frontage" },
+    { "pos": [292.4, 291.5], "yaw": -1.5708, "where": "IT block frontage" }
+  ],
+
+  "vending_machines": [
+    { "building": "Gate Canteen", "side": "E", "label": "Soda Machine",   "color": "#c62828", "pos": [80, 382.7], "stock": ["happy", "bsoda", "sky", "noob", "tvgirl"] },
+    { "building": "Gate Canteen", "side": "E", "label": "Energy Machine", "color": "#1f5fc8", "pos": [80, 387.3], "stock": ["monster", "redbull", "night", "bloxy", "nyan"] },
+    { "building": "Canteen", "side": "W", "label": "Cold Drinks",     "color": "#2e9d57", "pos": [286, 126.1], "stock": ["nyan", "sky", "tvgirl", "bloxy", "happy"] },
+    { "building": "Canteen", "side": "W", "label": "Energy Machine", "color": "#e08a1e", "pos": [286, 129.9], "stock": ["redbull", "monster", "night", "bsoda", "noob"] }
+  ],
+
+  "services": [
+    { "id": "bank",   "kind": "bank",   "name": "Bank",                 "prompt": "Withdraw cash (Bank)",      "pos": [80, 408.5], "ring_radius": 0.8 },
+    { "id": "noodle", "kind": "noodle", "name": "Magic Spot Noodle Bar","prompt": "Order noodles (Noodle Bar)", "pos": [80, 357.5], "ring_radius": 0.8 }
+  ],
+
+  "specials": [
+    { "name": "Open Auditorium", "rect": [231, 388, 243, 404], "model": "auditorium", "note": "the pavilion on the sand field, steps facing the NCC company" },
+    { "name": "Indian Flag", "pos": [235, 377], "pole_height": 14 }
+  ],
+
+  "spawn": { "pos": [122, 462], "yaw": 3.14159 },
+
+  "player": {
+    "walk_speed": 2.4,
+    "run_speed": 5.6,
+    "boost_multiplier": 1.3,
+    "boost_seconds": 30,
+    "step_up": 1.3,
+    "speed_lerp": 9.0,
+    "camera_distance": 5.4,
+    "camera_distance_dialogue": 3.2,
+    "camera_distance_office": 3.4,
+    "camera_height": 1.5,
+    "camera_look_height": 1.35,
+    "camera_min_distance": 1.2,
+    "camera_lerp": 10.0,
+    "pitch_min": 0.05,
+    "pitch_max": 1.1,
+    "mouse_yaw": 0.006,
+    "mouse_pitch": 0.004,
+    "key_rotate": 1.8,
+    "interact_radius": 3.8,
+    "machine_radius": 3.4,
+    "service_radius": 3.4,
+    "office_door_radius": 2.8,
+    "salute_radius": 16.0
+  },
+
+  "economy": {
+    "start_wallet": 200,
+    "start_bank": 2000,
+    "fee": 250,
+    "start_energy": 40,
+    "max_energy": 100,
+    "atm_presets": [100, 200, 500, 1000]
+  },
+
+  "mission_anchors": {
+    "day1_gate":       { "pos": [122, 396], "radius": 12 },
+    "day1_admin":      { "pos": [174, 337] },
+    "day3_room204":    { "pos": [80, 175], "radius": 8 },
+    "day3_wrong_lab":  { "pos": [80, 340], "radius": 8 },
+    "day4_library":    { "pos": [80, 175], "radius": 8 },
+    "day5_court":      { "pos": [290, 275], "radius": 10 },
+    "day6_colonel":    { "pos": [214, 396] },
+    "day8_canteen":    { "pos": [268, 145], "radius": 10 },
+    "day9_fest_stage": { "pos": [238, 244], "radius": 10 },
+    "day10_classroom": { "pos": [129, 287] }
+  }
+}

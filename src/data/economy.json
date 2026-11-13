@@ -1,0 +1,32 @@
+{
+  "_comment": "The 10 cold drinks from the original game (DR table in js/game.js). energy_type: 1 = energy drink (+35 energy AND a 30 s speed boost), 0 = soda (+20 energy).",
+
+  "drinks": [
+    { "id": "happy",  "name": "Happy Faces Soda", "price": 20, "energy_type": 0, "desc": "Sweet strawberry fizz. Instant smile." },
+    { "id": "tvgirl", "name": "TV Girl Soda",     "price": 25, "energy_type": 0, "desc": "Grape-berry blast with a dreamy finish." },
+    { "id": "bsoda",  "name": "BSODA",            "price": 20, "energy_type": 0, "desc": "Restart. Refresh. Blueberry fizz for tired coders." },
+    { "id": "noob",   "name": "Noob Soda",        "price": 20, "energy_type": 0, "desc": "Lemon-blue fizz. Beginner friendly." },
+    { "id": "sky",    "name": "Sky Cola",         "price": 25, "energy_type": 0, "desc": "Light, cool and cloud-soft." },
+    { "id": "bloxy",  "name": "Bloxy Cola",       "price": 30, "energy_type": 0, "desc": "Golden caramel cola with a kick." },
+    { "id": "nyan",   "name": "Nyan Cat Soda",    "price": 30, "energy_type": 0, "desc": "Rainbow cola. Purr-fectly sweet." },
+    { "id": "night",  "name": "Night Blizzard",   "price": 45, "energy_type": 1, "desc": "Ice-cold late-night study fuel. Speed boost!" },
+    { "id": "monster","name": "Monster Energy",   "price": 60, "energy_type": 1, "desc": "Claws out! Big energy kick. Speed boost!" },
+    { "id": "redbull","name": "Red Bull",         "price": 60, "energy_type": 1, "desc": "Gives you wings. Speed boost!" }
+  ],
+
+  "energy_per_drink": { "soda": 20, "energy": 35 },
+  "boost_seconds": 30,
+
+  "noodles": [
+    { "id": "masala", "name": "Indian Masala Noodles", "code": "IN", "price": 60,  "energy": 20, "desc": "Street-style masala noodles with onion, chilli and spice mix" },
+    { "id": "chowmein","name": "Chinese Chow Mein",   "code": "CN", "price": 80,  "energy": 25, "desc": "Wok-tossed hakka noodles with soy, garlic and crunchy veggies" },
+    { "id": "ramen",  "name": "Japanese Ramen",        "code": "JP", "price": 120, "energy": 30, "desc": "Hot miso broth, springy noodles, soft egg and nori" },
+    { "id": "buldak", "name": "Korean Buldak Fire Noodles", "code": "KR", "price": 150, "energy": 50, "desc": "Extremely spicy fire chicken noodles. Huge energy + speed boost!", "hot": true }
+  ],
+
+  "items": [
+    { "id": "id",  "name": "Student ID Card", "from_day": 1, "hint": "Complete Day 1 to collect your ID card." },
+    { "id": "fee", "name": "Fee Receipt",      "from_day": 2, "hint": "Complete Day 2 (Pay the Fees) to collect the receipt." },
+    { "id": "lib", "name": "Library Card",     "from_day": 4, "hint": "Complete Day 4 (Library Card) to collect it." }
+  ]
+}

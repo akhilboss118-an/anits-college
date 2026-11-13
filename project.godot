@@ -1,0 +1,56 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="ANITS College Simulation"
+config/description="Godot 4 rebuild of the ANITS College web game. See docs/README.md."
+run/main_scene="res://src/main.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+EventBus="*res://src/autoload/event_bus.gd"
+GameState="*res://src/autoload/game_state.gd"
+Settings="*res://src/autoload/settings.gd"
+SaveSystem="*res://src/autoload/save_system.gd"
+CampusDB="*res://src/autoload/campus_db.gd"
+Mission="*res://src/autoload/mission_runner.gd"
+Dialogue="*res://src/autoload/dialogue_service.gd"
+VoiceBank="*res://src/autoload/voice_bank.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+rendering_device/driver.windows="d3d12"
+textures/vram_compression/import_etc2_astc=true
+lights_and_shadows/directional_shadow/size=2048
+lights_and_shadows/directional_shadow/size.mobile=1024
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=1
+environment/defaults/default_clear_color=Color(0.53, 0.74, 0.92, 1)
+lights_and_shadows/positional_shadow/atlas_size=1024
+lights_and_shadows/positional_shadow/atlas_size.mobile=512
+scaling_3d/mode.mobile=0
+scaling_3d/scale.mobile=0.78

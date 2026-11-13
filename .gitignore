@@ -1,0 +1,35 @@
+# Godot
+.godot/
+.import/
+export.cfg
+export_presets.cfg.bak
+*.translation
+
+# Build output
+/build/
+/export/
+*.exe
+*.pck
+*.apk
+*.aab
+
+# The original web build (72 MB of binaries) stays on disk as the reference
+# source of truth but is not tracked in git.
+ANITS-WEB GAME/
+
+# Unused source asset packs. The runtime uses the imported copies in
+# glTF/ and third_party/; these folders only hold the upstream downloads.
+/FBX/
+/FBX (Unity)/
+/OBJ/
+/demo/
+/models/
+/road_demos/
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+*.TMP

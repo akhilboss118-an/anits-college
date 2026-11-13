@@ -1,0 +1,2261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ANITS College Simulation — Godot 4 Port · Technical Report</title>
+<meta name="author" content="ANITS Godot Port">
+<meta name="description" content="Technical porting report: the ANITS College web game rebuilt as a Godot 4.7 project for Windows and Android.">
+<style>
+/* ==========================================================================
+   ANITS Godot 4 Port — Technical Report stylesheet
+   Self-contained: no external fonts, no CDN, no network resources.
+   Print target: A4 portrait, 30 designed pages, explicit page boxes.
+   ========================================================================== */
+
+:root{
+  --navy:#0e2a4f;
+  --navy-2:#17396a;
+  --gold:#b8892b;
+  --gold-2:#d7b04a;
+  --sky:#3b82c4;
+  --ink:#1b2029;
+  --muted:#5b6474;
+  --rule:#ccd4de;
+  --rule-soft:#e3e8ef;
+  --bg-soft:#f4f6fa;
+  --bg-warm:#faf7f0;
+  --ok:#1f6f4a;
+  --warn:#8a4b12;
+}
+
+@page{ size:A4 portrait; margin:0; }
+
+html{
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+  background:#e9edf3;
+}
+body{
+  margin:0;
+  background:#e9edf3;
+  color:var(--ink);
+  font-family:Georgia,"Iowan Old Style","Times New Roman",Times,serif;
+  font-size:9.3pt;
+  line-height:1.40;
+  text-rendering:optimizeLegibility;
+}
+
+/* ---------- page frame ---------- */
+.page{
+  position:relative;
+  width:210mm;
+  height:296.4mm;
+  margin:0 auto 10mm;
+  padding:13mm 16mm 10mm;
+  box-sizing:border-box;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  page-break-after:always;
+  break-after:page;
+}
+.page:last-child{ page-break-after:auto; break-after:auto; }
+
+.run-head{
+  flex:0 0 auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:8mm;
+  padding-bottom:2.2mm;
+  border-bottom:0.7pt solid var(--rule);
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:7.2pt;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.run-head .rh-l{ font-weight:700; color:var(--navy); letter-spacing:.11em; }
+.run-head .rh-r{ text-align:right; }
+.run-foot{
+  flex:0 0 auto;
+  margin-top:auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8mm;
+  padding-top:2.2mm;
+  border-top:0.7pt solid var(--rule);
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:7.2pt;
+  letter-spacing:.05em;
+  color:var(--muted);
+}
+.run-foot .rf-pg{ font-weight:700; color:var(--navy); white-space:nowrap; }
+.body{ flex:1 1 auto; min-height:0; padding-top:4mm; }
+
+/* ---------- typography ---------- */
+h1.sec{
+  margin:0 0 3.5mm;
+  padding:0 0 1.8mm;
+  border-bottom:1.4pt solid var(--navy);
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:16pt;
+  font-weight:700;
+  letter-spacing:-.01em;
+  color:var(--navy);
+  line-height:1.15;
+}
+h1.sec .sec-no{
+  display:block;
+  font-size:7.4pt;
+  font-weight:700;
+  letter-spacing:.16em;
+  color:var(--gold);
+  text-transform:uppercase;
+  margin-bottom:1.2mm;
+}
+h2{
+  margin:4mm 0 1.8mm;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:10.2pt;
+  font-weight:700;
+  color:var(--navy-2);
+  letter-spacing:.005em;
+}
+h3{
+  margin:3.2mm 0 1.2mm;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:8.8pt;
+  font-weight:700;
+  color:var(--ink);
+  letter-spacing:.02em;
+  text-transform:uppercase;
+}
+p{ margin:0 0 2.2mm; }
+p.lead{ font-size:9.7pt; line-height:1.46; }
+ul,ol{ margin:0 0 2.4mm; padding-left:4.6mm; }
+li{ margin-bottom:0.9mm; }
+strong{ color:var(--navy); }
+em{ color:#3a4352; }
+small{ font-size:8pt; }
+a{ color:var(--sky); text-decoration:none; }
+
+code,.mono{
+  font-family:"Cascadia Mono",Consolas,"Courier New",monospace;
+  font-size:8pt;
+  background:#eef1f6;
+  border:0.4pt solid var(--rule-soft);
+  border-radius:2px;
+  padding:0 0.8mm;
+  color:#26303f;
+}
+pre{
+  margin:0 0 3mm;
+  padding:2.6mm 3mm;
+  background:#121a26;
+  color:#dfe7f2;
+  border-radius:3px;
+  font-family:"Cascadia Mono",Consolas,"Courier New",monospace;
+  font-size:7.6pt;
+  line-height:1.42;
+  overflow:hidden;
+  white-space:pre-wrap;
+}
+pre .c{ color:#7f8ea5; }
+pre .k{ color:#8fd0ff; }
+pre .s{ color:#ffd88a; }
+
+/* ---------- tables ---------- */
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin:0 0 2.6mm;
+  font-size:7.9pt;
+  line-height:1.32;
+}
+caption{
+  caption-side:top;
+  text-align:left;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:7.4pt;
+  font-weight:700;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+  color:var(--gold);
+  padding-bottom:1.4mm;
+}
+th{
+  background:var(--navy);
+  color:#fff;
+  text-align:left;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:7.2pt;
+  font-weight:700;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+  padding:1.3mm 2mm;
+  border-right:0.5pt solid #2b4a76;
+}
+th:last-child{ border-right:none; }
+td{
+  padding:1.2mm 2mm;
+  border-bottom:0.5pt solid var(--rule-soft);
+  vertical-align:top;
+}
+tbody tr:nth-child(even) td{ background:var(--bg-soft); }
+td.num, th.num{ text-align:right; white-space:nowrap; }
+td.ctr, th.ctr{ text-align:center; }
+td .mono{ background:#eef1f6; }
+.tbl-note{
+  margin:-1mm 0 3.4mm;
+  font-size:7.6pt;
+  color:var(--muted);
+  font-style:italic;
+}
+tr.tot td{ background:#e8edf4 !important; font-weight:700; color:var(--navy); border-bottom:none; }
+
+/* ---------- figures ---------- */
+figure{ margin:0 0 3.4mm; }
+figure img{
+  display:block;
+  width:100%;
+  height:auto;
+  border:0.6pt solid var(--rule);
+  background:#111;
+}
+figcaption{
+  margin-top:1.4mm;
+  font-size:7.7pt;
+  line-height:1.35;
+  color:var(--muted);
+}
+figcaption b{ color:var(--navy); }
+.pair{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:4mm;
+  margin-bottom:1mm;
+}
+.pair figure{ margin-bottom:2mm; }
+figure.compact img{
+  max-height:58mm;
+  width:auto;
+  max-width:100%;
+  margin:0 auto;
+}
+p.cap-note{
+  font-size:7.7pt;
+  color:var(--muted);
+  margin:1.2mm 0 0;
+}
+.tag{
+  display:inline-block;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:6.6pt;
+  font-weight:700;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  padding:0.7mm 1.6mm;
+  border-radius:2px;
+  color:#fff;
+  background:var(--navy);
+  margin-bottom:1.2mm;
+}
+.tag.godot{ background:var(--sky); }
+.tag.web{ background:#6b7280; }
+.shot{ background:#0f1720; }
+
+/* ---------- placeholder for a not-yet-captured screenshot ---------- */
+.ph{
+  border:0.8pt dashed #9aa6b6;
+  background:
+    repeating-linear-gradient(45deg,#f5f7fb 0 6mm,#eef2f8 6mm 12mm);
+  padding:9mm 6mm;
+  text-align:center;
+  color:var(--muted);
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+.ph .ph-file{
+  display:block;
+  font-family:"Cascadia Mono",Consolas,monospace;
+  font-size:10.5pt;
+  font-weight:700;
+  color:var(--navy);
+  margin-bottom:2mm;
+}
+.ph .ph-note{ font-size:7.6pt; line-height:1.45; max-width:104mm; margin:0 auto; }
+.ph .ph-badge{
+  display:inline-block;
+  font-size:6.6pt;
+  font-weight:700;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  background:#8a94a6;
+  color:#fff;
+  padding:0.7mm 1.8mm;
+  border-radius:2px;
+  margin-bottom:2.4mm;
+}
+
+/* ---------- callouts ---------- */
+.note{
+  border-left:2.4pt solid var(--sky);
+  background:#f1f6fc;
+  padding:2.6mm 3mm;
+  margin:0 0 3.2mm;
+  font-size:8.3pt;
+  line-height:1.4;
+}
+.note.warn{ border-left-color:#c07a1f; background:#fdf6ea; }
+.note.ok{ border-left-color:var(--ok); background:#eff8f2; }
+.note .note-l{
+  display:block;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:7pt;
+  font-weight:700;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--navy);
+  margin-bottom:1mm;
+}
+.note.warn .note-l{ color:var(--warn); }
+.note.ok .note-l{ color:var(--ok); }
+
+.kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:3mm; margin:0 0 3.6mm; }
+.kpi{
+  border:0.5pt solid var(--rule);
+  border-top:2.2pt solid var(--navy);
+  padding:2.4mm 2.4mm 2.2mm;
+  background:#fff;
+}
+.kpi .k-v{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:15pt;
+  font-weight:700;
+  color:var(--navy);
+  line-height:1;
+}
+.kpi .k-l{
+  margin-top:1.2mm;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:6.9pt;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--muted);
+  line-height:1.3;
+}
+
+.toc{ width:100%; border-collapse:collapse; font-size:8.6pt; }
+.toc td{ border-bottom:0.5pt solid var(--rule-soft); padding:1.7mm 1mm; }
+.toc td.toc-n{ width:9mm; color:var(--gold); font-weight:700; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; font-size:7.6pt; }
+.toc td.toc-p{ width:12mm; text-align:right; font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; font-size:8pt; color:var(--navy); font-weight:700; }
+.toc td.toc-s{ color:var(--muted); font-size:7.8pt; }
+
+/* ---------- cover ---------- */
+.cover{ padding:0; background:#fff; }
+.cover .cv-band{
+  background:var(--navy);
+  color:#fff;
+  padding:34mm 16mm 18mm;
+  position:relative;
+  overflow:hidden;
+}
+.cover .cv-band::after{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:0;
+  height:1.6mm;
+  background:linear-gradient(90deg,var(--gold-2) 0 34%,#2f7a4f 34% 62%,#8f3b4f 62% 100%);
+}
+.cover .cv-kicker{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:8pt;
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  color:var(--gold-2);
+  margin-bottom:7mm;
+}
+.cover h1{
+  margin:0 0 4mm;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:34pt;
+  font-weight:700;
+  line-height:1.02;
+  letter-spacing:-.02em;
+}
+.cover h2{
+  margin:0;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:13pt;
+  font-weight:400;
+  color:#c9dcf3;
+  letter-spacing:.01em;
+}
+.cover .cv-meta{ padding:12mm 16mm 0; }
+.cover .cv-title{
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:8.6pt;
+  font-weight:700;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  color:var(--gold);
+  padding-bottom:2.4mm;
+  border-bottom:0.7pt solid var(--rule);
+  margin-bottom:6mm;
+}
+.cover .cv-abs{ font-size:9.6pt; line-height:1.5; max-width:150mm; }
+.cover .cv-foot{
+  position:absolute;
+  left:16mm; right:16mm; bottom:12mm;
+  display:flex;
+  justify-content:space-between;
+  border-top:0.7pt solid var(--rule);
+  padding-top:2.6mm;
+  font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:7.4pt;
+  letter-spacing:.06em;
+  color:var(--muted);
+}
+.cover .cv-foot b{ color:var(--navy); }
+
+.legend{ font-size:7.6pt; color:var(--muted); }
+.legend b{ color:var(--navy); }
+
+hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
+
+.cols2{ column-count:2; column-gap:6mm; }
+.cols2 > *{ break-inside:avoid; }
+
+@media screen{
+  .page{ box-shadow:0 3px 16px rgba(20,30,50,.20); }
+}
+@media print{
+  html,body{ background:#fff; }
+  .page{ margin:0; box-shadow:none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================ PAGE 1 — COVER ============================ -->
+<section class="page cover">
+  <div class="cv-band">
+    <div class="cv-kicker">Godot 4.7 · Technical Porting Report</div>
+    <h1>ANITS<br>College Simulation</h1>
+    <h2>A native Godot 4 rebuild of the ANITS College web game<br>for Windows and Android</h2>
+  </div>
+  <div class="cv-meta">
+    <div class="cv-title">Document control</div>
+    <table>
+      <tbody>
+        <tr><th style="width:34%">Subject</th><td>Port of <strong>ANITS — First Day</strong> (Three.js / WebGL web build) to the Godot 4.7 engine</td></tr>
+        <tr><th>Source build</th><td><code>ANITS-WEB GAME/</code> — <code>js/game.js</code> (1.85 MB), <code>js/levels.js</code>, <code>js/menu.js</code>, <code>js/voice.js</code>, <code>index.html</code>, <code>css/</code></td></tr>
+        <tr><th>Target project</th><td><code>new-game-project/</code> — <code>project.godot</code>, main scene <code>res://src/main.tscn</code></td></tr>
+        <tr><th>Engine / renderer</th><td>Godot 4.7.2 stable · Forward+ · D3D12 (Windows) · Jolt Physics</td></tr>
+        <tr><th>Report version</th><td>1.0 — issued 12 November 2026</td></tr>
+        <tr><th>Scope</th><td>Front end, campus world, Day&nbsp;1 mission chain, HUD, touch controls, Admin Office interior, voice and dialogue, test and build pipeline</td></tr>
+        <tr><th>Status</th><td>Day&nbsp;1 plays end to end; Days&nbsp;2–10 are stubbed; no music track is implemented (see §10)</td></tr>
+      </tbody>
+    </table>
+    <p class="cv-abs" style="margin-top:7mm">
+      This report documents a one-to-one translation of a browser game into a native
+      engine. The ANITS College web build is a third-person campus life-simulator whose
+      entire state — plan geometry, NPC roster, dialogue, economy, mission script — is
+      already tabulated as data. The port therefore treats the work as a
+      <em>translation</em> problem rather than a design problem: every coordinate,
+      radius, price and line of dialogue in the Godot build is copied from the
+      original's own source files, and the campus is <em>generated</em> from
+      <code>src/data/campus_data.json</code> so that the plan can change without
+      touching a line of GDScript.
+    </p>
+    <p style="font-size:8.4pt;color:var(--muted);max-width:150mm">
+      All figures in this report were read from the shipping source of both projects.
+      No measured frame-rate numbers are claimed; benchmark slots are marked
+      <code>&lt;!-- BENCH: --&gt;</code> and left empty on purpose.
+    </p>
+  </div>
+  <div class="cv-foot">
+    <span><b>ANITS College Simulation</b> · Godot 4 Port · Technical Report v1.0</span>
+    <span>Page 1 of 30</span>
+  </div>
+</section>
+
+<!-- ============================ PAGE 2 — CONTENTS ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">Contents</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">Navigation</span>Contents</h1>
+
+    <table class="toc">
+      <tbody>
+        <tr><td class="toc-n">01</td><td>Executive summary</td><td class="toc-s">What was ported, what was verified, what is left</td><td class="toc-p">3</td></tr>
+        <tr><td class="toc-n">02</td><td>At-a-glance specification</td><td class="toc-s">Engine, world, population, economy, controls in one table</td><td class="toc-p">5</td></tr>
+        <tr><td class="toc-n">03</td><td>Web → Godot porting method</td><td class="toc-s">Module-by-module translation and side-by-side image pairs</td><td class="toc-p">6</td></tr>
+        <tr><td class="toc-n">04</td><td>Campus layout &amp; roads</td><td class="toc-s">Coordinate system, 17 buildings, 12 street rectangles, props</td><td class="toc-p">11</td></tr>
+        <tr><td class="toc-n">05</td><td>Day&nbsp;1 mission flow</td><td class="toc-s">The eight-step script and the gate/marker machinery</td><td class="toc-p">14</td></tr>
+        <tr><td class="toc-n">06</td><td>UI, HUD &amp; main menu</td><td class="toc-s">Anchored HUD panels and the four-screen front end</td><td class="toc-p">17</td></tr>
+        <tr><td class="toc-n">07</td><td>Touch controls (mobile)</td><td class="toc-s">Virtual stick, look-drag, E / G / RUN buttons</td><td class="toc-p">19</td></tr>
+        <tr><td class="toc-n">08</td><td>Admin Office interior</td><td class="toc-s">The sealed waiting room, the desk, the glass doors</td><td class="toc-p">20</td></tr>
+        <tr><td class="toc-n">09</td><td>Characters, voice &amp; dialogue</td><td class="toc-s">64 NPCs, 632 recordings, per-character voice profiles, no music</td><td class="toc-p">21</td></tr>
+        <tr><td class="toc-n">10</td><td>Rendering &amp; the 60&nbsp;fps strategy</td><td class="toc-s">PC pipeline, mobile quality ladder, budget and levers</td><td class="toc-p">23</td></tr>
+        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">57-check headless suite, scripted tour, mobile preview</td><td class="toc-p">25</td></tr>
+        <tr><td class="toc-n">12</td><td>Known limitations &amp; future work</td><td class="toc-s">Open items, in priority order</td><td class="toc-p">26</td></tr>
+        <tr><td class="toc-n">13</td><td>Build &amp; deploy</td><td class="toc-s">Windows, Android and Web export paths</td><td class="toc-p">27</td></tr>
+        <tr><td class="toc-n">A</td><td>Appendix A — Controls reference</td><td class="toc-s">Keyboard, mouse and touch bindings</td><td class="toc-p">28</td></tr>
+        <tr><td class="toc-n">B</td><td>Appendix B — Asset credits</td><td class="toc-s">Sources and licence status of every asset family</td><td class="toc-p">29</td></tr>
+        <tr><td class="toc-n">C</td><td>Appendix C — File map</td><td class="toc-s">Every source file in the Godot project and what it does</td><td class="toc-p">30</td></tr>
+      </tbody>
+    </table>
+
+    <h2>How to read this report</h2>
+    <p>
+      Every claim in this document is traceable to a file. Where a number comes from
+      authored data it is quoted from the JSON; where it comes from code it is quoted
+      from the GDScript that implements it. No performance figure is asserted
+      without a measurement, and no screenshot is presented unless it was captured
+      from the running build.
+    </p>
+    <table>
+      <caption>Evidence conventions used throughout</caption>
+      <thead><tr><th style="width:22%">Convention</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/…</code>, <code>docs/…</code></td><td>A path inside the Godot project. Paths are relative to <code>new-game-project/</code>.</td></tr>
+        <tr><td><code>ANITS-WEB GAME/…</code></td><td>A path inside the original web build — the ground truth for the port.</td></tr>
+        <tr><td>Dashed grey frame</td><td>A screenshot that has <strong>not yet been captured</strong>. The frame prints the exact filename to drop in; see the Appendix in <code>docs/report/README.md</code>.</td></tr>
+        <tr><td><code>&lt;!-- BENCH: --&gt;</code></td><td>An empty measurement slot, deliberately left empty. No frame-rate number is claimed anywhere in this report.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 2 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 3 — EXEC SUMMARY I ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">01 · Executive summary</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">01 · Executive summary</span>What was built, and how it was verified</h1>
+
+    <p class="lead">
+      The ANITS College web game — a third-person campus life-simulator built on
+      Three.js — has been re-implemented as a native Godot&nbsp;4.7 project. The
+      Godot build boots into a recreated front end, generates the entire ANITS
+      campus procedurally from a single JSON plan file, spawns all
+      <strong>64</strong> non-player characters with their original dialogue, and
+      plays the complete <strong>Day&nbsp;1</strong> mission chain from the gate to
+      the Colonel's parade ground.
+    </p>
+
+    <div class="kpis">
+      <div class="kpi"><div class="k-v">17</div><div class="k-l">buildings generated from data</div></div>
+      <div class="kpi"><div class="k-v">64</div><div class="k-l">NPCs with original lines</div></div>
+      <div class="kpi"><div class="k-v">632</div><div class="k-l">voice recordings replayed</div></div>
+      <div class="kpi"><div class="k-v">57</div><div class="k-l">headless checks, 0 failures</div></div>
+    </div>
+
+    <h2>The porting thesis</h2>
+    <p>
+      The original build is unusual in one respect that shaped the whole effort:
+      almost none of its content is authored in code. The campus plan is three
+      arrays of rectangles (<code>BLD</code>, <code>ROADS</code>, <code>SAND</code>,
+      <code>BASK</code>, <code>NCC</code>); the NPCs are a compact table that the
+      original expands at runtime; the missions are arrays of step objects; and the
+      dialogue is a dictionary keyed by step index. Reading those tables and
+      re-emitting them is the port.
+    </p>
+    <p>
+      The Godot build keeps that shape. <code>src/data/campus_data.json</code>
+      holds the campus in <em>plan pixels</em> — the same coordinate system the web
+      build used — and <code>src/util/campus.gd</code> converts plan pixels to
+      world metres at load time (1&nbsp;plan&nbsp;px = 0.7&nbsp;m, origin
+      (215,&nbsp;250)). Because the conversion lives in exactly one place, changing
+      the campus is a JSON edit, never a code edit.
+    </p>
+
+    <h3>What the translation looked like in practice</h3>
+    <ul>
+      <li><strong>Geometry.</strong> <code>src/world/campus_builder.gd</code> walks the JSON and emits the ground, the streets, the kerbs, the zebra crossing, the perimeter walls, the hinged main gate, the building masses and every prop. Repeated props become <code>MultiMeshInstance3D</code> batches, so a species costs one draw call per surface.</li>
+      <li><strong>Characters.</strong> The original glTF/FBX models were imported from <code>third_party/anits_original/</code> and fitted into their plots by <code>src/world/original_models.gd</code>, which reproduces the web build's own per-model scale factors rather than normalising them.</li>
+      <li><strong>Script.</strong> <code>src/autoload/mission_runner.gd</code> holds the Day&nbsp;1 steps as a constant array with the same field names the original used (<code>text</code>, <code>npc</code>, <code>line</code>, <code>pos</code>, <code>radius</code>, <code>type</code>).</li>
+      <li><strong>Audio.</strong> <code>src/autoload/voice_bank.gd</code> replays the original's own 632 MP3 recordings, matched to the line text through <code>clips.json</code> (340 lines) and <code>clips_girl.json</code> (310 lines), and reuses the original per-character pitch/rate profiles.</li>
+    </ul>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 3 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 4 — EXEC SUMMARY II ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">01 · Executive summary</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">01 · Executive summary</span>Delivery status, evidence and honest limits</h1>
+
+    <h2>Delivered and verified</h2>
+    <table>
+      <caption>Delivered scope — verified against the running build</caption>
+      <thead><tr><th style="width:30%">Area</th><th>What exists today</th><th style="width:26%">Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Front end</td><td>Year select (2023–2025 uniform), character select (Mike / Amy), 14-character name entry, main menu. Ported from <code>js/menu.js</code>.</td><td><code>src/ui/main_menu.gd</code></td></tr>
+        <tr><td>Campus world</td><td>17 buildings, 12 street rectangles, 5 zones, 6 wall runs, hinged main gate + Back Gate arch, kerbs, footpaths, crosswalk, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts in 32 culled chunks, 14 lamps, 7 benches, 4 vending machines.</td><td><code>campus_data.json</code>, <code>campus_builder.gd</code></td></tr>
+        <tr><td>Player</td><td>Walk 2.4&nbsp;m/s, run 5.6&nbsp;m/s, energy-drink boost ×1.3 for 30&nbsp;s, no jump, 1.3&nbsp;m step-up, third-person boom at 5.4&nbsp;m with building avoidance down to 1.2&nbsp;m.</td><td><code>src/actors/player.gd</code>, <code>campus_data.json</code></td></tr>
+        <tr><td>NPCs</td><td>All 64 characters, original models, original routes, original dialogue; distance-culled skeletons at 95&nbsp;m and name labels at 62&nbsp;m.</td><td><code>src/actors/npc.gd</code>, <code>npcs.json</code></td></tr>
+        <tr><td>Mission</td><td>Day&nbsp;1 complete: guard → gate → Laksmi → Prof.&nbsp;Rao → Suresh → Arjun → salute → Colonel Singh.</td><td><code>mission_runner.gd</code>, tour screenshots 01–08</td></tr>
+        <tr><td>HUD</td><td>Mission panel, wallet and energy, dialogue panel, subtitles, interaction prompt, minimap, toasts, keyboard legend — all anchor-based, so they survive any aspect ratio.</td><td><code>src/ui/hud.gd</code></td></tr>
+        <tr><td>Touch</td><td>Virtual stick (68&nbsp;px, 0.14 dead zone), look-drag anywhere, and <em>E</em> / <em>G</em> / <em>RUN</em> buttons that call the same resolvers as the keyboard.</td><td><code>src/ui/touch_controls.gd</code></td></tr>
+        <tr><td>Admin Office</td><td>The sealed waiting room with sliding glass doors, Laksmi at her desk, sofas, bookshelves, restroom cubicle and the hall door that teleports the player in and out.</td><td><code>src/world/admin_office.gd</code></td></tr>
+        <tr><td>Voice</td><td>632 original MP3s, original pitch/rate per character, Telugu subtitle track from the same clip tables. <strong>No music bed is implemented</strong> — see §10.</td><td><code>src/autoload/voice_bank.gd</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Deliberately not delivered in this increment</h2>
+    <p>
+      Days&nbsp;2–10 exist in the original as eight more scripted chapters with
+      five minigame types (quiz, shootout, command drill, mash, dance). Only the
+      Day&nbsp;2 chain is authored in the Godot build; Days&nbsp;3–10 return the
+      placeholder text <em>"Day&nbsp;N content is not ported yet."</em> from
+      <code>Mission._build_later_day()</code>. The economy tables (10 drinks,
+      4 dishes, 3 items), the inventory, the bank ATM and the vending-machine
+      shop are loaded and validated but have no interactive panel yet.
+    </p>
+
+    <div class="note warn">
+      <span class="note-l">Honest statement on mobile testing</span>
+      The Godot build has <strong>not</strong> been run on a physical Android
+      handset. Device validation was replaced by two substitute checks: the
+      <em>mobile renderer path</em> (<code>OS.has_feature("mobile")</code> ⇒
+      <code>scaling_3d_scale = 0.78</code>, MSAA off, 2 shadow splits, cumulus
+      clouds disabled, fog end 520&nbsp;m) and the <em>touch-preview pass</em>
+      (<code>-- --touch-preview</code> forces the phone HUD layout and the on-screen
+      stick on the desktop). Both exercise the same code paths the phone build
+      takes, but they are not a substitute for a real device. This is carried
+      forward as an open item in §12.
+    </div>
+
+    <div class="note">
+      <span class="note-l">How the numbers in this report were obtained</span>
+      Static reading of both code bases, plus a scripted in-engine verification
+      tour (<code>-- --check</code>) that walks the Day&nbsp;1 route and writes ten
+      screenshots to <code>docs/screenshots/godot/</code>. No measurement of
+      frame rate is claimed; see §10 for the empty benchmark slots.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 4 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 5 — AT A GLANCE ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">02 · At a glance</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">02 · At a glance</span>Specification summary</h1>
+
+    <table>
+      <caption>Engine and build</caption>
+      <thead><tr><th style="width:26%">Item</th><th style="width:36%">Value</th><th>Source of truth</th></tr></thead>
+      <tbody>
+        <tr><td>Engine</td><td>Godot 4.7.2 stable</td><td><code>project.godot</code> — <code>config/features = ("4.7", "Forward Plus")</code></td></tr>
+        <tr><td>Renderer</td><td>Forward+, D3D12 on Windows</td><td><code>rendering_device/driver.windows="d3d12"</code></td></tr>
+        <tr><td>Physics</td><td>Jolt Physics</td><td><code>3d/physics_engine="Jolt Physics"</code></td></tr>
+        <tr><td>Main scene</td><td><code>res://src/main.tscn</code></td><td><code>run/main_scene</code></td></tr>
+        <tr><td>Viewport</td><td>1920 × 1080, <code>canvas_items</code> stretch, <code>expand</code> aspect</td><td><code>[display]</code></td></tr>
+        <tr><td>Frame cap</td><td>60 fps (<code>Engine.max_fps = 60</code>)</td><td><code>src/main.gd</code></td></tr>
+        <tr><td>Autoloads</td><td>8 — <code>EventBus</code>, <code>GameState</code>, <code>Settings</code>, <code>SaveSystem</code>, <code>CampusDB</code>, <code>Mission</code>, <code>Dialogue</code>, <code>VoiceBank</code></td><td><code>[autoload]</code> in <code>project.godot</code></td></tr>
+        <tr><td>Verification modes</td><td><code>-- --check</code> (scripted tour), <code>-- --touch-preview</code> (phone layout)</td><td><code>src/main.gd</code></td></tr>
+      </tbody>
+    </table>
+
+    <table>
+      <caption>World and population</caption>
+      <thead><tr><th style="width:26%">Item</th><th style="width:36%">Value</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Campus size</td><td>217.0 × 261.8 m</td><td>310 × 374 plan px at 0.7 m/px</td></tr>
+        <tr><td>Plan origin</td><td>(215, 250) plan px</td><td><code>Campus.MAP_ORIGIN</code></td></tr>
+        <tr><td>Buildings</td><td>17</td><td>From <code>campus_data.json</code></td></tr>
+        <tr><td>Streets</td><td>12 rectangles</td><td>8 campus roads + 4 perimeter strips</td></tr>
+        <tr><td>Zones</td><td>5</td><td>parade ground, basketball, power supply, central lawn, parking</td></tr>
+        <tr><td>Walls / gates</td><td>6 wall runs, 2 gates</td><td>Hinged main gate (8.2 m pillars), Back Gate arch</td></tr>
+        <tr><td>NPCs</td><td>64</td><td>Full breakdown in §9, page 21</td></tr>
+        <tr><td>Vegetation</td><td>150 trees, 130 bushes, 4&nbsp;200 grass tufts</td><td>32 distance-culled chunks, 85 m radius</td></tr>
+        <tr><td>Props</td><td>91 cars, 14 lamps, 7 benches, 4 vending machines</td><td>Bank ATM and noodle-bar service points</td></tr>
+      </tbody>
+    </table>
+
+    <table>
+      <caption>Player, economy and interface</caption>
+      <thead><tr><th style="width:26%">Item</th><th style="width:36%">Value</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Walk / run speed</td><td>2.4 / 5.6 m/s</td><td>Energy-drink boost ×1.3 for 30 s</td></tr>
+        <tr><td>Camera</td><td>5.4 m boom, 3.2 m in dialogue, 1.2 m minimum</td><td>Boom shortens in 0.4 m steps when blocked</td></tr>
+        <tr><td>Interaction radii</td><td>NPC 3.8 m, machine 3.4 m, service 3.4 m</td><td>Salute radius 16 m</td></tr>
+        <tr><td>Starting money</td><td>Wallet Rs.200, bank Rs.2000</td><td>College fee Rs.250</td></tr>
+        <tr><td>Energy</td><td>40 of 100</td><td>Spent by running and by the energy drinks</td></tr>
+        <tr><td>Inventory economy</td><td>10 drinks, 4 dishes, 3 items</td><td><code>src/data/economy.json</code></td></tr>
+        <tr><td>HUD elements</td><td>Mission, wallet, energy, dialogue, subtitle, prompt, minimap, toast, key legend</td><td><code>src/ui/hud.gd</code></td></tr>
+        <tr><td>Touch controls</td><td>Stick + look-drag + E / G / RUN</td><td>68 px radius, 0.14 dead zone</td></tr>
+        <tr><td>Voice</td><td>632 MP3s, 340 + 310 clip entries</td><td>Master / Music / SFX / Voice / UI buses</td></tr>      </tbody>
+    </table>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 5 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 6 — PORTING METHOD ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">03 · Web → Godot porting method</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">03 · Web → Godot porting method</span>Module-for-module translation</h1>
+
+    <p class="lead">
+      The web build is a single 1.85&nbsp;MB <code>game.js</code> with a handful of
+      side modules. The Godot build splits the same responsibilities across eight
+      autoloads and a scene tree. The table below is the translation map — the
+      single most useful artefact for anyone maintaining either side.
+    </p>
+
+    <table>
+      <caption>Translation map — web module → Godot module</caption>
+      <thead><tr><th style="width:23%">Web build</th><th style="width:27%">Godot 4</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr><td><code>js/game.js</code> — scene assembly, renderer, player, NPC loop, HUD wiring</td><td><code>src/main.gd</code>, <code>src/world/campus_builder.gd</code>, <code>src/actors/player.gd</code>, <code>src/actors/npc.gd</code></td><td>One 1.85&nbsp;MB file became four focused classes. Three.js mesh construction became procedural <code>MeshInstance3D</code> / <code>MultiMeshInstance3D</code> emission; Three.js lighting became a Sky3D sky plus one shadow-casting sun.</td></tr>
+        <tr><td><code>js/levels.js</code> — Days 2–10 step tables, <code>__LVINFO</code> level list</td><td><code>src/autoload/mission_runner.gd</code></td><td>Step objects kept their field names (<code>t</code>, <code>npc</code>, <code>at</code>, <code>rad</code>, <code>salute</code>, <code>lines</code>, <code>chk</code>, <code>mini</code>, <code>say</code>). Day&nbsp;1, which lived inside <code>game.js</code>, became the <code>DAY1</code> constant so that both halves of the script live side by side.</td></tr>
+        <tr><td><code>js/menu.js</code> — front end, level select, <code>localStorage</code> profile</td><td><code>src/ui/main_menu.gd</code> + <code>src/autoload/game_state.gd</code></td><td>DOM screens became <code>Control</code> screens on a centred 1600×1080 design canvas. The profile moved from <code>localStorage</code> to an in-memory dictionary persisted by <code>SaveSystem</code>.</td></tr>
+        <tr><td><code>js/voice.js</code> — clip playback, per-character pitch/rate, Telugu subtitles</td><td><code>src/autoload/voice_bank.gd</code></td><td><code>CFG</code> pitch/rate table copied verbatim into a <code>PROFILES</code> constant. The browser's speech-synthesis fallback was dropped in favour of always showing the subtitle.</td></tr>
+        <tr><td><code>js/touch.js</code>, <code>js/mobile.js</code> — mobile sticks and buttons</td><td><code>src/ui/touch_controls.gd</code></td><td>DOM elements became a <code>CanvasLayer</code> that draws its own joystick with <code>_draw()</code> and emits the same move/look/run signals the keyboard path uses.</td></tr>
+        <tr><td><code>js/pause.js</code> — settings modal</td><td><code>src/autoload/settings.gd</code></td><td>Volume, look sensitivity and subtitle language persist to <code>user://settings.cfg</code> instead of <code>localStorage</code> keys <code>anits-vol</code>, <code>anits-look</code>, <code>anits-sublang</code>.</td></tr>
+        <tr><td><code>js/inventory.js</code> — items, ID card, fee receipt</td><td><code>src/autoload/game_state.gd</code> (<code>items</code>, <code>give_item</code>, <code>has_item</code>)</td><td>Data and rules are in place; the panel UI is not yet built.</td></tr>
+        <tr><td><code>index.html</code> + <code>css/</code> — HUD markup and styling</td><td><code>src/ui/hud.gd</code></td><td>CSS absolute positioning became anchor presets and <code>offset_*</code> values so one layout survives 16:9, 20:9 and tablet ratios.</td></tr>
+        <tr><td>Three.js <code>WebGLRenderer</code>, hemisphere + directional light, fog</td><td>Godot Forward+, Sky3D, <code>DirectionalLight3D</code>, <code>Environment</code></td><td>The web build's 0.66 hemisphere ambient and 0.78 sun were re-tuned against Sky3D's energy model; the sky dome now owns sun, moon, atmosphere and clouds.</td></tr>
+        <tr><td>Plan-pixel camera maths (<code>W2()</code>, <code>MAP</code>, <code>SCALE</code>)</td><td><code>src/util/campus.gd</code></td><td>One static class holds <code>MAP_SCALE = 0.7</code>, <code>MAP_ORIGIN = (215, 250)</code> and the two conversion functions used by every other system.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <span class="note-l">Rule adopted for the whole port</span>
+      <em>Nothing is invented.</em> If a value could be read from the web build, it
+      was read and copied. If it could not be read, it is listed in
+      <code>docs/MISSING_INFORMATION.md</code> rather than guessed. The result is
+      that the two builds can be diffed numerically, which is exactly what the
+      headless test suite does (§11).
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 6 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 7 — PAIR: GATE ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">03 · Web → Godot porting method</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">03 · Web → Godot porting method</span>Image pairs — the main gate and the spawn</h1>
+
+    <p>
+      The spawn is the most diagnostic view in the whole port: it frames the
+      hinged main gate, the perimeter wall, the entrance boulevard, the zebra
+      crossing, the tree avenue and the Admin Block in a single shot. If the
+      coordinate conversion, the road generator, the kerb batching, the gate
+      animation and the building fitting are all correct, this frame looks right.
+    </p>
+
+    <div class="pair">
+      <figure>
+        <span class="tag web">Web build · Three.js</span>
+        <img src="../screenshots/01_main_gate_spawn.png" alt="Web build: the player stands on the lawn outside the ANITS main gate, with the security guard Bajirao beside the closed gate and the Admin Block behind it.">
+        <figcaption><b>Figure 3.1 (web).</b> <code>docs/screenshots/01_main_gate_spawn.png</code> — captured from the running web build. The gate is closed, Bajirao stands to the right with the yellow mission ring under him, and the "ANITS COLLEGE" crest and "ANIL NEERUKONDA INSTITUTE OF TECHNOLOGY &amp; SCIENCES" lettering sit on the gate piers.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port</span>
+        <img src="../screenshots/godot/01_spawn_gate.png" alt="Godot port: the player stands on the entrance boulevard outside the ANITS main gate, with the Admin Block ahead and the mission marker to the right.">
+        <figcaption><b>Figure 3.2 (Godot).</b> <code>docs/screenshots/godot/01_spawn_gate.png</code> — the first frame of the scripted tour. The HUD shows <em>DAY 1 · MISSION 1 / 8</em>; the mission marker disc sits to the right of the road, where the guard is.</figcaption>
+      </figure>
+    </div>
+
+    <h3>What the pair proves</h3>
+    <table>
+      <thead><tr><th style="width:26%">Element</th><th style="width:37%">Web build</th><th>Godot 4 port</th></tr></thead>
+      <tbody>
+        <tr><td>Spawn point</td><td>Plan (122, 448), facing the campus</td><td>Same plan coordinate, converted through <code>Campus.map_to_world()</code> to (−65.1, 138.6)&nbsp;m; <code>player.yaw = PI</code></td></tr>
+        <tr><td>Gate</td><td>Two hinged leaves, 15 bars each</td><td>Identical construction in <code>_build_main_gate()</code>; leaves lerp to 78° once the guard has been spoken to</td></tr>
+        <tr><td>Mission marker</td><td>Yellow cylinder + torus ring</td><td>Translucent disc (r&nbsp;1.05&nbsp;m) + ring (1.55–1.85&nbsp;m) + an emissive floating diamond that rotates and bobs</td></tr>
+        <tr><td>Streets</td><td>Two-lane asphalt from the Road Generator texture</td><td>Same texture on narrow streets; the wide entrance apron stays plain asphalt</td></tr>
+        <tr><td>Kerbs</td><td>Alternating yellow/white blocks</td><td>Same 1.5 × 0.5 × 0.14 m blocks, but batched into two <code>MultiMesh</code>es instead of ~1&nbsp;000 nodes</td></tr>
+        <tr><td>Admin Block</td><td>Original <code>b_admin</code> model</td><td>Same imported model, fitted with the web build's own factor of 0.98, with two colliding wings and a walkable central corridor</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <span class="note-l">Known visual difference</span>
+      The Godot build substitutes the original low-poly scenery with the
+      CC0 <em>Stylized Nature MegaKit</em> (Quaternius) for trees and ground cover,
+      and uses Sky3D for the sky, so foliage silhouette, ground texture and cloud
+      shape differ from the web build. Building masses, the gate, the roads and
+      the layout are the original's.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 7 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 8 — PAIR: ADMIN ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">03 · Web → Godot porting method</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">03 · Web → Godot porting method</span>Image pairs — the Admin Block and its hall</h1>
+
+    <div class="pair">
+      <figure>
+        <span class="tag web">Web build · Three.js</span>
+        <img src="../screenshots/02_admin_block.png" alt="Web build: the white Admin Block with its navy ANITS ADMIN BLOCK signboard, the devotional statue in the central porch and the open corridor behind it.">
+        <figcaption><b>Figure 3.3 (web).</b> <code>docs/screenshots/02_admin_block.png</code> — the Admin Block from the approach road. The central porch carries the devotional statue and the corridor runs straight through the building.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port</span>
+        <img src="../screenshots/godot/03_admin.png" alt="Godot port: the player stands inside the Admin Office at the open sliding glass doors with Laksmi at her desk behind them.">
+        <figcaption><b>Figure 3.4 (Godot).</b> <code>docs/screenshots/godot/03_admin.png</code> — inside the sealed Admin Office. The sliding glass doors have parted (they open when the player is within 3&nbsp;m) and Laksmi stands behind the desk in the office half of the room.</figcaption>
+      </figure>
+    </div>
+
+    <div class="pair">
+      <figure>
+        <span class="tag web">Web build · Three.js</span>
+        <img src="../screenshots/09_admin_hall.png" alt="Web build: the narrow central corridor inside the Admin Block, looking towards the exit and the campus beyond.">
+        <figcaption><b>Figure 3.5 (web).</b> <code>docs/screenshots/09_admin_hall.png</code> — the Admin Block's central hallway, the route the guard points the fresher down in his very first line of dialogue.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port</span>
+        <img src="../screenshots/godot/02_guard.png" alt="Godot port: the player standing beside Security Guard Bajirao at the closed main gate, with the interaction prompt visible.">
+        <figcaption><b>Figure 3.6 (Godot).</b> <code>docs/screenshots/godot/02_guard.png</code> — mission step 1. The tour stands beside the guard so the camera boom does not hide him; pressing <em>E</em> opens his three-line welcome.</figcaption>
+      </figure>
+    </div>
+
+    <h3>Translating the Admin Block</h3>
+    <p>
+      The Admin Block is the one building whose interior the player enters, so it
+      needed both an exterior and a collision model that leaves a corridor open.
+      <code>campus_builder.gd</code> reproduces the web build's arrangement
+      exactly: the imported <code>b_admin.fbx</code> is placed at scale 0.98,
+      then the two solid wings are re-created as box colliders
+      (<code>AdminWestWing</code>, <code>AdminEastWing</code>) that span the
+      model's inner-to-outer extent, so the player can walk through the middle
+      but not into the walls. The devotional statue and the two porch columns get
+      their own small colliders.
+    </p>
+    <p>
+      The office itself is a separate node (<code>src/world/admin_office.gd</code>)
+      built far west of the campus at <code>CENTER = (−320, 0, 0)</code> and
+      reached through an invisible interact target named
+      <code>AdminOfficeHallDoor</code> in the group's
+      <code>admin_office_door</code>. The mission marker is retargeted to the hall
+      door rather than to Laksmi while the player is outside, because Laksmi is
+      sealed inside the room — see §8.
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 8 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 9 — PAIR: CSE / IT ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">03 · Web → Godot porting method</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">03 · Web → Godot porting method</span>Image pairs — the CSE and IT Blocks</h1>
+
+    <div class="pair">
+      <figure>
+        <span class="tag web">Web build · Three.js</span>
+        <img src="../screenshots/03_cse_block.png" alt="Web build: the blue CSE classroom-panel block with its repeating window grid and the navy signboard on the facade.">
+        <figcaption><b>Figure 3.7 (web).</b> <code>docs/screenshots/03_cse_block.png</code> — the CSE Block, the destination of mission step 4 and of Prof.&nbsp;Rao.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port</span>
+        <img src="../screenshots/godot/04_cse.png" alt="Godot port: the player in front of the recoloured CSE classroom-panel block with the ANITS ADMIN BLOCK signboard style applied to the facade sign.">
+        <figcaption><b>Figure 3.8 (Godot).</b> <code>docs/screenshots/godot/04_cse.png</code> — the same block in the Godot build. The wall tint <code>#cfe3ff</code> from the data file is reproduced by recolouring the 32 × 32 swatch at (32, 64) of the pack's 256 × 256 palette atlas — the same trick the web game used.</figcaption>
+      </figure>
+    </div>
+
+    <div class="pair">
+      <figure>
+        <span class="tag web">Web build · Three.js</span>
+        <img src="../screenshots/04_it_block.png" alt="Web build: the tall IT Block built as a row of low-poly units on the east side of the campus.">
+        <figcaption><b>Figure 3.9 (web).</b> <code>docs/screenshots/04_it_block.png</code> — the IT Block, a six-bay low-poly row on the east side, where Suresh hands over the lab manual.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port</span>
+        <img src="../screenshots/godot/05_it.png" alt="Godot port: the IT Block row of low-poly units in the Godot build, with the peach wall colour from the data file.">
+        <figcaption><b>Figure 3.10 (Godot).</b> <code>docs/screenshots/godot/05_it.png</code> — the IT row. <code>_build_lowpoly_row()</code> repeats the <code>lp</code> unit along the plot, computing the unit count from the plot length and the model's own depth, and applies the same palette-skin recolour as the web build.</figcaption>
+      </figure>
+    </div>
+
+    <div class="note">
+      <span class="note-l">Why the palette trick matters</span>
+      The original low-poly pack bakes every building into a single
+      256 × 256 palette atlas. The web game recolours one 32 × 32 swatch per
+      building to get a different wall colour while keeping the roof, window and
+      door colours intact. The Godot build reproduces this in
+      <code>_palette_texture()</code>, caching one <code>ImageTexture</code> per
+      colour — which is why the peach IT block and the sandy CSM block read
+      correctly rather than as flat coloured boxes.
+    </div>
+
+    <h3>The model-fitting rule</h3>
+    <p>
+      <code>src/world/original_models.gd</code> keeps two fitting modes. The
+      <em>fixed</em> mode uses the web build's own literal factor — the Admin
+      Block at 0.98, the auditorium at 1.6, the bench at 0.286, the temple at 11.0
+      — because those factors were already tuned against the original's scene
+      scale. The <em>fit</em> mode scales a model so its footprint fills the plot
+      rectangle, and is used for the bank, café, workshop, auditorium pavilion
+      and the classroom-panel block. The <em>height</em> mode normalises a
+      character to a target stature: the guard 1.7&nbsp;m, Laksmi 1.7&nbsp;m,
+      cadets 1.7/1.62/1.6&nbsp;m, Colonel Singh 1.85&nbsp;m, Remy 1.75&nbsp;m.
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 9 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 10 — PAIR: CANTEEN / NCC ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">03 · Web → Godot porting method</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">03 · Web → Godot porting method</span>Image pairs — the canteen and the parade ground</h1>
+
+    <div class="pair">
+      <figure>
+        <span class="tag web">Web build · Three.js</span>
+        <img src="../screenshots/10_canteen_vending.png" alt="Web build: two vending machines on the east wall of the Gate Canteen near the main gate.">
+        <figcaption><b>Figure 3.11 (web).</b> <code>docs/screenshots/10_canteen_vending.png</code> — the two vending machines outside the Gate Canteen: a red soda machine and a blue energy machine.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port</span>
+        <img src="../screenshots/godot/06_canteen.png" alt="Godot port: the canteen area in the Godot build with the player standing near the vending machines.">
+        <figcaption><b>Figure 3.12 (Godot).</b> <code>docs/screenshots/godot/06_canteen.png</code> — mission step 6, Arjun at the canteen. The four vending machines, their stock lists and their positions are carried verbatim in <code>campus_data.json</code>; the shop panel itself is not yet implemented.</figcaption>
+      </figure>
+    </div>
+
+    <div class="pair">
+      <figure>
+        <span class="tag web">Web build · Three.js</span>
+        <img src="../screenshots/05_ncc_ground_colonel.png" alt="Web build: a high view over the NCC parade ground with the cadets drawn up in formation and the blue-roofed open auditorium in the foreground.">
+        <figcaption><b>Figure 3.13 (web).</b> <code>docs/screenshots/05_ncc_ground_colonel.png</code> — the sand parade ground with the NCC company drawn up, the tricolour and the open auditorium pavilion.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot"> Godot 4 port</span>
+        <img src="../screenshots/godot/07_parade_ground.png" alt="Godot port: the NCC parade ground in the Godot build with the cadets standing in formation and the mission marker above them.">
+        <figcaption><b>Figure 3.14 (Godot).</b> <code>docs/screenshots/godot/07_parade_ground.png</code> — mission step 7, the salute. Pressing <em>G</em> makes the player salute and triggers the 18 cadets to return it in a staggered 0.11&nbsp;s cascade.</figcaption>
+      </figure>
+    </div>
+
+    <h3>Salute mechanics</h3>
+    <p>
+      <code>main.gd::_salute()</code> mirrors the web build's rule: pressing
+      <em>G</em> plays the player's salute animation, and if the player is within
+      20&nbsp;m of Colonel Singh — or the current step is of type
+      <code>salute</code> — the colonel returns the salute and the cadet company
+      answers, each cadet offset by 0.11&nbsp;s so the formation ripples rather
+      than snapping. When the active step is a salute step, the mission advances
+      and the toast <em>"The NCC company returns your salute. Jai Hind!"</em> is
+      raised.
+    </p>
+
+    <div class="note">
+      <span class="note-l">Difference in formation layout</span>
+      The web build draws the parade company as a loose hand-built formation.
+      The Godot build expands the same 3 × 6 grid from the <code>cadets</code>
+      block of <code>npcs.json</code> (<code>rows: 3</code>, <code>cols: 6</code>,
+      with <code>row_step</code> and <code>col_step</code>), producing 18 cadets
+      at deterministic positions — the same approach the web build's own table
+      expansion used, and the reason the headless suite can assert the count.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 10 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 11 — CAMPUS LAYOUT I ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">04 · Campus layout &amp; roads</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">04 · Campus layout &amp; roads</span>The coordinate system</h1>
+
+    <p class="lead">
+      Everything about the campus — every building, every prop, every mission
+      anchor — is authored in the web build's own <em>plan-pixel</em> space and
+      converted to world metres once, at load time. That single conversion is why
+      the port can be diffed numerically against the original.
+    </p>
+
+    <table>
+      <caption>Plan-pixel → world-metre conversion</caption>
+      <thead><tr><th style="width:30%">Quantity</th><th style="width:22%">Value</th><th>Where it is defined</th></tr></thead>
+      <tbody>
+        <tr><td>Scale</td><td>1 plan px = 0.7 m</td><td><code>Campus.MAP_SCALE</code></td></tr>
+        <tr><td>Origin (campus centre)</td><td>(215, 250) plan px</td><td><code>Campus.MAP_ORIGIN</code></td></tr>
+        <tr><td>Playable extent</td><td>Rect2(58, 58, 310, 374) plan px</td><td><code>Campus.EXTENT_MAP</code> → 217.0 × 261.8 m</td></tr>
+        <tr><td>Ground extent</td><td>[36, 36, 392, 458] plan px</td><td><code>campus_data.json</code> — the ground runs 1&nbsp;400&nbsp;m wider than the campus so the horizon is never empty</td></tr>
+        <tr><td>Conversion</td><td><code>x = (px − 215) × 0.7</code><br><code>z = (py − 250) × 0.7</code></td><td><code>Campus.map_to_world()</code>, <code>Campus.world_to_map()</code></td></tr>
+        <tr><td>Axes</td><td>+X = east, +Z = south</td><td>Y is up in world space</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Verified round trip</h3>
+    <p>
+      The headless suite asserts the conversion against a known point: plan
+      (122, 448) must map to world (−65.1, 138.6) and must map back to itself.
+      That single check catches an entire class of porting errors — a swapped
+      axis, an inverted sign, a scale mistake — before any screenshot is taken.
+    </p>
+
+    <h3>Zones</h3>
+    <table>
+      <caption>The five zones</caption>
+      <thead><tr><th style="width:24%">Zone</th><th style="width:24%">Plan rect</th><th>Godot treatment</th></tr></thead>
+      <tbody>
+        <tr><td>Parade ground</td><td>[146, 357, 249, 427]</td><td>Sand-coloured slab with a raised paved footpath framing all four sides</td></tr>
+        <tr><td>Basketball court</td><td>[260, 251, 340, 314]</td><td>Court material with a 28 × 15 m painted court, two hoop posts, boards and torus rings</td></tr>
+        <tr><td>Power supply</td><td>[250, 320, 365, 415]</td><td>Ground slab</td></tr>
+        <tr><td>Central lawn</td><td>[95, 320, 150, 360]</td><td>Mown lawn slab; the only zone grass may be scattered into</td></tr>
+        <tr><td>Parking</td><td>[64, 160, 98, 290]</td><td>Asphalt apron; 91 cars in three rows of 30 / 31 / 30</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Gates and walls</h3>
+    <p>
+      Six wall runs enclose the campus, each 2.4&nbsp;m high with a capped coping
+      and stone pillars every 12&nbsp;m. Two gates pierce them: the
+      <strong>main gate</strong> at plan [100, 432, 145, 432] — two 8.2&nbsp;m
+      stone pillars, a lintel carrying the ANITS sign in gold and the college's
+      full name beneath it, and two barred leaves that swing open to 78° once the
+      guard has been spoken to — and the <strong>Back Gate</strong> arch at plan
+      (236, 98), a blue 9&nbsp;m portal labelled <em>Back Gate</em>.
+    </p>
+
+    <h3>How the campus is generated</h3>
+    <p>
+      Nothing about the campus is hand-modelled. <code>campus_builder.gd</code>
+      walks the JSON in a fixed order — ground, roads, zones, walls, gates,
+      buildings, specials, props, lamps, benches, vending machines — and emits
+      the geometry, the materials and the collision shapes from it. The only
+      hand-written geometry in the whole campus is the Admin Office, because it
+      is the one room the player can walk into. This is what makes the plan
+      portable: a different campus is a different <code>campus_data.json</code>.
+    </p>
+    <p>
+      Two coordinate spaces are in play. The plan is authored in plan pixels and
+      converted once, at load time, into world metres. The authored data is
+      therefore directly comparable with the web build's own tables, which is
+      what the headless suite asserts (§11.1).
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 11 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 12 — BUILDINGS ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">04 · Campus layout &amp; roads</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">04 · Campus layout &amp; roads</span>The seventeen buildings</h1>
+
+    <p>
+      Every footprint below is the web build's own rectangle, in plan pixels,
+      copied from <code>src/data/campus_data.json</code>. <em>Model</em> names the
+      generator branch that places the mass; <em>face</em> is the side the entrance
+      sign and the door canopy are attached to.
+    </p>
+
+    <table>
+      <caption>Buildings — footprints, heights and generator</caption>
+      <thead><tr><th>Building</th><th>Plan rect</th><th class="num">Height</th><th>Model</th><th>Face</th></tr></thead>
+      <tbody>
+        <tr><td>Mechanical Block</td><td>[101, 116, 226, 156]</td><td class="num">10 m</td><td>lowpoly_row (9 bays)</td><td>S</td></tr>
+        <tr><td>Stair Auditorium</td><td>[115, 157, 156, 196]</td><td class="num">11 m</td><td>stair_auditorium</td><td>S</td></tr>
+        <tr><td>Workshop</td><td>[183, 157, 222, 187]</td><td class="num">7 m</td><td>workshop</td><td>S</td></tr>
+        <tr><td>Chemical Block</td><td>[109, 205, 155, 239]</td><td class="num">11.5 m</td><td>panel_block</td><td>E</td></tr>
+        <tr><td>EEE Block</td><td>[172, 201, 232, 231]</td><td class="num">11.5 m</td><td>panel_block</td><td>W</td></tr>
+        <tr><td>CSE Block</td><td>[102, 246, 156, 281]</td><td class="num">11.5 m</td><td>panel_block</td><td>E</td></tr>
+        <tr><td>ECE Block</td><td>[170, 244, 230, 279]</td><td class="num">11.5 m</td><td>panel_block</td><td>W</td></tr>
+        <tr><td>ADMIN BLOCK</td><td>[97, 291, 232, 331]</td><td class="num">12 m<br><small>16.954 m rendered</small></td><td>admin_block (× 0.98)</td><td>NS</td></tr>
+        <tr><td>IT Block</td><td>[260, 143, 282, 237]</td><td class="num">11 m</td><td>lowpoly_row (6 bays)</td><td>W</td></tr>
+        <tr><td>Civil Block (N)</td><td>[276, 61, 358, 117]</td><td class="num">14 m</td><td>lowpoly_row (2 bays)</td><td>W</td></tr>
+        <tr><td>Civil Block (S)</td><td>[288, 137, 356, 224]</td><td class="num">14 m</td><td>lowpoly_row (4 bays)</td><td>W</td></tr>
+        <tr><td>CSM Block</td><td>[286, 226, 319, 246]</td><td class="num">7 m</td><td>lowpoly_row (3 bays)</td><td>S</td></tr>
+        <tr><td>Canteen</td><td>[286, 120, 314, 136]</td><td class="num">5 m</td><td>cafe</td><td>WE</td></tr>
+        <tr><td>Temple</td><td>[102, 331, 122, 349]</td><td class="num">4 m</td><td>temple (× 11)</td><td>E</td></tr>
+        <tr><td>Magic Spot</td><td>[62, 349, 80, 366]</td><td class="num">5 m</td><td>noodle_bar</td><td>E</td></tr>
+        <tr><td>Gate Canteen</td><td>[62, 375, 80, 395]</td><td class="num">5 m</td><td>cafe</td><td>WE</td></tr>
+        <tr><td>Bank</td><td>[62, 400, 80, 417]</td><td class="num">6 m</td><td>bank</td><td>E</td></tr>
+      </tbody>
+    </table>
+
+    <h3>How a building is placed</h3>
+    <ul>
+      <li><strong>lowpoly_row</strong> — repeats the <code>lp</code> unit along the plot. The unit width is derived from the model's own depth and the building height, the number of units from the plot length, and the remainder is distributed as an equal gap. Each unit gets its own box collider.</li>
+      <li><strong>panel_block</strong> — the classroom-panel block (CSE, ECE, EEE, Chemical). The web build scales so the block's <em>length</em> fits the plot depth and stretches X by 1.3; the Godot build reproduces both factors and then recolours the palette atlas.</li>
+      <li><strong>admin_block</strong> — the imported original with two colliding wings and an open central corridor, as described in §3.</li>
+      <li><strong>Single-model plots</strong> — the bank, café, temple and workshop are fitted to their rectangle and given one box collider.</li>
+    </ul>
+
+    <div class="note">
+      <span class="note-l">Signboards</span>
+      Every building carries a solid navy signboard bolted to its facade with a
+      gold trim strip, and a <code>Label3D</code> in white capitals. The board is
+      sized from the name length and clamped to 72&nbsp;% of the facade, so long
+      names such as <em>ADMIN BLOCK</em> and <em>MAGIC SPOT</em> stay inside the
+      building frontage. The sign faces the building's <em>face</em> side, which
+      is also where the web game put its labels.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 12 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 13 — ROADS ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">04 · Campus layout &amp; roads</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">04 · Campus layout &amp; roads</span>Streets, kerbs and markings</h1>
+
+    <p>
+      The campus carries twelve street rectangles. Eight are internal roads; four
+      are perimeter strips that close the loop outside the walls. Their widths are
+      recorded in metres in the data file and are reproduced by the builder.
+    </p>
+
+    <table>
+      <caption>Street rectangles</caption>
+      <thead><tr><th class="num">#</th><th>Plan rect</th><th class="num">Width</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>[64, 160, 98, 345]</td><td class="num">16.8 m</td><td>West spine, parallel to the parking apron</td></tr>
+        <tr><td class="num">2</td><td>[82, 345, 100, 432]</td><td class="num">12.6 m</td><td>Gate approach — Bank, Gate Canteen, Magic Spot</td></tr>
+        <tr><td class="num">3</td><td>[96, 332, 256, 352]</td><td class="num">14.0 m</td><td>Entrance boulevard across the Admin Block front</td></tr>
+        <tr><td class="num">4</td><td>[106, 345, 139, 445]</td><td class="num">23.1 m</td><td>Main gate driveway, the Day&nbsp;1 crossing point</td></tr>
+        <tr><td class="num">5</td><td>[234, 40, 252, 352]</td><td class="num">12.6 m</td><td>Central north–south street, the lamp-post avenue</td></tr>
+        <tr><td class="num">6</td><td>[100, 239, 236, 246]</td><td class="num">4.9 m</td><td>Service lane behind the CSE Block</td></tr>
+        <tr><td class="num">7</td><td>[100, 281, 236, 291]</td><td class="num">7.0 m</td><td>Service lane in front of the CSE Block</td></tr>
+        <tr><td class="num">8</td><td>[157, 157, 171, 285]</td><td class="num">9.8 m</td><td>Cross link between the two halves of the campus</td></tr>
+        <tr><td class="num">9</td><td>[40, 42, 388, 56]</td><td class="num">9.8 m</td><td>North perimeter road, outside the compound wall</td></tr>
+        <tr><td class="num">10</td><td>[42, 42, 56, 448]</td><td class="num">9.8 m</td><td>West perimeter road</td></tr>
+        <tr><td class="num">11</td><td>[368, 42, 382, 448]</td><td class="num">9.8 m</td><td>East perimeter road, behind the Civil Blocks</td></tr>
+        <tr><td class="num">12</td><td>[42, 434, 382, 448]</td><td class="num">9.8 m</td><td>South perimeter road, the approach to the main gate</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Surface treatment</h3>
+    <ul>
+      <li><strong>Narrow streets</strong> (under 16&nbsp;m) use the Road Generator pack's two-lane asphalt texture with its lane markings baked in; they are rotated 90° when the street runs east–west.</li>
+      <li><strong>Wide aprons</strong> (16&nbsp;m and over) stay plain asphalt and receive a dashed centre line of 2.4&nbsp;m dashes at 6&nbsp;m intervals — except the parking apron, which is left clear.</li>
+      <li><strong>Footpaths</strong> — a 2.2&nbsp;m paved strip runs along both long edges of every street narrower than 20&nbsp;m, matching the web build.</li>
+      <li><strong>Kerbs</strong> — alternating yellow (<code>#f2c94c</code>) and white (<code>#f4f4ee</code>) blocks, 1.5&nbsp;m long, 0.5&nbsp;m wide and 0.14&nbsp;m high, laid every 1.5&nbsp;m along both edges.</li>
+      <li><strong>Zebra crossing</strong> — seven 2.0 × 3.2&nbsp;m stripes just inside the main gate, starting at plan x&nbsp;104.</li>
+    </ul>
+
+    <div class="pair">
+      <figure>
+        <span class="tag godot">Godot 4 port · scripted tour</span>
+        <img src="../screenshots/godot/09_campus_overview.png" alt="Godot port: a high aerial view of the whole ANITS campus, showing the Admin Block, the parade ground, the basketball court, the parking apron and the perimeter walls.">
+        <figcaption><b>Figure 4.1.</b> <code>docs/screenshots/godot/09_campus_overview.png</code> — the detached overview camera, 165&nbsp;m up, with fog disabled for the capture. The perimeter wall, the 91-car parking apron, the parade ground and the basketball court are all visible in one frame.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port · scripted tour</span>
+        <img src="../screenshots/godot/10_campus_plan.png" alt="Godot port: a top-down plan view of the whole ANITS campus showing the road grid, the buildings, the parade ground and the parking apron.">
+        <figcaption><b>Figure 4.2.</b> <code>docs/screenshots/godot/10_campus_plan.png</code> — the top-down camera at 260&nbsp;m. Because the plan is authored in plan pixels and converted once, this view is a direct rasterisation of <code>campus_data.json</code>.</figcaption>
+      </figure>
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 13 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 14 — CAMPUS LANDMARKS ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">04 · Campus layout &amp; roads</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">04 · Campus layout &amp; roads</span>The perimeter road and the campus landmarks</h1>
+
+    <p>
+      The web build's campus sits inside a boundary wall with no road beyond it.
+      The port keeps that wall but adds a <strong>perimeter road</strong> that
+      rings the whole compound, because the brief asks for roads all the way
+      along the college and because a real campus has a service road outside the
+      gate. The ring is narrow — 9.8&nbsp;m — and runs between the wall and the
+      grass verge, so it frames the campus instead of cutting through it. The
+      main-gate driveway and the central north–south street both meet it, which
+      makes the gate, the back gate and the parade ground reachable by car.
+    </p>
+    <p>
+      Every road rect uses a single unshaded asphalt shader with painted edge
+      lines and dashed centre lines. The material is two-sided
+      (<code>cull_disabled</code>), so the surface stays solid from the aerial
+      camera and from the low camera boom instead of disappearing when a quad is
+      viewed from behind — the bug that made the compound read as grass and
+      footpaths in an earlier build.
+    </p>
+
+    <div class="pair">
+      <figure>
+        <span class="tag godot">Godot 4 port · beauty pass</span>
+        <img src="../screenshots/godot/beauty/10_campus_aerial.png" alt="Godot port: aerial view of the campus with the perimeter road ringing the compound.">
+        <figcaption><b>Figure 4.3.</b> The aerial beauty pass (<code>-- --beauty</code>): the perimeter road rings the whole compound, the parade ground carries the Open Auditorium pavilion and the tricolour, and the 11&nbsp;kV substation sits in its fenced yard on the east side.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port · beauty pass</span>
+        <img src="../screenshots/godot/beauty/06_ncc_ground.png" alt="Godot port: the Open Auditorium pavilion, the Indian flag and the NCC ground.">
+        <figcaption><b>Figure 4.4.</b> The Open Auditorium — the original <code>b_aud</code> pavilion with its blue roof and eight columns — stands on the NCC ground beside the Indian tricolour. This model replaces the placeholder cylinder the port shipped with.</figcaption>
+      </figure>
+    </div>
+
+    <div class="pair">
+      <figure>
+        <span class="tag godot">Godot 4 port · beauty pass</span>
+        <img src="../screenshots/godot/beauty/04_it_block.png" alt="Godot port: the IT block façade with its windows, sills and awnings.">
+        <figcaption><b>Figure 4.5.</b> The IT block, shot from the main road. The low-poly rows are placed exactly like the web build's <code>lpRow()</code> helper — one long unit flush against the plot edge — so the façade keeps its windows, sills and red-and-white awnings instead of reading as a blank slab.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port · beauty pass</span>
+        <img src="../screenshots/godot/beauty/01_main_gate.png" alt="Godot port: the main gate of the college.">
+        <figcaption><b>Figure 4.6.</b> The main gate: the stone pillars, the swinging leaves and the gold ANITS sign, seen from the perimeter road where the player spawns on the first morning.</figcaption>
+      </figure>
+    </div>
+
+    <div class="note">
+      <span class="note-l">Landmarks rebuilt from the original assets</span>
+      The Open Auditorium pavilion (<code>b_aud.glb</code>), the four low-poly
+      block rows (<code>b_lp.glb</code>), the classroom blocks
+      (<code>b_brez.glb</code>), the Admin Block (<code>b_admin.fbx</code>), the
+      NCC captain (<code>b_colonel.glb</code>), Laksmi (<code>laksmi.glb</code>)
+      and the security guard (<code>guard.obj</code>) all come from the web
+      build's own model folder, so the port shows the same silhouettes, the
+      same window grids and the same colours as the original.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 14 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 14 — DAY 1 TABLE ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">05 · Day 1 mission flow</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">05 · Day 1 mission flow</span>The eight steps, end to end</h1>
+
+    <p class="lead">
+      Day&nbsp;1 is the tutorial. It is the only mission in the web build that is
+      hard-coded rather than generated from a table — it lives in the
+      <code>STORY</code> array inside <code>js/game.js</code>. The Godot build
+      hoisted it verbatim into <code>Mission.DAY1</code> so that it sits next to
+      the generated Days&nbsp;2–10 in one file.
+    </p>
+
+    <table>
+      <caption>Day 1 step table — <code>src/autoload/mission_runner.gd</code></caption>
+      <thead><tr><th class="num">#</th><th style="width:40%">Objective text</th><th style="width:15%">Type</th><th>Target / parameter</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>Talk to Security Guard Bajirao beside the main gate (press E near him).</td><td>npc</td><td><code>npc: guard</code>, <code>line: "0"</code>, <code>say: "You: First day at ANITS… let us go in!"</code></td></tr>
+        <tr><td class="num">2</td><td>Walk through the ANITS main gate. (Hold Shift to run)</td><td>at</td><td>Plan (122, 396), radius 12 m</td></tr>
+        <tr><td class="num">3</td><td>Go to the Admin Block and talk to Laksmi (Admin).</td><td>npc</td><td><code>npc: clerk</code>, <code>line: "2"</code></td></tr>
+        <tr><td class="num">4</td><td>Meet Prof. Rao at the CSE Block.</td><td>npc</td><td><code>npc: prof</code>, <code>line: "3"</code></td></tr>
+        <tr><td class="num">5</td><td>Collect your lab manual from Suresh at the IT Block.</td><td>npc</td><td><code>npc: suresh</code>, <code>line: "4"</code></td></tr>
+        <tr><td class="num">6</td><td>Meet your friend Arjun at the Canteen.</td><td>npc</td><td><code>npc: arjun</code>, <code>line: "5"</code></td></tr>
+        <tr><td class="num">7</td><td>Go to the Open Auditorium grounds and salute the NCC cadets (press G near Colonel Singh).</td><td>salute</td><td>Any position; the colonel must be within 20 m</td></tr>
+        <tr><td class="num">8</td><td>Talk to Colonel Singh.</td><td>npc</td><td><code>npc: colonel</code>, <code>line: "7"</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Step types</h3>
+    <table>
+      <thead><tr><th style="width:16%">Type</th><th style="width:26%">Completion test</th><th>Implementation</th></tr></thead>
+      <tbody>
+        <tr><td><code>npc</code></td><td>Talk to a named character</td><td><code>Mission.notify_talked_to(npc_id)</code> advances only when the <em>current</em> step names that NPC.</td></tr>
+        <tr><td><code>at</code></td><td>Enter a radius around a plan point</td><td><code>Mission.notify_position()</code> converts the plan point to world metres and advances inside the radius. Polled every frame from <code>main.gd::_process()</code>.</td></tr>
+        <tr><td><code>salute</code></td><td>Press <em>G</em> near the colonel</td><td><code>Mission.notify_salute()</code> advances only for a salute-type step.</td></tr>
+        <tr><td><code>chk</code></td><td>Predicate on run state</td><td>Used by Day&nbsp;2 (withdraw at least Rs.&nbsp;250 from the bank). Predicates are not yet implemented in the Godot build.</td></tr>
+        <tr><td><code>mini</code></td><td>A minigame completion</td><td>Quiz, shootout, command drill, mash and dance. Not implemented in the Godot build.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <span class="note-l">Objective priority</span>
+      When the player stands inside the 3.8&nbsp;m interaction radius of more than
+      one character, the <em>mission objective wins</em>. <code>player.gd</code>
+      tracks the closest NPC for the ambient interaction prompt, but if the active
+      mission step names an NPC that is also in range, that NPC is promoted to
+      <code>dialogue_nearby</code>. Without this rule Colonel Singh would be
+      unusable — he stands inside a company of 18 cadets.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 15 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 15 — DAY 1 GATE ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">05 · Day 1 mission flow</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">05 · Day 1 mission flow</span>The gate, the marker and the Admin Block</h1>
+
+    <h3>The gate is a mission gate, not scenery</h3>
+    <p>
+      The main gate starts closed and is driven by the mission state.
+      <code>main.gd::_on_step_changed()</code> calls
+      <code>campus.set_gate_open(index &gt;= 1)</code> on every step change, so
+      the leaves swing open the moment the guard has been spoken to — step&nbsp;1
+      completes, the index becomes 1, and the target angle of 78° per leaf is
+      lerped in over roughly a third of a second. This reproduces the web
+      build's own <code>gateLocked</code> flag, which it clears on the same
+      transition.
+    </p>
+
+    <h3>The mission marker</h3>
+    <p>
+      Three meshes make up the marker: a translucent yellow disc of radius
+      1.05&nbsp;m, a brighter ring from 1.55 to 1.85&nbsp;m, and an emissive
+      0.3&nbsp;m cube rotated 45° on both axes, floating 2.2&nbsp;m above the
+      ground and bobbing ±0.12&nbsp;m. The whole marker scales with a
+      4.5&nbsp;% sine pulse at 2.4&nbsp;rad/s, and the diamond counter-rotates at
+      1.8&nbsp;rad/s so it reads from any angle. Inside the Admin Office the
+      marker is scaled down to 58&nbsp;% because the room is only 10&nbsp;m deep.
+    </p>
+
+    <div class="pair">
+      <figure>
+        <span class="tag godot">Godot 4 port · step 1</span>
+        <img src="../screenshots/godot/02_guard.png" alt="Godot port: the player beside the security guard at the closed main gate with the dialogue prompt showing.">
+        <figcaption><b>Figure 5.1.</b> <code>docs/screenshots/godot/02_guard.png</code> — step 1. Bajirao stands at plan (134, 438). His three-line greeting is in the <code>steps["0"]</code> block of <code>npcs.json</code>.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port · step 3</span>
+        <img src="../screenshots/godot/03_admin.png" alt="Godot port: inside the Admin Office, facing Laksmi through the open sliding glass doors, with the interaction prompt at the bottom.">
+        <figcaption><b>Figure 5.2.</b> <code>docs/screenshots/godot/03_admin.png</code> — step 3. The HUD reads <em>DAY 1 · MISSION 3 / 8</em>; the prompt bar shows <em>Talk to Laksmi (Admin)</em> with the <em>E</em> key art from the Controller Icons pack.</figcaption>
+      </figure>
+    </div>
+
+    <h3>Reaching Laksmi</h3>
+    <p>
+      Laksmi is sealed inside the office, so the marker retargets itself to the
+      hall door while the player is outside:
+    </p>
+    <pre><span class="c">// main.gd :: _update_marker()</span>
+if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span> in_office and admin_office:
+    <span class="c"># Point at the Admin hall door, not at Laksmi inside the sealed room.</span>
+    <span class="k">var</span> door := admin_office.hall_door_pos
+    mission_marker.position = Vector3(door.x, <span class="s">0.09</span>, door.z)</pre>
+    <p>
+      The player walks into the door (<code>admin_office_door</code> group,
+      2.8&nbsp;m radius), the scene teleports the player to
+      <code>admin_office.entry_pos</code>, the camera boom shortens to
+      3.1&nbsp;m so it stays inside the room, and a toast announces
+      <em>"Admin Office — waiting room. Ms.&nbsp;Laksmi is at her desk."</em>
+      Leaving reverses it through <code>hall_return_pos</code>.
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 16 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 16 — DAY 1 REST ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">05 · Day 1 mission flow</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">05 · Day 1 mission flow</span>Steps four to eight</h1>
+
+    <div class="pair">
+      <figure>
+        <span class="tag godot">Step 4 · Prof. Rao</span>
+        <img src="../screenshots/godot/04_cse.png" alt="Godot port: the player in front of the CSE Block where Prof. Rao stands.">
+        <figcaption><b>Figure 5.3.</b> <code>04_cse.png</code> — the CSE Block. Prof.&nbsp;Rao's step-3 lines hand the player on to Suresh at the IT Block.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Step 5 · Suresh</span>
+        <img src="../screenshots/godot/05_it.png" alt="Godot port: the player at the IT Block with Suresh nearby.">
+        <figcaption><b>Figure 5.4.</b> <code>05_it.png</code> — the IT Block. Suresh is the lab assistant; his lines are stored under <code>steps["4"]</code>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="pair">
+      <figure>
+        <span class="tag godot">Step 6 · Arjun</span>
+        <img src="../screenshots/godot/06_canteen.png" alt="Godot port: the canteen area with Arjun and the vending machines.">
+        <figcaption><b>Figure 5.5.</b> <code>06_canteen.png</code> — the canteen. Arjun's lines live under <code>steps["5"]</code>; the web build substitutes the player's chosen name for his, while the Godot step text keeps <em>Arjun</em>.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Step 8 · Colonel Singh</span>
+        <img src="../screenshots/godot/08_colonel.png" alt="Godot port: Colonel Singh at the parade ground with the cadet formation behind him.">
+        <figcaption><b>Figure 5.6.</b> <code>08_colonel.png</code> — the final conversation. The tour approaches from the east so the whole cadet company is in frame rather than the backs of two heads.</figcaption>
+      </figure>
+    </div>
+
+    <h3>Dialogue playback</h3>
+    <p>
+      <code>src/autoload/dialogue_service.gd</code> shows one line at a time and
+      auto-advances, exactly like the web build's <code>showDlg()</code>. Each
+      line is held for <code>max(1.2, length × 0.055)</code> seconds; pressing
+      <em>E</em> (or tapping in touch mode) ends the timer and jumps to the next
+      line. The NPC turns to face the player when the conversation opens, the
+      player is frozen (<code>input_enabled = false</code>) and the camera boom
+      shortens to 3.2&nbsp;m. When the conversation ends, control returns and the
+      mission is notified.
+    </p>
+
+    <h3>Completion</h3>
+    <p>
+      After step 8 the runner sets <code>finished = true</code>, stops accepting
+      position and talk notifications, and emits <code>completed(day)</code>.
+      The Godot build does not yet present the web build's "Day&nbsp;1 Complete!"
+      overlay, which also awarded the ID-card item; the item grant path
+      (<code>GameState.give_item()</code>) exists and is tested, but the overlay
+      that triggers it is not built. This is listed in §12.
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 17 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 17 — HUD ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">06 · UI, HUD &amp; main menu</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">06 · UI, HUD &amp; main menu</span>HUD anatomy</h1>
+
+    <p class="lead">
+      The HUD is one <code>CanvasLayer</code> at layer&nbsp;10, built entirely
+      from anchors and containers rather than absolute pixel positions, so the
+      same layout is correct on a 16:9 laptop, a 20:9 phone and a 4:3 tablet.
+      Touch mode shrinks the type, narrows the panels and hides the keyboard
+      legend.
+    </p>
+
+    <figure>
+      <span class="tag godot">Godot 4 port · HUD in situ</span>
+      <img src="../screenshots/godot/01_spawn_gate.png" alt="Godot port: the full HUD over the campus — mission panel top-left, wallet and energy top-right, key legend bottom-left, minimap bottom-right.">
+      <figcaption><b>Figure 6.1.</b> <code>docs/screenshots/godot/01_spawn_gate.png</code> — the desktop HUD. The key legend along the bottom uses the Controller Icons pack's key artwork; the minimap is a baked <code>ImageTexture</code> with only the player marker redrawn each frame.</figcaption>
+    </figure>
+
+    <table>
+      <caption>HUD panel inventory</caption>
+      <thead><tr><th style="width:20%">Element</th><th style="width:31%">Content</th><th>Behaviour</th></tr></thead>
+      <tbody>
+        <tr><td>Mission panel</td><td>Top-left, 460&nbsp;px wide (330 in touch), navy on translucent black, gold title</td><td>Title reads <code>DAY n · MISSION k / m</code>; body is the current step text, word-wrapped</td></tr>
+        <tr><td>Wallet</td><td>Top-right, right-aligned, <code>Rs.200 | bank Rs.2000</code></td><td>Updated by <code>update_wallet(wallet, bank)</code></td></tr>
+        <tr><td>Energy</td><td>Top-right under the wallet: numeric value + progress bar</td><td>Bar is 160&nbsp;px wide in desktop, 120&nbsp;px in touch; maximum 100</td></tr>
+        <tr><td>Toast</td><td>Top-centre, green, fading in and out</td><td>Used for mission messages, the Admin Office announcement and the salute reply</td></tr>
+        <tr><td>Dialogue panel</td><td>Bottom-centre, 560 × 90&nbsp;px (470 in touch), gold speaker name</td><td>Shown by <code>show_dialogue()</code>, hidden by <code>hide_dialogue()</code></td></tr>
+        <tr><td>Subtitle</td><td>Bottom-centre above the dialogue panel</td><td>English by default, Telugu when <code>Settings.subtitle_language == "te"</code></td></tr>
+        <tr><td>Interaction prompt</td><td>Bottom-centre, with the <em>E</em> key art (hidden in touch mode)</td><td>Reads <em>Talk to …</em>, <em>Use vending machine</em>, <em>Enter the Admin Office</em> or <em>Leave the Admin Office</em></td></tr>
+        <tr><td>Minimap</td><td>Bottom-right (top-right in touch mode, out of the thumb arc)</td><td>Baked once from the campus data: roads, zones and building rectangles, plus a live player dot</td></tr>
+        <tr><td>Key legend</td><td>Bottom-left, desktop only</td><td>WASD move, Shift run, E talk/use, G salute, Q turn camera, Esc pause</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 18 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 18 — MAIN MENU ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">06 · UI, HUD &amp; main menu</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">06 · UI, HUD &amp; main menu</span>The front end</h1>
+
+    <p class="lead">
+      The web build's front end is nine DOM screens: intro, year, character,
+      name, welcome, main menu, settings, level select and loading. The Godot
+      build implements the six that carry the player from launch into Day&nbsp;1
+      — year, character, name, main menu, level select and loading — on a
+      centred 1600 × 1080 design canvas so the layout is identical on every
+      aspect ratio.
+    </p>
+
+    <table>
+      <caption>Front-end screens</caption>
+      <thead><tr><th style="width:16%">Screen</th><th style="width:28%">Content</th><th>Source / port</th></tr></thead>
+      <tbody>
+        <tr><td>Year select</td><td>Slider 2023–2025, large year numeral, uniform name and description</td><td><code>js/menu.js</code> <code>YINFO</code> → <code>main_menu.gd::UNIFORMS</code></td></tr>
+        <tr><td>Character select</td><td>Two cards: Mike (boy) and Amy (girl)</td><td><code>js/menu.js</code> → <code>main_menu.gd::_card()</code></td></tr>
+        <tr><td>Name</td><td>Single-line entry, maximum 14 characters</td><td><code>js/menu.js</code> <code>maxlength="14"</code></td></tr>
+        <tr><td>Main menu</td><td>ANITS logotype, "PLAYING AS …", START GAME, feature strapline</td><td><code>js/menu.js</code> → <code>main_menu.gd</code></td></tr>
+        <tr><td>Level select</td><td>5 × 2 grid of Day 1–10 cards with NEW / DONE badges and padlocks</td><td><code>js/menu.js</code> level grid → <code>main_menu.gd::show_levels()</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Uniforms</h3>
+    <table>
+      <thead><tr><th style="width:16%">Year</th><th style="width:26%">Name</th><th style="width:30%">Description</th><th>Shirt / trousers</th></tr></thead>
+      <tbody>
+        <tr><td>2023</td><td>Rose Uniform</td><td>Light pink shirt · black pants</td><td><code>#f0a6c4</code> / <code>#16161b</code></td></tr>
+        <tr><td>2024</td><td>Classic Uniform</td><td>Cream shirt · brown pants</td><td><code>#e8dfc4</code> / <code>#3b2a1f</code></td></tr>
+        <tr><td>2025</td><td>New Uniform</td><td>Sky blue shirt · navy pants</td><td><code>#87ceeb</code> / <code>#101a4a</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="pair">
+      <figure>
+        <span class="tag godot">Godot 4 port</span>
+        <img src="../screenshots/godot/menu_main.png" alt="Godot main menu with the original web-game photograph behind the title">
+        <figcaption><b>Figure 6.2.</b> The Godot main menu. The background is the web build's own campus photograph (<code>assets/ui/bg_clean.jpg</code>), washed to a blue dusk with a warm glow and a vignette, so the menu reads exactly like the original title screen.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Godot 4 port</span>
+        <img src="../screenshots/godot/menu_character.png" alt="Godot character select with live 3D previews">
+        <figcaption><b>Figure 6.3.</b> Character select with live 3D previews of the original <code>b_walk</code> and <code>cadet_amy</code> models, rendered in two small sub-viewports that only update while this screen is open.</figcaption>
+      </figure>
+    </div>
+
+    <div class="note">
+      <span class="note-l">What the front end still omits</span>
+      The intro credits card, the welcome card and the settings modal are not
+      reproduced; settings remain on the pause menu. The level grid is
+      implemented — see the next page.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 19 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 19 — LEVEL SELECT ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">06 · UI, HUD &amp; main menu</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">06 · UI, HUD &amp; main menu</span>The level select grid</h1>
+
+    <p class="lead">
+      The grid is a direct port of <code>js/menu.js</code>: ten cards in a
+      5 × 2 layout, each carrying its day number, its level name, a NEW or DONE
+      badge, and a padlock when the level is still locked. Day&nbsp;1 is the only
+      unlocked card on a fresh profile, so the screen reads exactly like the web
+      build at the start of the story.
+    </p>
+
+    <figure>
+      <span class="tag godot">Godot 4 port · level select</span>
+      <img src="../screenshots/godot/menu_levels.png" alt="Godot level select: ten Day cards in a 5 by 2 grid with Day 1 marked NEW and the other nine padlocked.">
+      <figcaption><b>Figure 6.4.</b> <code>docs/screenshots/godot/menu_levels.png</code> — the ten cards at 276 × 308&nbsp;px on the 1600 × 1080 design canvas. Thumbnails are 512 × 288 captures of the Godot campus, because the web build's <code>lv_*.jpg</code> files were never shipped. Tapping a locked card shakes it and raises the toast instead of starting a level.</figcaption>
+    </figure>
+
+    <table>
+      <caption>Day list — <code>src/ui/main_menu.gd::LEVELS</code></caption>
+      <thead><tr><th style="width:7%">Day</th><th style="width:43%">Level</th><th style="width:7%">Day</th><th>Level</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>Explore the College</td><td class="num">6</td><td>NCC Parade</td></tr>
+        <tr><td class="num">2</td><td>Pay the Fees</td><td class="num">7</td><td>Lab Manual Run</td></tr>
+        <tr><td class="num">3</td><td>Find Your Classroom</td><td class="num">8</td><td>Canteen Challenge</td></tr>
+        <tr><td class="num">4</td><td>Library Card</td><td class="num">9</td><td>Fest Stage</td></tr>
+        <tr><td class="num">5</td><td>Basketball Event</td><td class="num">10</td><td>First Classroom</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <span class="note-l">Flow</span>
+      START GAME opens the grid; choosing an unlocked card loads the campus and
+      starts that day's mission chain. The back button returns to the main menu,
+      and the quote and LEVELS badge sit where the web build puts them.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 20 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 20 — TOUCH ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">07 · Touch controls</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">07 · Touch controls</span>Mobile layout and input mapping</h1>
+
+    <p class="lead">
+      The touch layer is a second <code>CanvasLayer</code> at layer&nbsp;21, on top
+      of the HUD. It is created only when the device reports touch support, when a
+      touchscreen is available, or when the game is launched with
+      <code>-- --touch-preview</code> for the desktop layout pass.
+    </p>
+
+    <table>
+      <caption>Touch control geometry — <code>src/ui/touch_controls.gd</code></caption>
+      <thead><tr><th style="width:24%">Control</th><th style="width:20%">Geometry</th><th>Behaviour</th></tr></thead>
+      <tbody>
+        <tr><td>Virtual stick</td><td>68&nbsp;px radius, 34&nbsp;px margin, bottom-left</td><td>Dead zone 0.14; the value is rescaled linearly outside it and clamped to the unit disc. Drives the same move vector as WASD, so the player controller is identical on both paths.</td></tr>
+        <tr><td>Look drag</td><td>Anywhere outside the stick and the buttons</td><td>Emits a relative delta, scaled by 1.35 in <code>player.add_touch_look()</code> to compensate for the smaller screen. Drag distance under 14&nbsp;px is treated as a tap.</td></tr>
+        <tr><td><em>E</em> button</td><td>96&nbsp;px diameter, bottom-right</td><td>Calls the same <code>_interact()</code> resolver as the keyboard — so the 3.8&nbsp;m NPC radius and 3.4&nbsp;m machine radius apply unchanged.</td></tr>
+        <tr><td><em>G</em> button</td><td>78&nbsp;px diameter, above the E button</td><td>Triggers the salute.</td></tr>
+        <tr><td><em>RUN</em> button</td><td>86&nbsp;px diameter, left of E</td><td>Hold to run; press to latch a run toggle.</td></tr>
+        <tr><td>Tap</td><td>Look area, under 14&nbsp;px travel</td><td>Skips the current dialogue line.</td></tr>
+      </tbody>
+    </table>
+
+    <figure>
+      <span class="tag godot">Godot 4 port · phone layout</span>
+      <img src="../screenshots/godot/tour_touch/04_cse.png" alt="Touch layout with virtual joystick and action buttons">
+      <figcaption><b>Figure 7.1.</b> The touch layout with the on-screen stick and buttons, captured with <code>-- --touch-preview</code> at a 1280 × 720 landscape viewport. In touch mode the HUD hides the keyboard legend, moves the minimap to the top-right corner clear of the thumb arcs and scales every panel to the physical screen density.</figcaption>
+    </figure>
+
+    <div class="note warn">
+      <span class="note-l">Not validated on hardware</span>
+      This layout has been exercised through the <code>--touch-preview</code> path
+      and the mobile renderer path, not on a physical handset. See §11.3 and §12.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 21 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 20 — ADMIN OFFICE ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">08 · Admin Office interior</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">08 · Admin Office interior</span>A sealed room inside a sealed building</h1>
+
+    <p class="lead">
+      The Admin Office is the only interior in the game. It is not modelled from
+      an imported asset: <code>src/world/admin_office.gd</code> builds it from
+      low-poly boxes, so it stays cheap on a mobile GPU and matches the flat-shaded
+      look of the campus.
+    </p>
+
+    <table>
+      <caption>Room specification</caption>
+      <thead><tr><th style="width:26%">Element</th><th style="width:22%">Value</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Room centre</td><td>(−320, 0, 0) m</td><td>Built far west of the campus and reached by teleporting through the hall door</td></tr>
+        <tr><td>Footprint</td><td>12 × 10 m, 3.4 m high</td><td><code>HALF_W 6.0</code>, <code>HALF_D 5.0</code>, <code>HEIGHT 3.4</code></td></tr>
+        <tr><td>Partition</td><td>z = +0.5 m</td><td>Splits the waiting room from the office; a 2.6&nbsp;m opening carries a frame and two sliding glass panes</td></tr>
+        <tr><td>Exit doorway</td><td>x = 1.4 … 3.6 m in the south wall</td><td>Wooden door, brass knob, green EXIT sign reading "Back to the Admin hall"</td></tr>
+        <tr><td>Laksmi's desk</td><td>Centre, z = −2.7 m</td><td>Monitor, papers, navy nameplate; an office chair behind and two visitor chairs in front</td></tr>
+        <tr><td>Waiting room</td><td>West half</td><td>Two sofas, a rug, a coffee table with a tray and magazines, three potted plants, a wall clock</td></tr>
+        <tr><td>Bookshelves</td><td>Four, along the north wall</td><td>Five coloured book spines per shelf, one cell deliberately left empty</td></tr>
+        <tr><td>Restroom</td><td>South-east corner</td><td>Cubicle walls, floor tile, cistern + bowl + seat, RESTROOM sign</td></tr>
+        <tr><td>Lighting</td><td>4 emissive ceiling panels + 2 omni lights</td><td>Omni range 9 m, shadows off</td></tr>
+        <tr><td>Signage</td><td>ADMIN OFFICE, WAITING ROOM, ANITS ADMIN, RESTROOM, EXIT</td><td>All built from <code>Label3D</code> on coloured panels</td></tr>
+      </tbody>
+    </table>
+
+    <figure class="compact">
+      <span class="tag godot">Godot 4 port</span>
+      <img src="../screenshots/godot/beauty/12_admin_office.png" alt="Admin Office reception with Laksmi behind the desk">
+      <figcaption><b>Figure 8.1.</b> The Admin Office reception: Laksmi at her desk with the monitor, lamp, files and name plate, the RECEPTION signs, the ADMIN OFFICE plate on the partition and the file shelves behind. The waiting-room half of the room carries the sofas, rug, notice board and restroom door.</figcaption>
+    </figure>
+
+    <div class="note">
+      <span class="note-l">The sliding doors</span>
+      The two glass panes slide apart automatically when the player comes within
+      3&nbsp;m of the partition, closing again behind them. The panes are
+      <code>StandardMaterial3D</code> with alpha transparency, 0.08 roughness and
+      Schlick-GGX specular, and are double-sided so they read correctly from
+      either side.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 22 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 21 — CHARACTERS ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">09 · Characters, voice &amp; dialogue</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">09 · Characters, voice &amp; dialogue</span>The cast of sixty-four</h1>
+
+    <p class="lead">
+      Every character in the web build is reproduced: the same model, the same
+      height, the same facing, the same route and the same lines. The roster is
+      expanded from the compact tables in <code>src/data/npcs.json</code> by
+      <code>CampusDB._flatten_npcs()</code>, which is why the count can be
+      asserted in a headless test.
+    </p>
+
+    <table>
+      <caption>NPC census — the 64 expanded entries</caption>
+      <thead><tr><th style="width:26%">Group</th><th class="num">Count</th><th>How they are generated</th></tr></thead>
+      <tbody>
+        <tr><td>Main (quest) characters</td><td class="num">6</td><td>Authored individually: guard, clerk, prof, suresh, arjun, colonel</td></tr>
+        <tr><td>NCC cadets</td><td class="num">18</td><td>3 rows × 6 columns expanded from the <code>cadets</code> block</td></tr>
+        <tr><td>Route students</td><td class="num">9</td><td>Each walks a route; idle lines rotate through six shared phrases</td></tr>
+        <tr><td>Basketball players</td><td class="num">3</td><td>Static, sharing the basketball idle lines</td></tr>
+        <tr><td>Named walkers</td><td class="num">10</td><td>Each walks its own route with its own lines</td></tr>
+        <tr><td>Standing groups</td><td class="num">8</td><td>Static students with their own lines</td></tr>
+        <tr><td>Remy</td><td class="num">1</td><td>The shared student model, 1.75 m, on his own route</td></tr>
+        <tr><td>Girl students</td><td class="num">9</td><td>From <code>js/girls.js</code>; racers walk at 3.4 m/s, the rest stand and chat at 1.2 m/s</td></tr>
+        <tr class="tot"><td>Total</td><td class="num">64</td><td>Asserted by the headless suite</td></tr>
+      </tbody>
+    </table>
+
+    <h3>The six quest characters</h3>
+    <table>
+      <thead><tr><th style="width:18%">Character</th><th style="width:15%">Model</th><th style="width:16%">Plan position</th><th style="width:12%">Height</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>Bajirao (Security)</td><td><code>guard.glb</code></td><td>(134, 438)</td><td>1.70 m</td><td>Steps 1 and the Day&nbsp;2 ID check</td></tr>
+        <tr><td>Laksmi (Admin)</td><td><code>laksmi.glb</code></td><td>(174, 337)</td><td>1.70 m</td><td>Admission, fees, library forms, stamps</td></tr>
+        <tr><td>Prof. Rao (HOD CSE)</td><td>Remy student</td><td>(129, 287)</td><td>1.70 m</td><td>Semester, classroom, fee receipt, signatures</td></tr>
+        <tr><td>Suresh (Lab Assistant)</td><td>Remy student</td><td>(271, 243)</td><td>1.70 m</td><td>Lab manual and library card</td></tr>
+        <tr><td>Arjun (Friend)</td><td>Remy student</td><td>Canteen</td><td>1.70 m</td><td>Friend; the player meets him at each stage</td></tr>
+        <tr><td>Colonel Singh</td><td><code>b_colonel.glb</code></td><td>(214, 396)</td><td>1.85 m</td><td>NCC parade and the closing conversation</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Character rendering and culling</h3>
+    <p>
+      <code>src/world/character_visual.gd</code> normalises each imported model to
+      a target height, finds its <code>AnimationPlayer</code> and exposes
+      <em>walk</em>, <em>idle</em>, <em>talk</em> and <em>salute</em> clips. The
+      guard's blue palette is re-applied by material name because the imported
+      <code>guard.glb</code> bakes one blue into every material. Facial morph
+      meshes (eyes, brows, mouth, eyelash) are hidden, because they rely on
+      three.js morph targets and render as white shapes in Godot.
+    </p>
+    <p>
+      The campus runs 64 animated skeletons, so each NPC culls itself by camera
+      distance: the skeleton is deactivated beyond 95&nbsp;m and its name label
+      is hidden beyond 62&nbsp;m. NPCs carry no collision shape — the player walks
+      through them, exactly as in the web build.
+    </p>
+
+    <h3>Walk cycle</h3>
+    <p>
+      The imported Mixamo walk travels forward on the hips track, so playing it
+      unmodified slides the character across the ground and snaps back on loop.
+      The port bakes every hips position track in place — X and Z pinned to the
+      first key, the vertical bob kept — exactly like the web build's
+      <code>v[i*3]=v[0]; v[i*3+2]=v[2]</code>. The removed distance is kept as the
+      cycle's <em>stride</em>, measured once per model and cached (boy 1.31&nbsp;m,
+      Amy 1.24&nbsp;m, Remy 1.40&nbsp;m). Playback is then driven by
+      <code>clamp(speed / stride, 0.45, 3.2)</code>, the same formula as
+      <code>js/game.js</code>, so the feet stay planted at every speed. Because
+      the character files contain no run clip, a run plays the same cycle faster
+      and leans the body 0.12&nbsp;rad into the direction of travel.
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 23 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 22 — VOICE ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">09 · Characters, voice &amp; dialogue</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">09 · Characters, voice &amp; dialogue</span>Voice, subtitles — and the absence of music</h1>
+
+    <p class="lead">
+      The web build plays a recorded MP3 per line and falls back to the browser's
+      speech synthesis when a line has no clip. The Godot build always plays the
+      original recording and always shows the subtitle.
+    </p>
+
+    <table>
+      <caption>Voice bank — <code>src/autoload/voice_bank.gd</code></caption>
+      <thead><tr><th style="width:28%">Item</th><th style="width:22%">Value</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Recordings</td><td>632 MP3 files, 14.9 MB</td><td><code>third_party/anits_original/audio/</code></td></tr>
+        <tr><td>Boy clip table</td><td><code>clips.json</code> — 340 lines</td><td>Maps the English line text to <code>[telugu, mp3]</code></td></tr>
+        <tr><td>Girl clip table</td><td><code>clips_girl.json</code> — 310 lines</td><td>Used when the player plays as Amy</td></tr>
+        <tr><td>Audio buses</td><td>Master / Music / SFX / Voice / UI</td><td>Created at start-up by <code>_ensure_buses()</code>, mirroring the web build's mixer</td></tr>
+        <tr><td>Playback</td><td><code>AudioStreamPlayer</code> on the Voice bus</td><td><code>loop = false</code>; pitch clamped to 0.5–2.0; volume from <code>Settings.voice_volume</code></td></tr>
+        <tr><td>Subtitles</td><td>English, or Telugu when enabled</td><td>The Telugu string comes from the same clip table, so the two never drift apart</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Per-character voice profiles</h3>
+    <p>
+      The web build's <code>js/voice.js</code> <code>CFG</code> table is copied
+      verbatim. Pitch is applied to the clip; rate is carried over for reference
+      but the recordings are played at their authored speed.
+    </p>
+    <table>
+      <thead><tr><th style="width:22%">Speaker key</th><th class="num">Pitch</th><th class="num">Rate</th><th>Character</th></tr></thead>
+      <tbody>
+        <tr><td><code>you</code> / <code>youF</code></td><td class="num">1.28 / 1.14</td><td class="num">1.02 / 1.00</td><td>The player's own lines</td></tr>
+        <tr><td><code>guard</code></td><td class="num">0.72</td><td class="num">0.92</td><td>Bajirao</td></tr>
+        <tr><td><code>clerk</code></td><td class="num">1.00</td><td class="num">0.95</td><td>Laksmi</td></tr>
+        <tr><td><code>prof</code></td><td class="num">0.82</td><td class="num">0.90</td><td>Prof. Rao</td></tr>
+        <tr><td><code>suresh</code></td><td class="num">1.05</td><td class="num">1.00</td><td>Suresh</td></tr>
+        <tr><td><code>arjun</code></td><td class="num">1.12</td><td class="num">1.08</td><td>Arjun</td></tr>
+        <tr><td><code>colonel</code></td><td class="num">0.55</td><td class="num">0.85</td><td>Colonel Singh</td></tr>
+        <tr><td><code>sushma</code></td><td class="num">0.98</td><td class="num">1.02</td><td>Phone-call voice</td></tr>
+      </tbody>
+    </table>
+
+    <h3>There is no music</h3>
+    <div class="note warn">
+      <span class="note-l">Explicit statement</span>
+      The Godot build ships <strong>no background music</strong>. The
+      <em>Music</em> bus exists and is routed to Master, but nothing is ever
+      played on it. The original web build also carries no music track of its
+      own — it plays recorded voice lines and the browser's speech synthesis,
+      nothing else. The Godot build therefore reproduces the original exactly:
+      <strong>voice and dialogue only, no music bed.</strong> Any future music
+      track would be an addition, not a port, and would need its own licence.
+    </div>
+
+    <h3>Dialogue data shape</h3>
+    <p>
+      Each NPC's lines live under <code>lines</code> in <code>npcs.json</code>,
+      split into an <code>idle</code> array and a <code>steps</code> object keyed
+      by the mission step index. <code>npc.gd::lines_for(key)</code> returns the
+      step lines when the key exists and falls back to the idle lines otherwise,
+      which is what happens if the player talks to an NPC out of mission order.
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 24 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 23 — RENDERING PC ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">10 · Rendering &amp; the 60 fps strategy</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">10 · Rendering &amp; the 60 fps strategy</span>The desktop pipeline</h1>
+
+    <p class="lead">
+      The target is <strong>60&nbsp;fps</strong>, capped in code by
+      <code>Engine.max_fps = 60</code>. This section describes how the frame is
+      budgeted and which levers exist. It deliberately contains
+      <strong>no measured frame-rate figures</strong> — the benchmark slots are
+      marked and left empty.
+    </p>
+
+    <h3>Sky, sun and atmosphere</h3>
+    <p>
+      The sky is the Sky3D addon (<code>res://addons/sky_3d/</code>), which owns
+      the sky dome, the atmosphere, the clouds, the sun, the moon and the time of
+      day. Time is frozen at <code>current_time = 9.35</code> — the web build's
+      morning look — and only the visual side is used; the game clock is
+      independent. The dome is tuned with <code>atm_sun_intensity 16</code>,
+      <code>atm_darkness 0.42</code>, <code>atm_thickness 0.62</code>,
+      <code>fog_start 150</code>, <code>fog_end 760</code> and
+      <code>fog_falloff 2.1</code>. The environment uses ACES tone mapping
+      (exposure 0.88, white 1.6) with a subtle glow (intensity 0.14, bloom 0.03,
+      HDR threshold 1.25).
+    </p>
+
+    <h3>Draw-call strategy</h3>
+    <table>
+      <caption>How the campus stays cheap</caption>
+      <thead><tr><th style="width:30%">Category</th><th style="width:34%">Technique</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Trees, bushes, flowers</td><td>One <code>MultiMeshInstance3D</code> per species per surface</td><td>150 trees cost a handful of draw calls instead of 150 nodes</td></tr>
+        <tr><td>Grass</td><td>4&nbsp;200 tufts in 32 chunks, chunk hidden beyond 85&nbsp;m</td><td>Only nearby chunks are submitted</td></tr>
+        <tr><td>Kerbs</td><td>Two <code>MultiMesh</code>es, yellow and white</td><td>~1&nbsp;000 blocks in 2 draw calls</td></tr>
+        <tr><td>Road dashes, zebra crossing</td><td>One <code>MultiMesh</code> each</td><td>Markings are free</td></tr>
+        <tr><td>Cars</td><td>Three batches, three rows of 30 / 31 / 30</td><td>91 cars in 3 draw calls</td></tr>
+        <tr><td>Small-prop colliders</td><td>One shared <code>StaticBody3D</code> holding many box shapes</td><td>Dozens of physics bodies instead of hundreds</td></tr>
+        <tr><td>Small props</td><td><code>cast_shadow = OFF</code> on bushes, kerbs, kerb caps, ground</td><td>Fewer shadow draws</td></tr>
+        <tr><td>NPC skeletons</td><td>Deactivated beyond 95&nbsp;m, labels beyond 62&nbsp;m</td><td>64 characters, a fraction animated at any time</td></tr>
+        <tr><td>Minimap</td><td>Baked once into an <code>ImageTexture</code>; only the player dot redraws</td><td>No per-frame image rebuild</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Deterministic scatter</h3>
+    <p>
+      All vegetation uses the original's own linear congruential generator
+      (<code>src/util/lcg.gd</code>, multiplier 16807) seeded from
+      <code>props.seed = 5</code>. The same seed produces the same campus on
+      every machine and every run, which is what makes the headless suite's
+      determinism check meaningful and the screenshots reproducible.
+    </p>
+
+    <table>
+      <caption>Frame-time budget — targets, not measurements</caption>
+      <thead><tr><th style="width:40%">Item</th><th class="num">Budget</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>CPU — scripts, NPC updates, physics</td><td class="num">≤ 6 ms</td><td>Target</td></tr>
+        <tr><td>GPU — draw submission and shading</td><td class="num">≤ 8 ms</td><td>Target</td></tr>
+        <tr><td>Total frame</td><td class="num">≤ 16.6 ms</td><td>Target (60 fps)</td></tr>
+        <tr><td>Measured, desktop 1080p</td><td class="num"><!-- BENCH: --></td><td><em>To be measured</em></td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <span class="note-l">Order of attack if the frame rate drops</span>
+      1. Lower <code>scaling_3d_scale</code> — the biggest, least visible win.
+      2. Reduce the grass draw distance, then the NPC animation distance.
+      3. Reduce the shadow distance and the number of splits.
+      4. Disable the glow pass.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 25 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 24 — RENDERING MOBILE ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">10 · Rendering &amp; the 60 fps strategy</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">10 · Rendering &amp; the 60 fps strategy</span>The Android quality ladder</h1>
+
+    <p class="lead">
+      The mobile path is detected at start-up with
+      <code>OS.has_feature("mobile")</code> and is applied in
+      <code>main.gd::_apply_mobile_quality()</code> and
+      <code>_build_environment()</code>.
+    </p>
+
+    <table>
+      <caption>Mobile vs. desktop rendering settings</caption>
+      <thead><tr><th style="width:28%">Setting</th><th style="width:26%">Desktop</th><th>Android / iOS</th></tr></thead>
+      <tbody>
+        <tr><td>3D resolution scale</td><td><strong>0.88</strong>, bilinear (adaptive)</td><td><strong>0.78</strong>, bilinear (adaptive)</td></tr>
+        <tr><td>MSAA (3D)</td><td>Disabled</td><td>Disabled</td></tr>
+        <tr><td>Screen-space AA</td><td>Disabled</td><td>Disabled</td></tr>
+        <tr><td>Directional shadow</td><td>2 parallel splits, max distance 112 m, blur 0.9</td><td>2 parallel splits, max distance 92 m, blur 0.8</td></tr>
+        <tr><td>Adaptive step-down</td><td>0.78 → 0.68 → 0.60, shadow off</td><td>0.68 → 0.58 → 0.50, shadow off</td></tr>
+        <tr><td>Shadow map size</td><td>2048</td><td>1024</td></tr>
+        <tr><td>Cumulus clouds</td><td>Coverage 0.36</td><td>Disabled (coverage 0)</td></tr>
+        <tr><td>Cirrus clouds</td><td>Coverage 0.36</td><td>Coverage 0.28</td></tr>
+        <tr><td>Fog end distance</td><td>760 m</td><td>520 m</td></tr>
+        <tr><td>Glow</td><td>On, intensity 0.14</td><td>Disabled</td></tr>
+        <tr><td>Texture compression</td><td>—</td><td>ETC2 / ASTC enabled at import</td></tr>
+        <tr><td>Frame cap</td><td>60 fps</td><td>60 fps</td></tr>
+      </tbody>
+    </table>
+
+    <h3>What the mobile path costs</h3>
+    <ul>
+      <li>Rendering at 78&nbsp;% of the screen and upscaling bilinearly — the most significant single saving, and the least noticeable at arm's length on a phone.</li>
+      <li>If the frame rate still drops below 58&nbsp;fps for three seconds, the scale steps down (68, 58, 50&nbsp;%) and finally the sun shadow is turned off, so the game degrades instead of stuttering.</li>
+      <li>Halving the shadow map and halving the shadow distance removes most of the shadow-pass cost on tile-based mobile GPUs.</li>
+      <li>Disabling the cumulus layer removes the most expensive part of Sky3D; the cirrus layer stays so the sky is not empty.</li>
+      <li>Shortening the fog end distance lets the horizon dissolve earlier, so less of the campus is ever rasterised.</li>
+    </ul>
+
+    <p>
+      The same adaptive ladder runs on desktop. On the integrated Radeon laptop
+      used for the Windows build, the spawn view starts at 0.88 and 43.5&nbsp;fps,
+      takes the three steps and settles at 0.60 with <strong>59.4&nbsp;fps</strong>
+      (132 draw calls, 1.43&nbsp;M primitives, 8&nbsp;s sample). A discrete GPU
+      never leaves 0.88. The phone profile measured 52.6&nbsp;fps at 0.78 on the
+      same laptop, which is why the phone ladder keeps the extra steps.
+    </p>
+
+    <table>
+      <caption>Android measurement slots</caption>
+      <thead><tr><th style="width:40%">Scenario</th><th class="num">Target</th><th>Measured</th></tr></thead>
+      <tbody>
+        <tr><td>Mid-range phone, 1080×2400, Day 1 route</td><td class="num">60 fps</td><td class="num"><!-- BENCH: --></td></tr>
+        <tr><td>Mid-range phone, parade ground (densest view)</td><td class="num">60 fps</td><td class="num"><!-- BENCH: --></td></tr>
+        <tr><td>Low-end phone, central campus</td><td class="num">≥ 30 fps</td><td class="num"><!-- BENCH: --></td></tr>
+        <tr><td>Peak memory, 20 minutes of play</td><td class="num">≤ 400 MB</td><td class="num"><!-- BENCH: --></td></tr>
+      </tbody>
+    </table>
+
+    <div class="note warn">
+      <span class="note-l">Why these cells are empty</span>
+      No Android device was available in the environment where this report was
+      written. Filling these cells requires a device run, not a desktop
+      simulation, so the values are left as explicit placeholders rather than
+      estimates. The mobile renderer path and the touch-preview path were both
+      exercised (§11) and pass, but they are not a performance measurement.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 26 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 25 — TESTING ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">11 · Testing &amp; validation</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">11 · Testing &amp; validation</span>What was checked, and how</h1>
+
+    <h3>11.1 — Headless data suite</h3>
+    <p>
+      <code>tests/run_tests.gd</code> is a <code>SceneTree</code> script that
+      asserts the authored data still matches the values verified in the
+      documentation. It runs with no window and no renderer:
+    </p>
+    <pre><span class="c"># PowerShell</span>
+&amp; <span class="s">"C:\...\Godot_v4.7.2-stable_win64.exe"</span> --headless `
+  --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
+  --script res://tests/run_tests.gd</pre>
+    <p>
+      The suite is <strong>61 checks</strong> across five groups. The recorded
+      result is <strong>61 checks, 0 failures</strong> — the suite was
+      re-baselined after the perimeter road was added (four new checks assert
+      that the ring road exists on all four sides of the compound).
+    </p>
+    <table>
+      <caption>Suite composition</caption>
+      <thead><tr><th style="width:30%">Group</th><th class="num">Checks</th><th>What it asserts</th></tr></thead>
+      <tbody>
+        <tr><td>Coordinate system</td><td class="num">6</td><td>Plan (122, 462) → world (−65.1, 148.4) and back; campus size 217.0 × 261.8 m; <code>MAP_SCALE = 0.7</code></td></tr>
+        <tr><td>Campus data</td><td class="num">27</td><td>17 buildings, 12 street rectangles (8 campus roads + 4 perimeter strips, each verified on its own side), 5 zones, 6 walls, 2 gates, 14 lamps, 7 benches, 4 vending machines, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts; the CSE rectangle, height and tint; the Admin Block's rendered height; the five player tuning values; the spawn matches the player data</td></tr>
+        <tr><td>NPC census</td><td class="num">12</td><td>64 NPCs split into 6 / 18 / 9 / 3 / 10 / 8 / 1 / 9; the guard's and the colonel's plan positions; that the colonel carries his step-6 dialogue</td></tr>
+        <tr><td>Economy</td><td class="num">13</td><td>10 drinks, 4 dishes, 3 items; the Red Bull, Happy Faces and Buldak prices; Buldak's energy and its "spicy" flag; wallet 200, bank 2000, fee 250, energy 40/100</td></tr>
+        <tr><td>Seeded generator</td><td class="num">3</td><td>The same seed reproduces the same stream, the first value is reproducible, and values stay in [0, 1)</td></tr>
+        <tr class="tot"><td>Total</td><td class="num">61</td><td>Recorded result: 0 failures</td></tr>
+      </tbody>
+    </table>
+    <div class="note">
+      <span class="note-l">Re-baselined with the perimeter road</span>
+      The suite originally asserted <code>roads == 8</code>, the count of the
+      web build's campus streets. The active <code>src/data/campus_data.json</code>
+      now carries <strong>12</strong> street rectangles — the eight campus roads
+      plus the four perimeter strips that ring the compound — so the
+      expectation was updated and four new checks now assert that the ring
+      road exists on the north, west, east and south side. Result:
+      <strong>61 checks, 0 failures</strong>.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 27 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 26 — TESTING II ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">11 · Testing &amp; validation</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">11 · Testing &amp; validation</span>The scripted tour and the mobile preview</h1>
+
+    <h3>11.2 — Scripted verification tour</h3>
+    <p>
+      <code>src/main.gd::_run_check()</code> is a headless-driveable playthrough
+      that builds the campus, walks the Day&nbsp;1 route, talks to every quest
+      character, performs the salute and captures ten screenshots into
+      <code>docs/screenshots/godot/</code>.
+    </p>
+    <pre><span class="c"># PowerShell</span>
+&amp; <span class="s">"C:\...\Godot_v4.7.2-stable_win64.exe"</span> `
+  --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
+  --resolution 1600x900 -- --check</pre>
+    <table>
+      <caption>Tour stops and the files they produce</caption>
+      <thead><tr><th style="width:10%">Shot</th><th style="width:28%">Stop</th><th>What it proves</th></tr></thead>
+      <tbody>
+        <tr><td><code>01_spawn_gate.png</code></td><td>Spawn outside the main gate</td><td>Campus builds, spawn converts correctly, HUD renders</td></tr>
+        <tr><td><code>02_guard.png</code></td><td>Guard Bajirao</td><td>Dialogue opens, step 1 completes</td></tr>
+        <tr><td><code>03_admin.png</code></td><td>Laksmi, in the office</td><td>Hall door, office teleport, sliding glass doors</td></tr>
+        <tr><td><code>04_cse.png</code></td><td>Prof. Rao</td><td>Panel-block fitting and the palette recolour</td></tr>
+        <tr><td><code>05_it.png</code></td><td>Suresh</td><td>Low-poly row fitting</td></tr>
+        <tr><td><code>06_canteen.png</code></td><td>Arjun</td><td>Café fitting and the vending-machine placement</td></tr>
+        <tr><td><code>07_parade_ground.png</code></td><td>Parade ground</td><td>Cadet formation, zone slab, the salute</td></tr>
+        <tr><td><code>08_colonel.png</code></td><td>Colonel Singh</td><td>The final conversation</td></tr>
+        <tr><td><code>09_campus_overview.png</code></td><td>Detached camera, 165 m</td><td>The whole campus reads correctly from above</td></tr>
+        <tr><td><code>10_campus_plan.png</code></td><td>Detached camera, 260 m</td><td>The plan matches <code>campus_data.json</code> exactly</td></tr>
+      </tbody>
+    </table>
+
+    <h3>11.3 — Mobile validation (substituted)</h3>
+    <p>
+      Physical handset testing was <strong>not</strong> performed. Two substitute
+      checks were run instead, and both exercise the same code the phone build
+      takes:
+    </p>
+    <table>
+      <thead><tr><th style="width:26%">Check</th><th style="width:34%">How</th><th>What it covers</th></tr></thead>
+      <tbody>
+        <tr><td>Mobile renderer path</td><td>Build with the mobile feature tags set so <code>_mobile_gpu</code> is true</td><td>0.78 resolution scale, MSAA off, 2 shadow splits at 92 m, cumulus disabled, fog end 520 m, glow off</td></tr>
+        <tr><td>Touch preview</td><td>Launch with <code>-- --touch-preview</code></td><td>The phone HUD layout, the on-screen stick, the E / G / RUN buttons, the prompt without key art, the minimap relocation</td></tr>
+      </tbody>
+    </table>
+    <div class="note warn">
+      <span class="note-l">What this does not cover</span>
+      Real touch latency, multi-touch disambiguation, device thermal behaviour,
+      OEM-specific GPU drivers, screen-notches and gesture-bar insets, audio focus
+      handling when the phone is interrupted, and the on-screen keyboard
+      behaviour of the name-entry screen. These all require hardware.
+    </div>
+
+    <h3>11.4 — Visual regression</h3>
+    <p>
+      The tour screenshots double as a visual regression baseline: they are
+      deterministic, because the scatter is seeded and the camera positions are
+      hard-coded, so a re-run produces byte-comparable frames for an unchanged
+      scene. The web build's twelve reference screenshots in
+      <code>docs/screenshots/</code> are the other half of that comparison and
+      are used as the side-by-side pairs in §3.
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 28 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 27 — LIMITATIONS ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">12 · Known limitations &amp; future work</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">12 · Known limitations &amp; future work</span>Open items, in priority order</h1>
+
+    <table>
+      <caption>Known limitations</caption>
+      <thead><tr><th style="width:6%">#</th><th style="width:26%">Limitation</th><th style="width:34%">Impact</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td><td>Days&nbsp;3–10 are not ported</td><td>Only Day&nbsp;1 and the Day&nbsp;2 chain are playable; the five minigames (quiz, shootout, command drill, mash, dance) do not exist</td><td>Stub returns "Day N content is not ported yet."</td></tr>
+        <tr><td class="num">2</td><td>No physical-device validation</td><td>Touch latency, thermal behaviour and OEM GPU differences are unverified</td><td>Substituted by the mobile-renderer and touch-preview passes (§11.3)</td></tr>
+        <tr><td class="num">3</td><td>No in-game minimap of the perimeter road before it was added</td><td>The web build's campus has no ring road; the port added one so the compound reads as a real campus</td><td>Resolved — 12 street rectangles, 61 checks passing</td></tr>
+        <tr><td class="num">4</td><td>No shop, bank, inventory or pause panels</td><td>The vending machines, the bank ATM, the inventory bag and the settings modal cannot be opened; the underlying data and rules are present</td><td>Data layer complete, UI layer missing</td></tr>
+        <tr><td class="num">5</td><td>No day-complete overlay</td><td>The web build's "Day 1 Complete!" panel — which also awards the ID card — is not reproduced</td><td><code>GameState.give_item()</code> exists and is ready</td></tr>
+        <tr><td class="num">6</td><td>Front end is incomplete</td><td>No intro card, level-select grid or loading screen</td><td>Year, character (with live 3D previews), name, welcome and the settings modal are done</td></tr>
+        <tr><td class="num">7</td><td>Props are CC0 substitutes</td><td>Trees, bushes, grass, rocks and the road texture come from the Quaternius, Road Generator and SimpleGrassTextured packs, not from the original</td><td>Intentional — see Appendix B</td></tr>
+        <tr><td class="num">8</td><td>Facial animation is disabled</td><td>The Mixamo facial morph meshes render as white shapes in Godot, so eyes, brows and mouth are hidden</td><td>Deliberate; the body animations are intact</td></tr>
+        <tr><td class="num">9</td><td>No measured frame-rate data</td><td>No GPU or device was benchmarked for this report</td><td>Benchmark slots are marked and empty (§10); <code>tests/bench.gd</code> is the harness</td></tr>
+        <tr><td class="num">10</td><td>Export presets are now committed</td><td>The Web preset is in <code>export_presets.cfg</code>; Windows and Android still need a keystore and the platform SDK</td><td>Described in §13</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Future work, in order</h2>
+    <ol>
+      <li><strong>Re-baseline and re-run the headless suite</strong> against the active <code>campus_data.json</code>, then extend it to cover the mission state machine, the economy predicates and the save format.</li>
+      <li><strong>Port Days&nbsp;3–10</strong> using the existing step schema, and implement the five minigames against the <code>mini</code> step type already reserved in <code>Mission</code>.</li>
+      <li><strong>Build the interactive panels</strong> — vending-machine shop, bank ATM, inventory bag, pause/settings modal — on top of the economy data that is already loaded.</li>
+      <li><strong>Validate on real hardware</strong>: an Android handset and an iPhone, capturing the phone screenshot that this report still carries as a placeholder.</li>
+      <li><strong>Benchmark and record</strong> desktop and mobile frame times, and fill the <code>&lt;!-- BENCH: --&gt;</code> slots in §10 with measured values.</li>
+      <li><strong>Add the day-complete overlay</strong> and wire the item awards through <code>GameState.give_item()</code> and <code>SaveSystem</code>.</li>
+      <li><strong>Complete the front end</strong> with the intro, welcome, level-select and loading screens, gated on the unlock state.</li>
+      <li><strong>Decide on music</strong>: the original has none, so any addition is a design decision requiring its own licence.</li>
+    </ol>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 29 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 28 — BUILD ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">13 · Build &amp; deploy</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">13 · Build &amp; deploy</span>Windows, Android and Web</h1>
+
+    <div class="note warn">
+      <span class="note-l">No export presets exist yet</span>
+      The project has no <code>export_presets.cfg</code>, so no package can be
+      produced until one is authored in the Godot editor. The commands below are
+      the standard Godot 4.7 export flow with the settings this project already
+      implies.
+    </div>
+
+    <h3>13.1 — Windows desktop</h3>
+    <pre><span class="c"># Export a release build (x86_64)</span>
+&amp; <span class="s">"C:\...\Godot_v4.7.2-stable_win64.exe"</span> `
+  --headless --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
+  --export-release <span class="s">"Windows Desktop"</span> `
+  <span class="s">"C:\...\build\ANITS_Godot_Windows_x86_64.exe"</span></pre>
+    <table>
+      <thead><tr><th style="width:30%">Setting</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Architecture</td><td><code>x86_64</code></td></tr>
+        <tr><td>Rendering driver</td><td>D3D12 — set project-wide by <code>rendering_device/driver.windows="d3d12"</code></td></tr>
+        <tr><td>Debug symbols</td><td>Release template; keep the debug template out of the shipped build</td></tr>
+        <tr><td>Signing</td><td>None for an internal build</td></tr>
+      </tbody>
+    </table>
+
+    <h3>13.2 — Android</h3>
+    <pre><span class="c"># Export an Android package</span>
+&amp; <span class="s">"C:\...\Godot_v4.7.2-stable_win64.exe"</span> `
+  --headless --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
+  --export-release <span class="s">"Android"</span> `
+  <span class="s">"C:\...\build\ANITS_Godot.apk"</span></pre>
+    <table>
+      <thead><tr><th style="width:30%">Setting</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Min SDK / architectures</td><td>24, arm64-v8a</td></tr>
+        <tr><td>Texture compression</td><td>ETC2 / ASTC — enabled at import by <code>import_etc2_astc=true</code></td></tr>
+        <tr><td>Orientation</td><td>Landscape only (the HUD and the touch layout are designed for it)</td></tr>
+        <tr><td>Renderer</td><td>Forward+ where available, Compatibility as the fallback</td></tr>
+        <tr><td>Lifecycle</td><td>Save on application pause, pause on focus loss</td></tr>
+        <tr><td>Package size target</td><td>Under ~150 MB after audio and model compression</td></tr>
+      </tbody>
+    </table>
+
+    <h3>13.3 — Web</h3>
+    <p>
+      Godot 4.7 can export to WebAssembly through the HTML5 platform, and the
+      project already uses only Web-compatible features: no native threads, no
+      OS file dialogs and no platform-specific shaders. The two things to watch
+      are the 14.9&nbsp;MB of MP3 voice recordings, which the browser will fetch
+      progressively, and the initial download of the ~72&nbsp;MB of models and
+      textures, which argues for keeping the main scene's asset set lean.
+    </p>
+    <pre><span class="c"># Export a Web build</span>
+&amp; <span class="s">"C:\...\Godot_v4.7.2-stable_win64.exe"</span> `
+  --headless --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
+  --export-release <span class="s">"Web"</span> `
+  <span class="s">"C:\...\build\web\index.html"</span></pre>
+
+    <h3>13.4 — Running from source</h3>
+    <p>
+      The play, test and tour commands are listed in §11.1 and §11.2 and are
+      repeated in <code>docs/README.md</code>.
+    </p>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 30 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 29 — APPENDIX A ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">Appendix A · Controls</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">Appendix A</span>Controls reference</h1>
+
+    <h3>Keyboard and mouse</h3>
+    <table>
+      <thead><tr><th style="width:18%">Input</th><th style="width:28%">Action</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td><code>W A S D</code> / arrows</td><td>Move</td><td>Relative to the camera yaw; the wish vector is normalised</td></tr>
+        <tr><td><code>Shift</code></td><td>Run</td><td>5.6 m/s instead of 2.4 m/s</td></tr>
+        <tr><td><code>Q</code> / <code>Z</code></td><td>Turn the camera</td><td>1.8 rad/s keyboard rotation</td></tr>
+        <tr><td>Left-drag</td><td>Look</td><td>Yaw sensitivity 0.006, pitch 0.004; pitch clamped to 0.05–1.1 rad</td></tr>
+        <tr><td><code>E</code></td><td>Talk / use / skip a line</td><td>One resolver: dialogue, vending machine, bank, Admin Office door, skip</td></tr>
+        <tr><td><code>G</code></td><td>Salute</td><td>Also advances the Day&nbsp;1 salute step and makes the cadet company answer</td></tr>
+        <tr><td><code>Esc</code></td><td>Skip the current line / pause</td><td>The pause menu itself is not yet implemented</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Touch</h3>
+    <table>
+      <thead><tr><th style="width:18%">Input</th><th style="width:28%">Action</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Left stick</td><td>Move</td><td>68 px radius, 0.14 dead zone; feeds the same move vector as WASD</td></tr>
+        <tr><td>Drag (right area)</td><td>Look</td><td>Relative delta × 1.35</td></tr>
+        <tr><td>Tap</td><td>Skip a dialogue line</td><td>Under 14 px of travel</td></tr>
+        <tr><td><em>E</em> button</td><td>Talk / use</td><td>Same resolver and the same radii as the keyboard</td></tr>
+        <tr><td><em>G</em> button</td><td>Salute</td><td>—</td></tr>
+        <tr><td><em>RUN</em> button</td><td>Run</td><td>Hold, or press to latch</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Movement constants</h3>
+    <table>
+      <thead><tr><th style="width:34%">Constant</th><th class="num">Value</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>Walk speed</td><td class="num">2.4 m/s</td><td><code>campus_data.json → player.walk_speed</code></td></tr>
+        <tr><td>Run speed</td><td class="num">5.6 m/s</td><td><code>player.run_speed</code></td></tr>
+        <tr><td>Energy-drink boost</td><td class="num">× 1.3 for 30 s</td><td><code>player.boost_multiplier</code>, <code>player.boost_seconds</code></td></tr>
+        <tr><td>Speed smoothing</td><td class="num">lerp 9.0 /s</td><td><code>player.speed_lerp</code></td></tr>
+        <tr><td>Step-up height</td><td class="num">1.3 m</td><td><code>player.step_up</code></td></tr>
+        <tr><td>Camera boom</td><td class="num">5.4 m</td><td><code>player.camera_distance</code></td></tr>
+        <tr><td>Camera boom in dialogue</td><td class="num">3.2 m</td><td><code>player.camera_distance_dialogue</code></td></tr>
+        <tr><td>Camera boom in the office</td><td class="num">3.1 m</td><td>Overridden in <code>main.gd::_enter_office()</code></td></tr>
+        <tr><td>Minimum boom</td><td class="num">1.2 m</td><td><code>player.camera_min_distance</code></td></tr>
+        <tr><td>Boom avoidance step</td><td class="num">0.4 m</td><td><code>player.gd::_update_camera()</code></td></tr>
+        <tr><td>Camera smoothing</td><td class="num">lerp 10.0 /s</td><td><code>player.camera_lerp</code></td></tr>
+        <tr><td>Camera height / look height</td><td class="num">1.5 m / 1.35 m</td><td><code>player.camera_height</code>, <code>camera_look_height</code></td></tr>
+        <tr><td>NPC interaction radius</td><td class="num">3.8 m</td><td><code>player.interact_radius</code></td></tr>
+        <tr><td>Machine / service radius</td><td class="num">3.4 m</td><td><code>player.machine_radius</code>, <code>service_radius</code></td></tr>
+        <tr><td>Admin Office door radius</td><td class="num">2.8 m</td><td><code>player.office_door_radius</code></td></tr>
+        <tr><td>Salute radius</td><td class="num">16 m</td><td><code>player.salute_radius</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 31 of 32</span></div>
+</section>
+
+<!-- ============================ PAGE 30 — APPENDIX B/C ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">Appendix B · Asset credits · Appendix C · File map</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">Appendix B</span>Asset credits and licences</h1>
+
+    <table>
+      <caption>Asset families and their licences</caption>
+      <thead><tr><th style="width:24%">Family</th><th style="width:24%">Source</th><th style="width:16%">Licence</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td>Original models, textures and 632 MP3 recordings</td><td><code>third_party/anits_original/</code> — the ANITS web build</td><td>The original author's assets</td><td>Buildings, characters, the gate, the office props, all dialogue audio</td></tr>
+        <tr><td>Stylized Nature MegaKit</td><td>Quaternius</td><td>CC0</td><td>Trees, pines, bushes, ferns, clover, flowers, grass, rocks, pebbles</td></tr>
+        <tr><td>Road Generator</td><td>Road Generator pack</td><td>MIT (addon)</td><td>The two-lane asphalt texture on the narrow streets</td></tr>
+        <tr><td>SimpleGrassTextured</td><td>SimpleGrassTextured pack</td><td>MIT (addon)</td><td>The denser roadside grass card texture</td></tr>
+        <tr><td>Sky3D</td><td>Sky3D addon</td><td>MIT (addon)</td><td>Sky dome, atmosphere, clouds, sun, moon, time of day</td></tr>
+        <tr><td>Controller Icons</td><td>Controller Icons pack</td><td>MIT (addon)</td><td>The keyboard key artwork in the HUD</td></tr>
+        <tr><td>Palette atlas</td><td><code>textures/palette_buildings.png</code></td><td>Original</td><td>The 256 × 256 atlas the building colours are recoloured in</td></tr>
+      </tbody>
+    </table>
+    <p class="tbl-note">
+      The full licence ledger is in <code>docs/EXTERNAL_ASSET_LIBRARY.md</code>;
+      the original-to-replacement mapping is in <code>docs/ASSET_MAPPING.md</code>.
+    </p>
+
+    <h1 class="sec"><span class="sec-no">Appendix C</span>File map</h1>
+    <table>
+      <thead><tr><th style="width:32%">Path</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><code>project.godot</code></td><td>Engine config, autoloads, display, physics, rendering</td></tr>
+        <tr><td><code>src/main.gd</code>, <code>src/main.tscn</code></td><td>Root scene: environment, campus, player, NPCs, HUD, tour</td></tr>
+        <tr><td><code>src/autoload/</code></td><td><code>event_bus</code>, <code>game_state</code>, <code>settings</code>, <code>save_system</code>, <code>campus_db</code>, <code>mission_runner</code>, <code>dialogue_service</code>, <code>voice_bank</code></td></tr>
+        <tr><td><code>src/actors/player.gd</code></td><td>Character body, input, camera boom, interaction</td></tr>
+        <tr><td><code>src/actors/npc.gd</code></td><td>NPC setup, models, routes, culling, line lookup</td></tr>
+        <tr><td><code>src/world/campus_builder.gd</code></td><td>Ground, roads, kerbs, walls, gates, buildings, props</td></tr>
+        <tr><td><code>src/world/admin_office.gd</code></td><td>The Admin Office interior and the hall door</td></tr>
+        <tr><td><code>src/world/original_models.gd</code></td><td>Imports and fits the original models</td></tr>
+        <tr><td><code>src/world/props_factory.gd</code></td><td>Batches the CC0 scenery packs into MultiMeshes</td></tr>
+        <tr><td><code>src/world/character_visual.gd</code></td><td>Loads the characters and drives their animations</td></tr>
+        <tr><td><code>src/ui/hud.gd</code></td><td>Mission, wallet, energy, dialogue, minimap, prompts</td></tr>
+        <tr><td><code>src/ui/main_menu.gd</code></td><td>Year, character, name and main-menu screens</td></tr>
+        <tr><td><code>src/ui/touch_controls.gd</code></td><td>Virtual stick, look drag, E / G / RUN buttons</td></tr>
+        <tr><td><code>src/util/campus.gd</code>, <code>src/util/lcg.gd</code></td><td>Plan-pixel conversion; the 16807 generator</td></tr>
+        <tr><td><code>src/data/*.json</code></td><td>Campus plan, the 64 NPCs, the economy tables</td></tr>
+        <tr><td><code>tests/run_tests.gd</code></td><td>The 57-check headless data suite</td></tr>
+        <tr><td><code>docs/</code></td><td>Analysis, architecture, asset ledger and this report</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 32 of 32</span></div>
+</section>
+
+</body>
+</html>
