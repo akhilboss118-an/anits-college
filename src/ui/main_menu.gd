@@ -145,6 +145,17 @@ var _sun_glow: TextureRect
 var _level_cards: Array[Button] = []
 var _level_toast: Label
 var _level_toast_tween: Tween
+var _screen_tween: Tween
+var _year_tween: Tween
+var _level_progress: Label
+var _level_progress_bar: ProgressBar
+var _loading_bg: TextureRect
+var _loading_logo: TextureRect
+var _loading_spinner: Control
+var _loading_pct: Label
+var _loading_shine: ColorRect
+var _loading_loops: Array[Tween] = []
+var _quote_tween: Tween
 
 
 # ---------------------------------------------------------------- small art
@@ -256,6 +267,18 @@ class Lock:
 		draw_rect(body, gold, false, 3.0)
 		draw_circle(Vector2(w * 0.5, h * 0.66), w * 0.09, gold)
 		draw_line(Vector2(w * 0.5, h * 0.70), Vector2(w * 0.5, h * 0.82), gold, 4.0)
+
+
+class Spinner:
+	extends Control
+	## A ring with a bright comet arc; the loading screen rotates it.
+
+	func _draw() -> void:
+		var c := size * 0.5
+		var r := minf(size.x, size.y) * 0.5 - 6.0
+		draw_arc(c, r, 0.0, TAU, 48, Color(0.55, 0.80, 1.0, 0.18), 5.0, true)
+		draw_arc(c, r, -PI * 0.5, -PI * 0.5 + PI * 0.62, 24, Color(1.0, 0.86, 0.38, 0.98), 6.0, true)
+		draw_arc(c, r, -PI * 0.5 + PI * 0.62, -PI * 0.5 + PI * 1.0, 16, Color(0.45, 0.75, 1.0, 0.55), 5.0, true)
 
 
 class Skyline:
@@ -411,11 +434,46 @@ func _build_ambient() -> void:
 		var down := tw.tween_property(_sun_glow, "modulate:a", 0.70, 2.6)
 		down.set_trans(Tween.TRANS_SINE)
 		down.set_ease(Tween.EASE_IN_OUT)
+	_add_orbs()
 	if _main_crest:
+		_main_crest.set_meta("no_stagger", true)
 		var cw := create_tween().set_loops()
 		var lift := cw.tween_method(_crest_lift, 0.0, 1.0, 3.4)
 		lift.set_trans(Tween.TRANS_SINE)
 		lift.set_ease(Tween.EASE_IN_OUT)
+
+
+func _add_orbs() -> void:
+	## Five soft light orbs drift behind the UI: cheap textured quads, no particles.
+	var specs := [
+		[0.10, 0.22, 420.0, Color(0.30, 0.62, 1.0, 0.16), 7.0, 46.0],
+		[0.88, 0.72, 500.0, Color(1.0, 0.72, 0.38, 0.12), 9.0, 58.0],
+		[0.50, 0.92, 380.0, Color(0.36, 0.70, 1.0, 0.12), 8.0, 40.0],
+		[0.30, 0.64, 300.0, Color(0.72, 0.60, 1.0, 0.08), 10.0, 34.0],
+		[0.78, 0.14, 340.0, Color(1.0, 0.84, 0.46, 0.10), 6.5, 36.0],
+	]
+	for spec in specs:
+		var s: Array = spec
+		var r: float = float(s[2]) * 0.5
+		var orb := _radial_glow(float(s[2]), s[3] as Color)
+		orb.anchor_left = float(s[0])
+		orb.anchor_right = float(s[0])
+		orb.anchor_top = float(s[1])
+		orb.anchor_bottom = float(s[1])
+		orb.offset_left = -r
+		orb.offset_right = r
+		orb.offset_top = -r
+		orb.offset_bottom = r
+		_root.add_child(orb)
+		_root.move_child(orb, _frame.get_index())
+		var tw := create_tween().set_loops()
+		tw.tween_method(_drift_orb.bind(orb, r, float(s[5])), 0.0, 1.0, float(s[4]))
+
+
+func _drift_orb(t: float, orb: Control, r: float, amp: float) -> void:
+	var dy := sin(t * TAU) * amp
+	orb.offset_top = -r + dy
+	orb.offset_bottom = r + dy
 
 
 func _crest_lift(t: float) -> void:
@@ -434,6 +492,10 @@ func _build_background() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(bg)
+	bg.resized.connect(func() -> void: bg.pivot_offset = bg.size * 0.5)
+	var kb := create_tween().set_loops()
+	kb.tween_property(bg, "scale", Vector2(1.06, 1.06), 20.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	kb.tween_property(bg, "scale", Vector2.ONE, 20.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	# blue dusk wash over the photo: bright in the middle band where the
 	# campus shows, deep navy at the top and bottom behind the UI
@@ -491,6 +553,7 @@ func _build_background() -> void:
 
 func _build_year_screen() -> void:
 	_screen_year = _screen()
+	_glass(_screen_year, Rect2(330, 172, 940, 648))
 	var title := _headline("WHICH YEAR DID YOU JOIN?", 56)
 	title.position = Vector2(0, 54)
 	_screen_year.add_child(title)
@@ -618,6 +681,7 @@ func _build_character_screen() -> void:
 
 func _build_name_screen() -> void:
 	_screen_name = _screen()
+	_glass(_screen_name, Rect2(290, 292, 1020, 428))
 	var back := _button("<  BACK", 18)
 	back.custom_minimum_size = Vector2(190, 62)
 	back.size = Vector2(190, 62)
@@ -701,6 +765,7 @@ func _build_welcome_screen() -> void:
 
 func _build_main_screen() -> void:
 	_screen_main = _screen()
+	_glass(_screen_main, Rect2(52, 96, 700, 790))
 
 	var crest := Crest.new()
 	crest.size = Vector2(190, 210)
@@ -844,6 +909,35 @@ func _build_levels_screen() -> void:
 	badge.add_child(badge_text)
 	_screen_levels.add_child(badge)
 
+	_level_progress = Label.new()
+	_level_progress.add_theme_font_size_override("font_size", 16)
+	_level_progress.add_theme_color_override("font_color", Color(0.80, 0.90, 1.0, 0.92))
+	_level_progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_level_progress.position = Vector2(1000, 210)
+	_level_progress.size = Vector2(528, 26)
+	_level_progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_levels.add_child(_level_progress)
+	_level_progress_bar = ProgressBar.new()
+	_level_progress_bar.min_value = 0
+	_level_progress_bar.max_value = LEVELS.size()
+	_level_progress_bar.show_percentage = false
+	_level_progress_bar.position = Vector2(1228, 242)
+	_level_progress_bar.size = Vector2(300, 10)
+	_level_progress_bar.custom_minimum_size = Vector2(300, 10)
+	_level_progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pb_bg := StyleBoxFlat.new()
+	pb_bg.bg_color = Color(0.42, 0.72, 1.0, 0.22)
+	pb_bg.set_corner_radius_all(5)
+	var pb_fill := StyleBoxFlat.new()
+	pb_fill.bg_color = GOLD
+	pb_fill.set_corner_radius_all(5)
+	pb_fill.shadow_size = 6
+	pb_fill.shadow_color = Color(1.0, 0.84, 0.30, 0.35)
+	_level_progress_bar.add_theme_stylebox_override("background", pb_bg)
+	_level_progress_bar.add_theme_stylebox_override("fill", pb_fill)
+	_screen_levels.add_child(_level_progress_bar)
+	_update_level_progress()
+
 	const COLS := 5
 	const CW := 276.0
 	const CH := 308.0
@@ -866,6 +960,7 @@ func _build_levels_screen() -> void:
 	_level_toast.size = Vector2(DESIGN_W, 30)
 	_level_toast.modulate.a = 0.0
 	_level_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_level_toast.set_meta("no_stagger", true)
 	_screen_levels.add_child(_level_toast)
 
 
@@ -886,15 +981,27 @@ func _make_level_card(n: int, level_name: String, pos: Vector2, card_size: Vecto
 	_screen_levels.add_child(card)
 	_level_cards.append(card)
 
+	var current := open and not done
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.030, 0.090, 0.200, 0.92) if open else Color(0.020, 0.055, 0.120, 0.94)
-	normal.border_color = Color(0.42, 0.75, 1.0, 0.75) if open else Color(0.34, 0.46, 0.62, 0.55)
+	normal.bg_color = Color(0.030, 0.090, 0.200, 0.86) if open else Color(0.020, 0.055, 0.120, 0.90)
+	normal.border_color = Color(0.42, 0.75, 1.0, 0.60) if open else Color(0.34, 0.46, 0.62, 0.45)
+	if done:
+		normal.bg_color = Color(0.030, 0.120, 0.150, 0.88)
+		normal.border_color = Color(0.40, 0.90, 0.62, 0.75)
+	elif current:
+		normal.bg_color = Color(0.050, 0.130, 0.270, 0.92)
+		normal.border_color = Color(1.0, 0.84, 0.30, 0.95)
 	normal.set_border_width_all(2)
-	normal.set_corner_radius_all(16)
+	normal.set_corner_radius_all(18)
+	normal.shadow_size = 10
+	normal.shadow_color = Color(0, 0, 0, 0.38)
+	normal.shadow_offset = Vector2(0, 5)
 	card.add_theme_stylebox_override("normal", normal)
 	var hover := normal.duplicate() as StyleBoxFlat
-	hover.border_color = GOLD
-	hover.bg_color = Color(0.06, 0.16, 0.34, 0.96)
+	hover.border_color = GOLD if open else Color(0.60, 0.70, 0.84, 0.7)
+	hover.bg_color = Color(0.07, 0.17, 0.35, 0.95) if open else Color(0.03, 0.08, 0.16, 0.94)
+	hover.shadow_size = 18 if open else 10
+	hover.shadow_color = Color(1.0, 0.84, 0.30, 0.30) if open else Color(0, 0, 0, 0.38)
 	card.add_theme_stylebox_override("hover", hover)
 	var pressed := normal.duplicate() as StyleBoxFlat
 	pressed.border_color = GOLD
@@ -903,9 +1010,26 @@ func _make_level_card(n: int, level_name: String, pos: Vector2, card_size: Vecto
 	var focus := StyleBoxFlat.new()
 	focus.border_color = Color(1, 0.95, 0.62, 0.95)
 	focus.set_border_width_all(3)
-	focus.set_corner_radius_all(16)
+	focus.set_corner_radius_all(18)
 	focus.draw_center = false
 	card.add_theme_stylebox_override("focus", focus)
+	_juice(card, 1.035)
+	if current:
+		var halo := Panel.new()
+		var halo_sb := StyleBoxFlat.new()
+		halo_sb.draw_center = false
+		halo_sb.border_color = Color(1.0, 0.90, 0.50, 1.0)
+		halo_sb.set_border_width_all(3)
+		halo_sb.set_corner_radius_all(18)
+		halo_sb.shadow_size = 14
+		halo_sb.shadow_color = Color(1.0, 0.84, 0.30, 0.35)
+		halo.add_theme_stylebox_override("panel", halo_sb)
+		halo.size = card_size
+		halo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(halo)
+		var pulse := halo.create_tween().set_loops()
+		pulse.tween_property(halo, "modulate:a", 0.15, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		pulse.tween_property(halo, "modulate:a", 1.0, 1.1).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	# thumbnail, clipped to the card's rounded-ish top area
 	var frame := Control.new()
@@ -922,7 +1046,13 @@ func _make_level_card(n: int, level_name: String, pos: Vector2, card_size: Vecto
 		thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		thumb.size = frame.size
 		thumb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		thumb.pivot_offset = thumb.size * 0.5
 		frame.add_child(thumb)
+		if open:
+			card.mouse_entered.connect(_zoom_thumb.bind(thumb, 1.09))
+			card.mouse_exited.connect(_zoom_thumb.bind(thumb, 1.0))
+			card.focus_entered.connect(_zoom_thumb.bind(thumb, 1.09))
+			card.focus_exited.connect(_zoom_thumb.bind(thumb, 1.0))
 	if not open:
 		var dim := ColorRect.new()
 		dim.color = Color(0.01, 0.03, 0.08, 0.66)
@@ -1017,6 +1147,7 @@ func show_levels() -> void:
 	var unlocked: int = 1
 	if GameState:
 		unlocked = clampi(GameState.unlocked_day, 1, LEVELS.size())
+	_update_level_progress()
 	for i in _level_cards.size():
 		var card := _level_cards[i]
 		var n := i + 1
@@ -1025,6 +1156,25 @@ func show_levels() -> void:
 	_fade_in(_screen_levels)
 	if not _level_cards.is_empty():
 		_level_cards[0].grab_focus()
+
+
+func _update_level_progress() -> void:
+	if _level_progress == null:
+		return
+	var unlocked: int = 1
+	if GameState:
+		unlocked = clampi(GameState.unlocked_day, 1, LEVELS.size())
+	var finished := unlocked - 1
+	_level_progress.text = "%d / %d DAYS COMPLETED" % [finished, LEVELS.size()]
+	var tw := create_tween()
+	tw.tween_property(_level_progress_bar, "value", float(finished), 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func _zoom_thumb(thumb: Control, factor: float) -> void:
+	if not is_instance_valid(thumb):
+		return
+	var tw := thumb.create_tween()
+	tw.tween_property(thumb, "scale", Vector2(factor, factor), 0.28).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func _refresh_level_card(card: Button, n: int, open: bool, done: bool) -> void:
@@ -1292,6 +1442,8 @@ func _build_loading_screen() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_screen_loading.add_child(bg)
+	bg.resized.connect(func() -> void: bg.pivot_offset = bg.size * 0.5)
+	_loading_bg = bg
 
 	var shade := ColorRect.new()
 	shade.color = Color(0.008, 0.047, 0.133, 0.62)
@@ -1313,6 +1465,22 @@ func _build_loading_screen() -> void:
 	logo.offset_bottom = 248.0
 	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_screen_loading.add_child(logo)
+	logo.resized.connect(func() -> void: logo.pivot_offset = logo.size * 0.5)
+	_loading_logo = logo
+
+	var spinner := Spinner.new()
+	spinner.anchor_left = 0.5
+	spinner.anchor_right = 0.5
+	spinner.anchor_top = 0.5
+	spinner.anchor_bottom = 0.5
+	spinner.offset_left = -44.0
+	spinner.offset_right = 44.0
+	spinner.offset_top = -44.0
+	spinner.offset_bottom = 44.0
+	spinner.pivot_offset = Vector2(44.0, 44.0)
+	spinner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(spinner)
+	_loading_spinner = spinner
 
 	var caption := Label.new()
 	caption.text = "COLLEGE SIMULATION"
@@ -1363,11 +1531,37 @@ func _build_loading_screen() -> void:
 	_loading_bar.add_theme_stylebox_override("background",
 			_sb(Color(0.012, 0.055, 0.149, 0.72), Color(0.31, 0.69, 1.0, 0.95), 2, 9))
 	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(0.20, 0.62, 1.0)
+	fill.bg_color = Color(0.26, 0.68, 1.0)
 	fill.set_corner_radius_all(8)
+	fill.shadow_size = 10
+	fill.shadow_color = Color(0.30, 0.70, 1.0, 0.55)
 	_loading_bar.add_theme_stylebox_override("fill", fill)
 	_loading_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_loading_bar.clip_contents = true
 	_screen_loading.add_child(_loading_bar)
+	_loading_shine = ColorRect.new()
+	_loading_shine.color = Color(1, 1, 1, 0.30)
+	_loading_shine.size = Vector2(90, 20)
+	_loading_shine.position = Vector2(-90, 0)
+	_loading_shine.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_loading_bar.add_child(_loading_shine)
+
+	_loading_pct = Label.new()
+	_loading_pct.text = "0%"
+	_loading_pct.add_theme_font_size_override("font_size", 18)
+	_loading_pct.add_theme_color_override("font_color", GOLD)
+	_loading_pct.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_loading_pct.anchor_left = 0.5
+	_loading_pct.anchor_right = 0.5
+	_loading_pct.anchor_top = 1.0
+	_loading_pct.anchor_bottom = 1.0
+	_loading_pct.offset_left = 200.0
+	_loading_pct.offset_right = 360.0
+	_loading_pct.offset_top = -160.0
+	_loading_pct.offset_bottom = -130.0
+	_loading_pct.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(_loading_pct)
+	_loading_bar.value_changed.connect(func(v: float) -> void: _loading_pct.text = "%d%%" % int(v))
 
 	_loading_status = Label.new()
 	_loading_status.text = "LOADING..."
@@ -1473,7 +1667,51 @@ func _button(text: String, font_size: int) -> Button:
 	b.add_theme_font_size_override("font_size", int(font_size * _ui))
 	b.focus_mode = Control.FOCUS_ALL
 	_style_button(b, false)
+	_juice(b, 1.04)
 	return b
+
+
+func _glass(parent: Control, rect: Rect2) -> Panel:
+	## A translucent rounded panel with a soft shadow: the shared glass look.
+	var p := Panel.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.15, 0.32, 0.46)
+	sb.border_color = Color(0.75, 0.90, 1.0, 0.22)
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(30)
+	sb.shadow_size = 28
+	sb.shadow_color = Color(0, 0, 0, 0.38)
+	sb.shadow_offset = Vector2(0, 12)
+	p.add_theme_stylebox_override("panel", sb)
+	p.position = rect.position
+	p.size = rect.size
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(p)
+	return p
+
+
+func _juice(b: Button, lift: float) -> void:
+	## Hover / focus lift and a press squash on any button.
+	b.mouse_entered.connect(_pop.bind(b, lift, 0.16))
+	b.mouse_exited.connect(_pop.bind(b, 1.0, 0.20))
+	b.focus_entered.connect(_pop.bind(b, lift, 0.16))
+	b.focus_exited.connect(_pop.bind(b, 1.0, 0.20))
+	b.button_down.connect(_pop.bind(b, 0.96, 0.08))
+	b.button_up.connect(func() -> void: _pop(b, lift if b.is_hovered() else 1.0, 0.14))
+
+
+func _pop(b: Button, target: float, dur: float) -> void:
+	if not is_instance_valid(b) or (b.disabled and target != 1.0):
+		return
+	b.pivot_offset = b.size * 0.5
+	if b.has_meta("pop_tween"):
+		var old: Tween = b.get_meta("pop_tween")
+		if old and old.is_valid():
+			old.kill()
+	var tw := b.create_tween()
+	tw.tween_property(b, "scale", Vector2(target, target), dur).set_trans(
+			Tween.TRANS_BACK if target > 1.0 else Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	b.set_meta("pop_tween", tw)
 
 
 func _swatch(colour: Color) -> Panel:
@@ -1519,13 +1757,17 @@ func _sb(bg: Color, border: Color, width: int, radius: int) -> StyleBoxFlat:
 	sb.content_margin_right = 26
 	sb.content_margin_top = 10
 	sb.content_margin_bottom = 10
+	if bg.a > 0.05:
+		sb.shadow_size = 8
+		sb.shadow_color = Color(0, 0, 0, 0.30)
+		sb.shadow_offset = Vector2(0, 4)
 	return sb
 
 
 func _style_button(b: Button, primary: bool) -> void:
-	var base := Color(0.045, 0.125, 0.28, 0.85)
-	var hover := Color(0.10, 0.29, 0.60, 0.94)
-	var border := Color(0.42, 0.74, 1.0, 0.85)
+	var base := Color(0.07, 0.18, 0.38, 0.66)
+	var hover := Color(0.13, 0.33, 0.66, 0.90)
+	var border := Color(0.66, 0.86, 1.0, 0.50)
 	if primary:
 		base = Color(0.13, 0.47, 0.92, 0.96)
 		hover = Color(0.22, 0.62, 1.0, 1.0)
@@ -1676,6 +1918,7 @@ func _make_card(model_id: String, title: String, tag: String, colour: Color, pos
 	card.focus_mode = Control.FOCUS_ALL
 	card.text = ""
 	_style_card(card, false)
+	_juice(card, 1.025)
 	card.pressed.connect(func() -> void: _choose(model_id))
 	_screen_char.add_child(card)
 
@@ -1740,7 +1983,10 @@ func _style_card(card: Button, selected: bool) -> void:
 	normal.bg_color = bg
 	normal.border_color = border
 	normal.set_border_width_all(2 if not selected else 3)
-	normal.set_corner_radius_all(20)
+	normal.set_corner_radius_all(24)
+	normal.shadow_size = 22 if selected else 12
+	normal.shadow_color = Color(1.0, 0.84, 0.30, 0.30) if selected else Color(0, 0, 0, 0.4)
+	normal.shadow_offset = Vector2(0, 0) if selected else Vector2(0, 6)
 	normal.content_margin_left = 0
 	normal.content_margin_right = 0
 	normal.content_margin_top = 0
@@ -1757,7 +2003,7 @@ func _style_card(card: Button, selected: bool) -> void:
 	var focus := StyleBoxFlat.new()
 	focus.border_color = Color(1, 0.95, 0.6, 0.95)
 	focus.set_border_width_all(3)
-	focus.set_corner_radius_all(20)
+	focus.set_corner_radius_all(24)
 	focus.draw_center = false
 	card.add_theme_stylebox_override("focus", focus)
 
@@ -1869,9 +2115,32 @@ func _update_preview_mode(on: bool) -> void:
 
 
 func _fade_in(node: CanvasItem) -> void:
+	## Screen entrance: the screen fades in and its direct children rise into
+	## place one after another (staggered).
+	if _screen_tween and _screen_tween.is_valid():
+		_screen_tween.kill()
 	node.modulate.a = 0.0
-	var tw := create_tween()
-	tw.tween_property(node, "modulate:a", 1.0, 0.22)
+	_screen_tween = create_tween().set_parallel(true)
+	_screen_tween.tween_property(node, "modulate:a", 1.0, 0.28)
+	if not (node is Control) or node == _screen_welcome or node == _screen_settings:
+		return
+	var idx := 0
+	for child in node.get_children():
+		var c := child as Control
+		if c == null or c.has_meta("no_stagger"):
+			continue
+		if not c.has_meta("rest_pos"):
+			c.set_meta("rest_pos", c.position)
+			c.set_meta("rest_a", c.modulate.a)
+		var rest: Vector2 = c.get_meta("rest_pos")
+		var rest_a: float = c.get_meta("rest_a")
+		var delay := minf(float(idx) * 0.04, 0.55)
+		c.position = rest + Vector2(0.0, 28.0)
+		c.modulate.a = 0.0
+		_screen_tween.tween_property(c, "position", rest, 0.52).set_delay(delay).set_trans(
+				Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_screen_tween.tween_property(c, "modulate:a", rest_a, 0.40).set_delay(delay)
+		idx += 1
 
 
 func show_intro() -> void:
@@ -2112,6 +2381,12 @@ func _on_year_changed(value: float) -> void:
 	year = int(value)
 	var info: Array = UNIFORMS.get(year, UNIFORMS[2024])
 	_year_value.text = str(year)
+	_year_value.pivot_offset = _year_value.size * 0.5
+	_year_value.scale = Vector2(1.14, 1.14)
+	if _year_tween and _year_tween.is_valid():
+		_year_tween.kill()
+	_year_tween = create_tween()
+	_year_tween.tween_property(_year_value, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_year_name.text = str(info[0])
 	_year_desc.text = str(info[1])
 	_swatch_top.add_theme_stylebox_override("panel", _swatch_style(info[2]))
@@ -2221,9 +2496,52 @@ func _start(day: int = 1) -> void:
 	_loading_bar.value = 100.0
 	# Same gate as js/menu.js: the bar fills to 100 %, then waits for a tap.
 	_loading_status.text = "TAP ANYWHERE TO START" if _touch else "CLICK ANYWHERE TO START"
+	if _quote_tween and _quote_tween.is_valid():
+		_quote_tween.kill()
+	var ready_pulse := create_tween().set_loops()
+	ready_pulse.tween_property(_loading_status, "modulate:a", 0.35, 0.7).set_trans(Tween.TRANS_SINE)
+	ready_pulse.tween_property(_loading_status, "modulate:a", 1.0, 0.7).set_trans(Tween.TRANS_SINE)
+	_loading_loops.append(ready_pulse)
 	await loading_go
 	start_requested.emit({"name": player_name, "char": character, "year": year,
 		"day": clampi(day, 1, 10)})
+
+
+func _loading_stop_loops() -> void:
+	for tw in _loading_loops:
+		if tw and tw.is_valid():
+			tw.kill()
+	_loading_loops.clear()
+	if _quote_tween and _quote_tween.is_valid():
+		_quote_tween.kill()
+
+
+func _loading_start_loops() -> void:
+	_loading_stop_loops()
+	_loading_bg.scale = Vector2.ONE
+	_loading_logo.scale = Vector2.ONE
+	_loading_status.modulate.a = 1.0
+	var kb := create_tween()
+	kb.tween_property(_loading_bg, "scale", Vector2(1.10, 1.10), 14.0).set_trans(Tween.TRANS_SINE)
+	_loading_loops.append(kb)
+	var breathe := create_tween().set_loops()
+	breathe.tween_property(_loading_logo, "scale", Vector2(1.06, 1.06), 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	breathe.tween_property(_loading_logo, "scale", Vector2.ONE, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_loading_loops.append(breathe)
+	_loading_spinner.rotation = 0.0
+	var spin := create_tween().set_loops()
+	spin.tween_property(_loading_spinner, "rotation", TAU, 1.15).from(0.0)
+	_loading_loops.append(spin)
+	var sweep := create_tween().set_loops()
+	sweep.tween_property(_loading_shine, "position:x", 740.0, 1.3).from(-90.0).set_trans(Tween.TRANS_SINE)
+	sweep.tween_interval(0.4)
+	_loading_loops.append(sweep)
+	_quote_tween = create_tween().set_loops()
+	_quote_tween.tween_interval(3.6)
+	_quote_tween.tween_property(_loading_quote, "modulate:a", 0.0, 0.35)
+	_quote_tween.tween_callback(func() -> void:
+		_loading_quote.text = "\u201c%s\u201d" % LOADING_QUOTES[randi() % LOADING_QUOTES.size()])
+	_quote_tween.tween_property(_loading_quote, "modulate:a", 1.0, 0.35)
 
 
 func _show_loading(day: int) -> void:
@@ -2231,6 +2549,8 @@ func _show_loading(day: int) -> void:
 	_show_only(_screen_loading)
 	_screen_loading.visible = true
 	_screen_loading.modulate.a = 1.0
+	_loading_quote.modulate.a = 1.0
+	_loading_start_loops()
 	_loading_bar.value = 0.0
 	var title := "DAY %d" % clampi(day, 1, LEVELS.size())
 	if day >= 1 and day <= LEVELS.size():
@@ -2251,6 +2571,7 @@ func dismiss_loading() -> void:
 	_loading_tween = create_tween()
 	_loading_tween.tween_property(_screen_loading, "modulate:a", 0.0, 0.35)
 	_loading_tween.tween_callback(func() -> void:
+		_loading_stop_loops()
 		_screen_loading.visible = false
 		_root.visible = false
 		_starting = false)
