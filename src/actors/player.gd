@@ -1,4 +1,4 @@
-﻿extends CharacterBody3D
+extends CharacterBody3D
 ## Player controller + third-person camera rig.
 ##
 ## Values are taken verbatim from the original web build (js/game.js):
@@ -44,6 +44,10 @@ func _ready() -> void:
 			"mouse_yaw": 0.006, "mouse_pitch": 0.004, "key_rotate": 1.8,
 			"step_up": 1.3, "speed_lerp": 9.0,
 		}
+	floor_snap_length = 0.45
+	floor_constant_speed = true
+	floor_stop_on_slope = true
+	floor_max_angle = deg_to_rad(48.0)
 	var shape := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.radius = 0.38
@@ -100,12 +104,10 @@ func _refresh_nearby_cache(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
-	if event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_LEFT or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
+	if event is InputEventMouseMotion and ((event.button_mask & (MOUSE_BUTTON_MASK_LEFT | MOUSE_BUTTON_MASK_RIGHT)) != 0 or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED):
 		_look(event.relative)
-	if event is InputEventMouseButton and event.pressed:
-		_drag = true
-	if event is InputEventMouseButton and not event.pressed:
-		_drag = false
+	if event is InputEventMouseButton:
+		_drag = event.pressed
 
 
 func _look(relative: Vector2) -> void:
@@ -128,10 +130,15 @@ func add_touch_look(relative: Vector2) -> void:
 
 func _read_input(delta: float) -> void:
 	if not input_enabled:
-		speed = 0.0
-		velocity.x = 0.0
-		velocity.z = 0.0
+		speed = move_toward(speed, 0.0, delta * 18.0)
+		velocity.x = move_toward(velocity.x, 0.0, delta * 18.0)
+		velocity.z = move_toward(velocity.z, 0.0, delta * 18.0)
+		if not is_on_floor():
+			velocity.y -= 19.6 * delta
+		move_and_slide()
+		_update_visual(delta)
 		return
+
 	var forward := 0.0
 	var strafe := 0.0
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
@@ -156,29 +163,37 @@ func _read_input(delta: float) -> void:
 	var boost := 1.0
 	if GameState and GameState.boost_seconds > 0.0:
 		boost = float(tuning.get("boost_multiplier", 1.3))
-	var target := 0.0
-	if wish.length() > 0.0:
-		target = (float(tuning.get("run_speed", 5.6)) if run else float(tuning.get("walk_speed", 2.4))) * boost
-	speed = lerpf(speed, target, minf(1.0, delta * float(tuning.get("speed_lerp", 9.0))))
-	velocity.x = wish.x * speed
-	velocity.z = wish.z * speed
-	if not is_on_floor():
-		velocity.y -= 18.0 * delta
+	var target_speed := (float(tuning.get("run_speed", 5.6)) if run else float(tuning.get("walk_speed", 2.4))) * boost
+	var accel: float = float(tuning.get("speed_lerp", 11.0))
+	if wish.length() > 0.001:
+		var target_vel := wish * target_speed
+		velocity.x = lerpf(velocity.x, target_vel.x, minf(1.0, delta * accel))
+		velocity.z = lerpf(velocity.z, target_vel.z, minf(1.0, delta * accel))
 	else:
-		velocity.y = -0.1
+		velocity.x = move_toward(velocity.x, 0.0, delta * 20.0)
+		velocity.z = move_toward(velocity.z, 0.0, delta * 20.0)
+
+	speed = Vector2(velocity.x, velocity.z).length()
+
+	if not is_on_floor():
+		velocity.y -= 19.6 * delta
+	else:
+		velocity.y = 0.0
+
 	move_and_slide()
 	_find_nearby()
-	_update_visual()
+	_update_visual(delta)
 
 
-func _update_visual() -> void:
+func _update_visual(delta: float) -> void:
 	if _visual == null:
 		return
-	if speed > 0.15:
+	if speed > 0.18:
 		_visual.set_moving(true, maxf(speed, 0.6))
 		var dir := Vector3(velocity.x, 0.0, velocity.z)
-		if dir.length() > 0.05:
-			_visual.rotation.y = atan2(dir.x, dir.z)
+		if dir.length() > 0.1:
+			var target_rot := atan2(dir.x, dir.z)
+			_visual.rotation.y = rotate_toward(_visual.rotation.y, target_rot, delta * 14.0)
 	else:
 		_visual.set_moving(false)
 
@@ -243,45 +258,33 @@ func _update_camera(delta: float) -> void:
 		distance = float(tuning.get("camera_distance_dialogue", 3.2))
 	var forward := Vector3(sin(yaw) * cos(pitch), -sin(pitch), cos(yaw) * cos(pitch))
 	var eye := global_position + Vector3(0, float(tuning.get("camera_height", 1.5)), 0)
-	# Building avoidance: shrink the boom in 0.4 m steps until it is clear.
-	# The raycast march is expensive, so it only re-runs ~12 times a second
-	# (and immediately after a teleport).
+
 	var min_d := float(tuning.get("camera_min_distance", 1.2))
-	_boom_timer -= delta
-	if _boom_distance < 0.0 or _boom_timer <= 0.0:
-		_boom_timer = 0.08
-		var probe := distance
-		var steps := 0
-		while probe > min_d and steps < 12:
-			var p := eye - forward * probe
-			if not _solid_at(p):
-				break
-			probe -= 0.4
-			steps += 1
-		_boom_distance = probe
-	var d: float = minf(_boom_distance, distance)
-	var target := eye - forward * d
+	var target_d := distance
+	var space := get_world_3d().direct_space_state if get_world_3d() else null
+	if space:
+		var ray := PhysicsRayQueryParameters3D.create(eye, eye - forward * distance)
+		ray.exclude = [get_rid()]
+		ray.collision_mask = 1 # Static architecture and walls only; never NPCs, grass, or triggers!
+		var hit := space.intersect_ray(ray)
+		if not hit.is_empty():
+			var hit_pos: Vector3 = hit.get("position", eye - forward * distance)
+			target_d = clampf(eye.distance_to(hit_pos) - 0.22, min_d, distance)
+
+	if _boom_distance < 0.0:
+		_boom_distance = target_d
+	else:
+		_boom_distance = lerpf(_boom_distance, target_d, minf(1.0, delta * 14.0))
+
+	var target := eye - forward * _boom_distance
 	target.y = maxf(target.y, 0.5)
-	# when the boom cannot fit (the player is against a wall) fall back to a
-	# first-person style view instead of showing the inside of a building
-	if d <= min_d + 0.01:
-		target = global_position + Vector3(0, 1.62, 0) - forward * 0.25
-		if _visual:
-			_visual.visible = false
-	elif _visual:
+
+	if _visual:
 		_visual.visible = true
-	camera.global_position = camera.global_position.lerp(target, minf(1.0, delta * float(tuning.get("camera_lerp", 10.0))))
+
+	camera.global_position = camera.global_position.lerp(target, minf(1.0, delta * float(tuning.get("camera_lerp", 12.0))))
 	camera.look_at(global_position + Vector3(0, float(tuning.get("camera_look_height", 1.35)), 0), Vector3.UP)
 
-
-func _solid_at(p: Vector3) -> bool:
-	## The boom must not be blocked by the player's own capsule.
-	var params := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 1.9, 0), p)
-	params.exclude = [get_rid()]
-	params.hit_from_inside = false
-	for hit in get_world_3d().direct_space_state.intersect_ray(params):
-		return true
-	return false
 
 
 func snap_camera() -> void:

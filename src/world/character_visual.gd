@@ -313,10 +313,14 @@ func _process(delta: float) -> void:
 		# The original run clip is not in the exported character files, so the
 		# walk cycle is driven fast for running and the body leans into it.
 		holder.rotation.x = lerpf(holder.rotation.x, _run_lean, minf(1.0, delta * 6.0))
+		if not _walking and not _talking and not _saluting:
+			_breath += delta
+			holder.scale.y = 1.0 + sin(_breath * 1.5) * 0.005
+			holder.rotation.y = sin(_breath * 0.35) * 0.025
 	if holder and not _has_anim:
 		# static models breathe very slightly, like the web build
 		_breath += delta
-		holder.scale.y = 1.0 + sin(_breath * 1.6) * 0.004
+		holder.scale.y = 1.0 + sin(_breath * 1.6) * 0.005
 		if model_id == "guard":
 			# slow weight shift
 			holder.rotation.z = sin(_breath * 0.55) * 0.014

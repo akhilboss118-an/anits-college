@@ -14,6 +14,14 @@ var _enabled: bool = false
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+	# GameState is declared before SaveSystem in project.godot, so it is ready
+	# by now. Restore the collected documents (ID, fee receipt, library card,
+	# lab manual) that give_item() persisted.
+	var gs: Node = get_node_or_null("/root/GameState")
+	if gs:
+		var saved: Variant = load_items()
+		if saved is Dictionary:
+			gs.items = saved
 	set_process(true)
 
 

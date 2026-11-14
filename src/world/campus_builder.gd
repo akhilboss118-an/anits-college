@@ -46,6 +46,8 @@ func build(data: Dictionary) -> void:
 	_build_lamps()
 	_build_benches()
 	_build_vending_machines()
+	_build_notice_boards()
+	_build_water_coolers()
 
 
 func _clear() -> void:
@@ -958,68 +960,30 @@ func _build_admin_block(b: Dictionary) -> void:
 	_add_building_label("ADMIN & ADMISSIONS", wr, height, "NS")
 
 
-func _add_building_label(text: String, wr: Rect2, height: float, face := "S") -> void:
-	## A solid navy signboard bolted to the facade, instead of a floating label.
+func _add_building_label(text: String, wr: Rect2, height: float, _face := "S") -> void:
+	## High-visibility rooftop billboard label centered above the building.
 	if text.strip_edges() == "":
 		return
-	var side := face.strip_edges().to_upper()
-	if side == "" or side == "NS" or side == "SN":
-		side = "S"
-	elif side == "WE" or side == "EW":
-		side = "E"
-	side = side.left(1)
-	if side != "N" and side != "E" and side != "W":
-		side = "S"
-	var normal := Vector3.BACK
-	var rot := 0.0
-	var facade_len := wr.size.x
-	match side:
-		"N":
-			normal = Vector3.FORWARD
-			rot = PI
-		"E":
-			normal = Vector3.RIGHT
-			rot = PI * 0.5
-			facade_len = wr.size.y
-		"W":
-			normal = Vector3.LEFT
-			rot = -PI * 0.5
-			facade_len = wr.size.y
-		_:
-			normal = Vector3.BACK
-			rot = 0.0
-			facade_len = wr.size.x
 	var centre := Vector3(wr.position.x + wr.size.x * 0.5, 0.0, wr.position.y + wr.size.y * 0.5)
-	var face_pos := centre + normal * 0.0
-	match side:
-		"N":
-			face_pos.z = wr.position.y
-		"S":
-			face_pos.z = wr.end.y
-		"E":
-			face_pos.x = wr.end.x
-		"W":
-			face_pos.x = wr.position.x
-	var sign_w := clampf(float(text.length()) * 0.34, 3.0, minf(facade_len * 0.72, 12.0))
-	var sign_y := minf(maxf(height * 0.60, 2.2), maxf(height - 1.0, 1.5))
-	var board_pos := Vector3(face_pos.x, sign_y, face_pos.z) + normal * 0.10
-	var board := box(self, Vector3(sign_w + 0.34, 1.08, 0.14), board_pos,
-		mat(Color.html("#0e2a4f")), "SignBoard")
-	board.rotation.y = rot
-	board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var trim := box(self, Vector3(sign_w + 0.34, 0.06, 0.16),
-		Vector3(board_pos.x, board_pos.y + 0.56, board_pos.z), mat(Color.html("#d7b04a")), "SignTrim")
-	trim.rotation.y = rot
-	trim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var actual_h := height
+	for b in campus.get(KEY_BUILDINGS, []):
+		var bname := str(b.get("name", "")).to_upper()
+		var tname := text.to_upper()
+		if bname in tname or tname in bname:
+			actual_h = maxf(actual_h, float(b.get("rendered_height", height)))
+			break
+	var label_pos := Vector3(centre.x, actual_h + 2.8, centre.z)
+
 	var label := Label3D.new()
+	label.name = "BuildingLabel_" + text.replace(" ", "_")
 	label.text = text.to_upper()
-	label.font_size = 64
-	label.pixel_size = 0.0072
-	label.modulate = Color.html("#f2f5ff")
-	label.outline_size = 0
-	label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-	label.rotation.y = rot
-	label.position = board_pos + normal * 0.09
+	label.font_size = 54
+	label.pixel_size = 0.0088
+	label.modulate = Color(1.0, 0.96, 0.82)
+	label.outline_size = 12
+	label.outline_modulate = Color(0.04, 0.08, 0.18, 0.95)
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.position = label_pos
 	add_child(label)
 	label_nodes.append(label)
 
@@ -1270,7 +1234,9 @@ func _tree_spot_ok(px: float, py: float) -> bool:
 	if px > 78.0 and px < 168.0 and py > 406.0:
 		return false
 	var metres := 1.0 / Campus.MAP_SCALE
-	for npc in CampusDB.npc_list:
+	var db_node: Node = get_node_or_null("/root/CampusDB") if is_inside_tree() else null
+	var npcs: Array = db_node.get("npc_list") if db_node else []
+	for npc in npcs:
 		var p: Array = npc.get("pos", [])
 		if p.size() >= 2:
 			var d := Vector2(px - float(p[0]), py - float(p[1])).length()
@@ -1537,7 +1503,19 @@ func _build_lamps() -> void:
 func _build_benches() -> void:
 	var wood := mat(Color.html("#6e3f1c"))
 	var metal := mat(Color.html("#2d3138"))
-	for b in campus.get(KEY_BENCHES, []):
+	var book_mat := mat(Color.html("#2a52be"), 0.5)
+	var bag_mat := mat(Color.html("#36454f"), 0.8)
+	var laptop_mat := mat(Color.html("#b0b7bd"), 0.2)
+	laptop_mat.metallic = 0.8
+	var screen_mat := StandardMaterial3D.new()
+	screen_mat.albedo_color = Color("#00d4ff")
+	screen_mat.emission_enabled = true
+	screen_mat.emission = Color("#00d4ff")
+	screen_mat.emission_energy_multiplier = 0.7
+
+	var bench_list: Array = campus.get(KEY_BENCHES, [])
+	for i in bench_list.size():
+		var b: Dictionary = bench_list[i]
 		var p: Array = b["pos"]
 		var w := Campus.map_to_world(Vector2(p[0], p[1]))
 		var yaw := float(b.get("yaw", 0.0))
@@ -1547,6 +1525,18 @@ func _build_benches() -> void:
 			var leg := box(self, Vector3(0.12, 0.45, 0.45), Vector3(w.x + cos(yaw) * side, 0.22, w.z - sin(yaw) * side), metal, "BenchLeg")
 			leg.rotation.y = yaw
 			leg.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+		# Place realistic campus study props on alternating benches
+		if i % 3 == 0:
+			var bag := box(self, Vector3(0.35, 0.42, 0.25), Vector3(w.x + cos(yaw) * 1.05, 0.21, w.z - sin(yaw) * 1.05), bag_mat, "BenchBackpack")
+			bag.rotation.y = yaw + 0.2
+			var book := box(self, Vector3(0.32, 0.04, 0.24), Vector3(w.x + cos(yaw) * 0.35, 0.53, w.z - sin(yaw) * 0.35), book_mat, "BenchBook")
+			book.rotation.y = yaw - 0.1
+		elif i % 3 == 1:
+			var base_lap := box(self, Vector3(0.32, 0.02, 0.24), Vector3(w.x - cos(yaw) * 0.3, 0.52, w.z + sin(yaw) * 0.3), laptop_mat, "LaptopBase")
+			base_lap.rotation.y = yaw
+			var scr := box(self, Vector3(0.32, 0.22, 0.02), Vector3(w.x - cos(yaw) * 0.3, 0.63, w.z + sin(yaw) * 0.3 - 0.11), screen_mat, "LaptopScreen")
+			scr.rotation.y = yaw
 
 
 func _build_vending_machines() -> void:
@@ -1566,3 +1556,139 @@ func _build_vending_machines() -> void:
 		label.position = Vector3(w.x, 2.3, w.z)
 		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		add_child(label)
+
+
+func _build_notice_boards() -> void:
+	var boards := [
+		{
+			"id": "board_cse",
+			"pos": Vector2(155.0, 259.0),
+			"yaw": PI * 0.5,
+			"title": "CSE Notice Board",
+			"header": "ANITS CSE DEPARTMENT",
+			"content": "TECH FEST 2024 · CODE WARS\nRoom 204: Hackathon & Coding Arena\nGuest Lecture: AI & Systems Architecture"
+		},
+		{
+			"id": "board_admin",
+			"pos": Vector2(168.0, 331.0),
+			"yaw": 0.0,
+			"title": "Admin Notice Board",
+			"header": "ANITS ADMINISTRATION",
+			"content": "ACADEMIC CALENDAR 2024-25\nAdmissions & Fee Payment Desk Open\nScholarship & ID Card Verification"
+		},
+		{
+			"id": "board_library",
+			"pos": Vector2(99.0, 172.0),
+			"yaw": -PI * 0.5,
+			"title": "Central Library Notice",
+			"header": "CENTRAL LIBRARY & DIGITAL LAB",
+			"content": "SILENCE ZONE · Timings: 8 AM - 8 PM\nDigital Repository & IEEE Journal Access\nBook Return & Borrow Counter"
+		},
+		{
+			"id": "board_sports",
+			"pos": Vector2(240.0, 375.0),
+			"yaw": 0.0,
+			"title": "Sports & Fest Board",
+			"header": "CAMPUS SPORTS & CULTURAL FEST",
+			"content": "Inter-Department Basketball Championship\nNCC Annual Parade Drills\nAnnual Fest Evening Live Music"
+		}
+	]
+
+	var frame_mat := mat(Color.html("#3a2518"), 0.8)
+	var board_mat := mat(Color.html("#1e2b22"), 0.9)
+	var post_mat := mat(Color.html("#2b303a"), 0.5)
+
+	for b in boards:
+		var w := Campus.map_to_world(b["pos"])
+		var yaw: float = b["yaw"]
+		var root := Node3D.new()
+		root.name = str(b["id"])
+		root.position = Vector3(w.x, 0.0, w.z)
+		root.rotation.y = yaw
+		add_child(root)
+
+		for x in [-1.1, 1.1]:
+			box(root, Vector3(0.08, 2.2, 0.08), Vector3(x, 1.1, 0.0), post_mat, "BoardPost")
+		box(root, Vector3(2.36, 1.48, 0.07), Vector3(0.0, 1.7, 0.0), frame_mat, "BoardFrame")
+		var face := box(root, Vector3(2.2, 1.32, 0.08), Vector3(0.0, 1.7, 0.01), board_mat, "BoardFace")
+		face.add_to_group("interactables")
+		face.add_to_group("notice_board")
+		face.set_meta("board_title", b["title"])
+		face.set_meta("board_desc", b["content"])
+
+		var header_lbl := Label3D.new()
+		header_lbl.text = "★ %s ★" % b["header"]
+		header_lbl.font_size = 22
+		header_lbl.pixel_size = 0.0055
+		header_lbl.modulate = Color(1.0, 0.88, 0.35)
+		header_lbl.outline_size = 6
+		header_lbl.outline_modulate = Color(0.05, 0.05, 0.05)
+		header_lbl.position = Vector3(0.0, 2.15, 0.06)
+		root.add_child(header_lbl)
+
+		var content_lbl := Label3D.new()
+		content_lbl.text = b["content"]
+		content_lbl.font_size = 18
+		content_lbl.pixel_size = 0.005
+		content_lbl.modulate = Color(0.95, 0.96, 0.98)
+		content_lbl.outline_size = 4
+		content_lbl.outline_modulate = Color(0.05, 0.05, 0.05)
+		content_lbl.position = Vector3(0.0, 1.62, 0.06)
+		content_lbl.line_spacing = 4.0
+		root.add_child(content_lbl)
+
+		add_collider(root, Vector3(2.4, 2.2, 0.4), Vector3(0.0, 0.0, 0.0), "BoardCol")
+
+
+func _build_water_coolers() -> void:
+	var coolers := [
+		{"pos": Vector2(172.0, 331.0), "yaw": 0.0, "name": "Admin Water Cooler"},
+		{"pos": Vector2(155.0, 258.0), "yaw": PI * 0.5, "name": "CSE Water Cooler"},
+		{"pos": Vector2(99.0, 178.0), "yaw": -PI * 0.5, "name": "Library Water Cooler"},
+		{"pos": Vector2(286.0, 122.0), "yaw": -PI * 0.5, "name": "Canteen Water Cooler"}
+	]
+
+	var body_mat := mat(Color.html("#dcdfe3"), 0.35)
+	body_mat.metallic = 0.65
+	var tray_mat := mat(Color.html("#1a4570"), 0.4)
+	var bottle_mat := mat(Color(0.2, 0.6, 0.95, 0.65), 0.15)
+	bottle_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+
+	for c in coolers:
+		var w := Campus.map_to_world(c["pos"])
+		var root := Node3D.new()
+		root.name = str(c["name"]).replace(" ", "_")
+		root.position = Vector3(w.x, 0.0, w.z)
+		root.rotation.y = float(c["yaw"])
+		add_child(root)
+
+		var body := box(root, Vector3(0.65, 0.95, 0.55), Vector3(0.0, 0.475, 0.0), body_mat, "CoolerBody")
+		body.add_to_group("interactables")
+		body.add_to_group("water_cooler")
+
+		box(root, Vector3(0.5, 0.12, 0.22), Vector3(0.0, 0.96, 0.16), tray_mat, "CoolerTray")
+
+		var bottle := CylinderMesh.new()
+		bottle.top_radius = 0.20
+		bottle.bottom_radius = 0.20
+		bottle.height = 0.52
+		bottle.radial_segments = 14
+		var bmi := MeshInstance3D.new()
+		bmi.name = "WaterBottle"
+		bmi.mesh = bottle
+		bmi.material_override = bottle_mat
+		bmi.position = Vector3(0.0, 1.25, 0.0)
+		root.add_child(bmi)
+
+		var lbl := Label3D.new()
+		lbl.text = "ANITS RO WATER"
+		lbl.font_size = 20
+		lbl.pixel_size = 0.0055
+		lbl.modulate = Color(0.3, 0.85, 1.0)
+		lbl.outline_size = 4
+		lbl.outline_modulate = Color(0.02, 0.08, 0.15)
+		lbl.position = Vector3(0.0, 1.65, 0.0)
+		lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		root.add_child(lbl)
+
+		add_collider(root, Vector3(0.65, 1.6, 0.55), Vector3(0.0, 0.0, 0.0), "CoolerCol")

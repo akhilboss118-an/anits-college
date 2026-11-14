@@ -39,6 +39,7 @@ signal look_dragged(relative: Vector2)
 signal tapped
 signal interact_pressed
 signal salute_pressed
+signal bag_pressed
 signal run_changed(running: bool)
 
 const HUD_SCRIPT := preload("res://src/ui/hud.gd")
@@ -161,6 +162,7 @@ var _look_travel := 0.0
 var _buttons: Array[Button] = []
 var _button_e: Button
 var _button_g: Button
+var _button_bag: Button
 var _button_next: Button
 var _button_run: Button
 var _pill_run: PanelContainer
@@ -212,6 +214,9 @@ func _ready() -> void:
 	_button_g = _make_button("G", BTN_G)
 	_button_g.pressed.connect(_on_salute)
 	_button_g.visible = false
+	_button_bag = _make_button("BAG", BTN_G)
+	_button_bag.pressed.connect(_on_bag)
+	_button_bag.visible = true
 	_button_next = _make_button("NEXT", BTN_NEXT)
 	_button_next.pressed.connect(_on_next)
 	_button_next.visible = false
@@ -358,6 +363,7 @@ func _layout() -> void:
 	var d_e := BTN_E * s
 	var d_r := BTN_RUN * s
 	var d_g := BTN_G * s
+	var d_b := BTN_G * s
 	var d_n := BTN_NEXT * s
 	var gap := BTN_GAP * s
 	var edge := BTN_EDGE * s
@@ -371,6 +377,7 @@ func _layout() -> void:
 	_place(_button_e, Vector2(right_edge - d_e, button_y + (maxf(d_e, d_r) - d_e)), d_e)
 	_place(_button_run, Vector2(right_edge - d_e - gap - d_r, button_y + (maxf(d_e, d_r) - d_r)), d_r)
 	_place(_button_g, Vector2(right_edge - d_g, button_y - gap - d_g), d_g)
+	_place(_button_bag, Vector2(right_edge - d_g - gap - d_b, button_y - gap - d_b), d_b)
 	# NEXT replaces E in the same slot while a dialogue is open.
 	_place(_button_next, Vector2(right_edge - d_n, button_y + (maxf(d_e, d_n) - d_n)), d_n)
 
@@ -383,6 +390,7 @@ func _layout() -> void:
 			button.add_theme_font_size_override("font_size", int(button.size.x * 0.34))
 		_apply_button_style(_button_e, 1 if _action_available else 0)
 		_apply_button_style(_button_g, 1 if _salute_available else 0)
+		_apply_button_style(_button_bag, 0)
 		_apply_button_style(_button_next, 0)
 		_apply_run_style()
 		_pill_run_label.add_theme_font_size_override("font_size", int(round(11.0 * s)))
@@ -504,6 +512,10 @@ func _on_salute() -> void:
 	salute_pressed.emit()
 
 
+func _on_bag() -> void:
+	bag_pressed.emit()
+
+
 func _on_next() -> void:
 	## The explicit "next" button advances the dialogue.  It reuses `tapped`
 	## so the game side does not need to know about it.
@@ -596,6 +608,8 @@ func _refresh_button_visibility() -> void:
 	_button_e.visible = not _dialogue_open
 	_button_run.visible = not _dialogue_open
 	_button_g.visible = _salute_available and not _dialogue_open
+	if _button_bag:
+		_button_bag.visible = not _dialogue_open
 	_button_next.visible = _dialogue_open
 	_pill_e.visible = _button_e.visible
 	_pill_run.visible = _button_run.visible

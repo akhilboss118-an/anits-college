@@ -495,7 +495,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><th>Target project</th><td><code>new-game-project/</code> — <code>project.godot</code>, main scene <code>res://src/main.tscn</code></td></tr>
         <tr><th>Engine / renderer</th><td>Godot 4.7.2 stable · Forward+ · D3D12 (Windows) · Jolt Physics</td></tr>
         <tr><th>Report version</th><td>1.0 — issued 13 November 2026</td></tr>
-        <tr><th>Scope</th><td>Front end, campus world, Day&nbsp;1 mission chain, HUD, touch controls, Admin Office interior, voice and dialogue, test and build pipeline</td></tr>
+        <tr><th>Scope</th><td>Front end, campus world, the complete 10-day mission campaign, four walk-in interiors, five minigames, inventory, HUD, touch controls, voice and dialogue, test and build pipeline</td></tr>
         <tr><th>Status</th><td>Day&nbsp;1 plays end to end; Days&nbsp;2–10 are stubbed; no music track is implemented (see §10)</td></tr>
       </tbody>
     </table>
@@ -541,7 +541,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td class="toc-n">08</td><td>Admin Office interior</td><td class="toc-s">The sealed waiting room, the desk, the glass doors</td><td class="toc-p">24</td></tr>
         <tr><td class="toc-n">09</td><td>Characters, voice &amp; dialogue</td><td class="toc-s">64 NPCs, 632 recordings, per-character voice profiles, no music</td><td class="toc-p">25</td></tr>
         <tr><td class="toc-n">10</td><td>Rendering &amp; the 60&nbsp;fps strategy</td><td class="toc-s">PC pipeline, mobile quality ladder, budget and levers</td><td class="toc-p">27</td></tr>
-        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">66-check headless suite, scripted tour, mobile preview</td><td class="toc-p">29</td></tr>
+        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">138-check headless suite, scripted tour, mobile preview</td><td class="toc-p">29</td></tr>
         <tr><td class="toc-n">12</td><td>Known limitations &amp; future work</td><td class="toc-s">Open items, in priority order</td><td class="toc-p">31</td></tr>
         <tr><td class="toc-n">13</td><td>Build &amp; deploy</td><td class="toc-s">Signed Android APK and the GitHub Pages web build</td><td class="toc-p">32</td></tr>
         <tr><td class="toc-n">A</td><td>Appendix A - Controls reference</td><td class="toc-s">Keyboard, mouse and touch bindings</td><td class="toc-p">33</td></tr>
@@ -584,15 +584,15 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       Godot build boots into a recreated front end, generates the entire ANITS
       campus procedurally from a single JSON plan file, spawns all
       <strong>64</strong> non-player characters with their original dialogue, and
-      plays the complete <strong>Day&nbsp;1</strong> mission chain from the gate to
-      the Colonel's parade ground.
+      plays the complete <strong>10-day</strong> campaign — four walk-in
+      interiors, five minigames and a persistent student bag included.
     </p>
 
     <div class="kpis">
       <div class="kpi"><div class="k-v">17</div><div class="k-l">buildings generated from data</div></div>
       <div class="kpi"><div class="k-v">64</div><div class="k-l">NPCs with original lines</div></div>
       <div class="kpi"><div class="k-v">632</div><div class="k-l">voice recordings replayed</div></div>
-      <div class="kpi"><div class="k-v">66</div><div class="k-l">headless checks, 0 failures</div></div>
+      <div class="kpi"><div class="k-v">138</div><div class="k-l">headless checks, 0 failures</div></div>
     </div>
 
     <h2>The porting thesis</h2>
@@ -640,24 +640,13 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Campus world</td><td>17 buildings, 12 street rectangles, 5 zones, 6 wall runs, hinged main gate + Back Gate arch, kerbs, footpaths, crosswalk, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts in 32 culled chunks, 14 lamps, 7 benches, 4 vending machines.</td><td><code>campus_data.json</code>, <code>campus_builder.gd</code></td></tr>
         <tr><td>Player</td><td>Walk 2.4&nbsp;m/s, run 5.6&nbsp;m/s, energy-drink boost ×1.3 for 30&nbsp;s, no jump, 1.3&nbsp;m step-up, third-person boom at 5.4&nbsp;m with building avoidance down to 1.2&nbsp;m.</td><td><code>src/actors/player.gd</code>, <code>campus_data.json</code></td></tr>
         <tr><td>NPCs</td><td>All 64 characters, original models, original routes, original dialogue; distance-culled skeletons at 95&nbsp;m. Floating name tags are removed — names appear only in dialogue.</td><td><code>src/actors/npc.gd</code>, <code>npcs.json</code></td></tr>
-        <tr><td>Mission</td><td>Day&nbsp;1 complete: guard → gate → Laksmi → Prof.&nbsp;Rao → Suresh → Arjun → salute → Colonel Singh.</td><td><code>mission_runner.gd</code>, tour screenshots 01–08</td></tr>
+        <tr><td>Mission</td><td>All 10 days playable: Day&nbsp;1 campus tour; fees and bank ATM; Room&nbsp;204; library quiz; basketball; NCC drill; lab-manual run; canteen typing challenge; fest dance; first-class quiz. Each day ends in a completion dialog that unlocks the next.</td><td><code>mission_runner.gd</code>, <code>level_complete_dialog.gd</code>, 138-check suite</td></tr>
+        <tr><td>New systems</td><td>Four walk-in interiors (Admin, Library, Room&nbsp;204, Canteen); seven minigame variants; student bag with ID, fee receipt, library card and lab manual; bank ATM, notice boards and water coolers.</td><td><code>*_interior.gd</code>, <code>minigame_overlay.gd</code>, <code>inventory_panel.gd</code></td></tr>
         <tr><td>HUD</td><td>Mission panel, wallet and energy, dialogue panel, subtitles, interaction prompt, minimap, toasts, keyboard legend — all anchor-based, so they survive any aspect ratio.</td><td><code>src/ui/hud.gd</code></td></tr>
-        <tr><td>Touch</td><td>Small 76&nbsp;px virtual stick with auto-run at the outer ring, look-drag anywhere, and context-only <em>E</em> / <em>G</em> / <em>NEXT</em> buttons that call the same resolvers as the keyboard.</td><td><code>src/ui/touch_controls.gd</code></td></tr>
-        <tr><td>Admin Office</td><td>The sealed waiting room with sliding glass doors, Laksmi at her desk, sofas, bookshelves, restroom cubicle and the hall door that teleports the player in and out.</td><td><code>src/world/admin_office.gd</code></td></tr>
+        <tr><td>Touch</td><td>Small 84&nbsp;px virtual stick with auto-run at the outer ring, look-drag anywhere, and context-only <em>E</em> / <em>G</em> / <em>BAG</em> buttons that call the same resolvers as the keyboard.</td><td><code>src/ui/touch_controls.gd</code></td></tr>
         <tr><td>Voice</td><td>632 original MP3s, original pitch/rate per character, Telugu subtitle track from the same clip tables. <strong>No music bed is implemented</strong> — see §10.</td><td><code>src/autoload/voice_bank.gd</code></td></tr>
       </tbody>
     </table>
-
-    <h2>Deliberately not delivered in this increment</h2>
-    <p>
-      Days&nbsp;2–10 exist in the original as eight more scripted chapters with
-      five minigame types (quiz, shootout, command drill, mash, dance). Only the
-      Day&nbsp;2 chain is authored in the Godot build; Days&nbsp;3–10 return the
-      placeholder text <em>"Day&nbsp;N content is not ported yet."</em> from
-      <code>Mission._build_later_day()</code>. The economy tables (10 drinks,
-      4 dishes, 3 items), the inventory, the bank ATM and the vending-machine
-      shop are loaded and validated but have no interactive panel yet.
-    </p>
 
     <div class="note warn">
       <span class="note-l">Honest statement on mobile testing</span>
@@ -710,7 +699,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <thead><tr><th style="width:26%">Item</th><th style="width:36%">Value</th><th>Notes</th></tr></thead>
       <tbody>
         <tr><td>Campus size</td><td>217.0 × 261.8 m</td><td>310 × 374 plan px at 0.7 m/px</td></tr>
-        <tr><td>Plan origin</td><td>(215, 250) plan px</td><td><code>Campus.MAP_ORIGIN</code></td></tr>
+        <tr><td>Campaign</td><td>10 days, 4 interiors, 5 minigames</td><td><code>mission_runner.gd</code>, interiors, minigames</td></tr>
         <tr><td>Buildings</td><td>17</td><td>From <code>campus_data.json</code></td></tr>
         <tr><td>Streets</td><td>12 rectangles</td><td>8 campus roads + 4 perimeter strips</td></tr>
         <tr><td>Zones</td><td>5</td><td>parade ground, basketball, power supply, central lawn, parking</td></tr>
@@ -730,9 +719,9 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Interaction radii</td><td>NPC 3.8 m, machine 3.4 m, service 3.4 m</td><td>Salute radius 16 m</td></tr>
         <tr><td>Starting money</td><td>Wallet Rs.200, bank Rs.2000</td><td>College fee Rs.250</td></tr>
         <tr><td>Energy</td><td>40 of 100</td><td>Spent by running and by the energy drinks</td></tr>
-        <tr><td>Inventory economy</td><td>10 drinks, 4 dishes, 3 items</td><td><code>src/data/economy.json</code></td></tr>
+        <tr><td>Inventory</td><td>Bag: ID, fee receipt, library card, lab manual</td><td><code>inventory_panel.gd</code>; <code>economy.json</code></td></tr>
         <tr><td>HUD elements</td><td>Mission, wallet, energy, dialogue, subtitle, prompt, minimap, toast, key legend</td><td><code>src/ui/hud.gd</code></td></tr>
-        <tr><td>Touch controls</td><td>Small stick + look-drag + context E / G / NEXT</td><td>76 px radius, 0.14 dead zone, auto-run at 0.92</td></tr>
+        <tr><td>Touch controls</td><td>Stick + look-drag + context E / G / BAG / NEXT</td><td>84 px radius, 0.14 dead zone, auto-run at 0.92</td></tr>
         <tr><td>Voice</td><td>632 MP3s, 340 + 310 clip entries</td><td>Master / Music / SFX / Voice / UI buses</td></tr>      </tbody>
     </table>
   </div>
@@ -761,8 +750,8 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td><code>js/menu.js</code> — front end, level select, <code>localStorage</code> profile</td><td><code>src/ui/main_menu.gd</code> + <code>src/autoload/game_state.gd</code></td><td>DOM screens became <code>Control</code> screens on a centred 1600×1080 design canvas. The profile moved from <code>localStorage</code> to an in-memory dictionary persisted by <code>SaveSystem</code>.</td></tr>
         <tr><td><code>js/voice.js</code> — clip playback, per-character pitch/rate, Telugu subtitles</td><td><code>src/autoload/voice_bank.gd</code></td><td><code>CFG</code> pitch/rate table copied verbatim into a <code>PROFILES</code> constant. The browser's speech-synthesis fallback was dropped in favour of always showing the subtitle.</td></tr>
         <tr><td><code>js/touch.js</code>, <code>js/mobile.js</code> — mobile sticks and buttons</td><td><code>src/ui/touch_controls.gd</code></td><td>DOM elements became a <code>CanvasLayer</code> that draws its own joystick with <code>_draw()</code> and emits the same move/look/run signals the keyboard path uses.</td></tr>
-        <tr><td><code>js/pause.js</code> — settings modal</td><td><code>src/autoload/settings.gd</code></td><td>Volume, look sensitivity and subtitle language persist to <code>user://settings.cfg</code> instead of <code>localStorage</code> keys <code>anits-vol</code>, <code>anits-look</code>, <code>anits-sublang</code>.</td></tr>
-        <tr><td><code>js/inventory.js</code> — items, ID card, fee receipt</td><td><code>src/autoload/game_state.gd</code> (<code>items</code>, <code>give_item</code>, <code>has_item</code>)</td><td>Data and rules are in place; the panel UI is not yet built.</td></tr>
+        <tr><td><code>js/pause.js</code> — settings modal and pause</td><td><code>src/ui/hud.gd</code> (pause overlay) + <code>src/autoload/settings.gd</code></td><td>The pause overlay (RESUME / MAIN MENU) is built in the HUD; volume, look sensitivity and subtitle language persist to <code>user://settings.cfg</code> instead of <code>localStorage</code> keys <code>anits-vol</code>, <code>anits-look</code>, <code>anits-sublang</code>.</td></tr>
+        <tr><td><code>js/inventory.js</code> — items, ID card, fee receipt</td><td><code>src/ui/inventory_panel.gd</code> + <code>src/autoload/game_state.gd</code></td><td>The bag, its four document cards and the SHOW ID action are built; items persist through <code>SaveSystem</code> so a restart keeps the ID card.</td></tr>
         <tr><td><code>index.html</code> + <code>css/</code> — HUD markup and styling</td><td><code>src/ui/hud.gd</code></td><td>CSS absolute positioning became anchor presets and <code>offset_*</code> values so one layout survives 16:9, 20:9 and tablet ratios.</td></tr>
         <tr><td>Three.js <code>WebGLRenderer</code>, hemisphere + directional light, fog</td><td>Godot Forward+, Sky3D, <code>DirectionalLight3D</code>, <code>Environment</code></td><td>The web build's 0.66 hemisphere ambient and 0.78 sun were re-tuned against Sky3D's energy model; the sky dome now owns sun, moon, atmosphere and clouds.</td></tr>
         <tr><td>Plan-pixel camera maths (<code>W2()</code>, <code>MAP</code>, <code>SCALE</code>)</td><td><code>src/util/campus.gd</code></td><td>One static class holds <code>MAP_SCALE = 0.7</code>, <code>MAP_ORIGIN = (215, 250)</code> and the two conversion functions used by every other system.</td></tr>
@@ -964,7 +953,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <figure>
         <span class="tag godot">Godot 4 port</span>
         <img src="../screenshots/godot/06_canteen.png" alt="Godot port: the canteen area in the Godot build with the player standing near the vending machines.">
-        <figcaption><b>Figure 3.12 (Godot).</b> <code>docs/screenshots/godot/06_canteen.png</code> — mission step 6, Arjun at the canteen. The four vending machines, their stock lists and their positions are carried verbatim in <code>campus_data.json</code>; the shop panel itself is not yet implemented.</figcaption>
+        <figcaption><b>Figure 3.12 (Godot).</b> <code>docs/screenshots/godot/06_canteen.png</code> - mission step 6, Arjun at the canteen. The four vending machines, their stock lists and their positions are carried verbatim in <code>campus_data.json</code>; each machine sells directly from the <em>E</em> prompt, with no separate shop screen.</figcaption>
       </figure>
     </div>
 
@@ -1301,8 +1290,8 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td><code>npc</code></td><td>Talk to a named character</td><td><code>Mission.notify_talked_to(npc_id)</code> advances only when the <em>current</em> step names that NPC.</td></tr>
         <tr><td><code>at</code></td><td>Enter a radius around a plan point</td><td><code>Mission.notify_position()</code> converts the plan point to world metres and advances inside the radius. Polled every frame from <code>main.gd::_process()</code>.</td></tr>
         <tr><td><code>salute</code></td><td>Press <em>G</em> near the colonel</td><td><code>Mission.notify_salute()</code> advances only for a salute-type step.</td></tr>
-        <tr><td><code>chk</code></td><td>Predicate on run state</td><td>Used by Day&nbsp;2 (withdraw at least Rs.&nbsp;250 from the bank). Predicates are not yet implemented in the Godot build.</td></tr>
-        <tr><td><code>mini</code></td><td>A minigame completion</td><td>Quiz, shootout, command drill, mash and dance. Not implemented in the Godot build.</td></tr>
+        <tr><td><code>chk</code></td><td>Predicate on run state</td><td>Day&nbsp;2 waits for the bank withdrawal (<code>notify_check("bank")</code>); Day&nbsp;8 waits for two vending-machine drinks (<code>notify_check("drinks")</code>).</td></tr>
+        <tr><td><code>mini</code></td><td>A minigame completion</td><td>Quiz, shootout, cadence drill, typing, mash, command QTE and dance, all in <code>src/ui/minigame_overlay.gd</code>; the overlay emits <code>minigame_completed</code> and the mission advances on a win.</td></tr>
       </tbody>
     </table>
 
@@ -1429,12 +1418,14 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
 
     <h3>Completion</h3>
     <p>
-      After step 8 the runner sets <code>finished = true</code>, stops accepting
-      position and talk notifications, and emits <code>completed(day)</code>.
-      The Godot build does not yet present the web build's "Day&nbsp;1 Complete!"
-      overlay, which also awarded the ID-card item; the item grant path
-      (<code>GameState.give_item()</code>) exists and is tested, but the overlay
-      that triggers it is not built. This is listed in §12.
+      After the final step the runner sets <code>finished = true</code>, stops
+      accepting position and talk notifications, and emits
+      <code>completed(day)</code>. <code>level_complete_dialog.gd</code> answers
+      with the web build's "Day&nbsp;N Complete!" panel: the day number, the
+      saved wallet and the unlocked next day. Day&nbsp;1 also awards the ID card
+      through <code>GameState.give_item("id")</code>. NEXT DAY starts the next
+      mission and teleports the player back to the gate; MAIN MENU returns to
+      the level grid.
     </p>
   </div>
   <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 17 of 34</span></div>
@@ -1453,27 +1444,27 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       It follows the mobile-game reference: a mission pill, a wallet pill, a
       round pause button and an N-badged minimap, with the touch layer adding a
       translucent joystick and caption-pill action buttons. Touch mode shrinks
-      the type, narrows the panels and hides the keyboard legend.
+      the type, narrows panels and hides the legend.
     </p>
 
     <figure>
       <span class="tag godot">Godot 4 port · HUD in situ</span>
       <img src="../screenshots/godot/01_spawn_gate.png" alt="Godot port: the new HUD over the campus — mission pill top-left, wallet and pause top-right, N-badged minimap below them, key legend bottom-left.">
-      <figcaption><b>Figure 6.1.</b> <code>docs/screenshots/godot/01_spawn_gate.png</code> — the desktop HUD at the main gate. The mission pill carries the objective and a gold distance readout; the wallet pill carries the coin balance and the green energy bar; the round button opens the pause overlay. The minimap is a baked <code>SubViewport</code> image with building names, an N badge and a player arrow that rotates with the controller yaw.</figcaption>
+      <figcaption><b>Figure 6.1.</b> <code>01_spawn_gate.png</code> — the desktop HUD at the main gate: mission pill with distance, wallet and energy, pause button, and the baked minimap with its N badge and rotating player arrow.</figcaption>
     </figure>
 
-    <table>
+    <table style="font-size:7.5pt">
       <caption>HUD panel inventory</caption>
       <thead><tr><th style="width:20%">Element</th><th style="width:31%">Content</th><th>Behaviour</th></tr></thead>
       <tbody>
-        <tr><td>Mission pill</td><td>Top-left, 470&nbsp;px wide (340 in touch), navy glass with a pin icon and a chevron</td><td>Reads <code>MISSION k / m</code>, the current objective and a gold distance readout on the title row; the body wraps to the pill width</td></tr>
-        <tr><td>Wallet pill</td><td>Top-right, left of the pause button, coin icon + balance</td><td>Updated by <code>update_wallet()</code>; the green energy bar and bolt icon below it are updated by <code>update_energy()</code></td></tr>
+        <tr><td>Mission pill</td><td>Top-left, 470&nbsp;px (340 touch), navy glass, pin icon and chevron</td><td>Reads <code>MISSION k / m</code>, the objective and a gold distance readout; body wraps to the pill width</td></tr>
+        <tr><td>Wallet pill</td><td>Top-right, left of the pause button, coin icon + balance</td><td>Updated by <code>update_wallet()</code>; the energy bar below by <code>update_energy()</code></td></tr>
         <tr><td>Pause button</td><td>Top-right corner, 46&nbsp;px round navy button</td><td>Emits <code>pause_requested</code>; opens the pause overlay (RESUME / MAIN MENU). <code>Esc</code> pauses too, after finishing a typing line</td></tr>
         <tr><td>Minimap</td><td>Top-right below the pills, rounded, with an N badge</td><td>Baked once from the campus data into a <code>SubViewport</code>: roads, zones, tinted building footprints and names. Only the player arrow and objective dot redraw</td></tr>
-        <tr><td>Dialogue panel</td><td>Bottom-centre, brush-stroke navy panel with a gold frame and a portrait</td><td>Gold speaker name, 55&nbsp;cps typewriter, pulsing next hint and a NEXT button; <em>E</em> or a tap finishes the line, a second press advances it</td></tr>
-        <tr><td>Prompt</td><td>Bottom-centre above the dialogue panel</td><td>Reads <em>Talk to …</em>, <em>Use vending machine</em>, <em>Enter the Admin Office</em> or <em>Leave the Admin Office</em>; hidden in touch mode, where the E caption carries the same information</td></tr>
+        <tr><td>Dialogue panel</td><td>Bottom-centre, brush-stroke navy panel with a gold frame and a portrait</td><td>Gold speaker name, 55&nbsp;cps typewriter, pulsing next hint and NEXT; <em>E</em> or a tap finishes the line, a second advances it</td></tr>
+        <tr><td>Prompt</td><td>Bottom-centre above the dialogue panel</td><td>Reads <em>Talk to …</em>, <em>Use vending machine</em>, <em>Enter/Leave the Admin Office</em>; hidden in touch mode, where the E caption carries it</td></tr>
         <tr><td>Toast</td><td>Top-centre, green, fading in and out</td><td>Mission messages, the Admin Office announcement and the salute reply</td></tr>
-        <tr><td>Key legend</td><td>Bottom-left, desktop only</td><td>WASD move, Shift run, E talk/use, G salute, Q turn camera, Esc pause</td></tr>
+        <tr><td>Key legend</td><td>Bottom-left, desktop only</td><td>WASD move, Shift run, E talk/use, G salute, B bag, Q turn camera, Esc pause</td></tr>
       </tbody>
     </table>
   </div>
@@ -1592,24 +1583,23 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     <h3>How the swap works</h3>
     <p>
       <code>CharacterVisual.apply_uniform(year)</code> is the single entry point.
-      It changes the <code>albedo_texture</code> and <code>emission_texture</code>
-      of the body material only. The materials are per-instance duplicates made
-      by <code>_tweak_surface()</code>, so a uniform change on the player never
-      touches an NPC. The girl's <code>Acc_MAT</code> surface carries her
-      clothing colours in <code>COLOR_0</code>; the three source/target pairs
-      above are copied from <code>js/uniform.js</code>. Godot 4.7 has no
-      <code>surface_set_arrays()</code>, so a duplicate <code>ArrayMesh</code> is
-      rebuilt with <code>add_surface_from_arrays()</code> and cached per year.
+      It changes only the body material's <code>albedo_texture</code> and
+      <code>emission_texture</code>; per-instance duplicates from
+      <code>_tweak_surface()</code> keep NPCs untouched. The girl's
+      <code>Acc_MAT</code> surface carries her clothing colours in
+      <code>COLOR_0</code>; the pairs above are copied from
+      <code>js/uniform.js</code>. Godot 4.7 lacks
+      <code>surface_set_arrays()</code>, so a duplicate <code>ArrayMesh</code>
+      is rebuilt and cached per year.
     </p>
     <p>
       For 2023 and 2025 the girl also gets the web build's chunni: a
       90-segment ribbon generated around the spine, neck, arm and hip rest
       positions and parented to <code>mixamorig_Spine2</code> through a
       <code>BoneAttachment3D</code>, so it follows the walk, talk and salute
-      clips. It is hidden in 2024. The girl GLB's leftover orange authored
-      albedo is discarded (the web build sets every player material to white),
-      which is what makes the rose and sky panels read correctly instead of
-      being multiplied into orange.
+      clips. It is hidden in 2024. The girl GLB's leftover orange albedo is
+      discarded (the web build sets player materials to white), so the rose and
+      sky panels read correctly.
     </p>
 
     <div class="note">
@@ -1747,16 +1737,17 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
         <tr><td><em>RUN</em> button</td><td>86&nbsp;px diameter, bottom-right, with a <em>RUN</em> caption pill</td><td>Latches run on or off independently of stick deflection; the sprinter pictogram and the gold ring show the latched state. It stays visible at all times.</td></tr>
         <tr><td><em>E</em> button</td><td>86&nbsp;px diameter, right of RUN, with an <em>INTERACT</em> caption pill</td><td>Always visible; turns gold and the caption turns gold when an NPC is within 3.8&nbsp;m or a machine/service point within 3.4&nbsp;m. Calls the same <code>_interact()</code> resolver as the keyboard.</td></tr>
         <tr><td><em>G</em> button</td><td>68&nbsp;px diameter, above RUN, hidden by default</td><td>Appears only when the Colonel or a salute step is in range; triggers the salute.</td></tr>
+        <tr><td><em>BAG</em> button</td><td>68&nbsp;px diameter, above RUN, left of G</td><td>Always visible outside dialogue; opens the student bag, where SHOW ID satisfies a gate check.</td></tr>
         <tr><td><em>NEXT</em> button</td><td>86&nbsp;px diameter, replaces E in the same slot</td><td>Visible only while a dialogue is open; advances the current line.</td></tr>
         <tr><td>Look drag</td><td>Anywhere outside the stick and the buttons</td><td>Emits a relative delta multiplied by <code>Settings.look_sensitivity</code> (0.3–2.5, default 1.0). The slider updates this live.</td></tr>
         <tr><td>Tap</td><td>Look area, under 16&nbsp;px travel</td><td>Finishes the typewriter if a line is still typing, otherwise advances the line.</td></tr>
       </tbody>
     </table>
 
-    <figure>
+    <figure class="compact">
       <span class="tag godot">Godot 4 port · phone layout</span>
-      <img src="../screenshots/godot/flow_spawn.png" alt="Phone layout at spawn: mission and wallet pills, N-badged minimap, translucent joystick, RUN and E buttons with captions">
-      <figcaption><b>Figure 7.1.</b> The phone layout at spawn, captured through the menu → loading → campus handover at 1920 × 1055. The joystick is small enough to leave the world visible; RUN and INTERACT stay on screen as labelled buttons, G appears only when a salute is possible, and NEXT replaces E during dialogue. The HUD hides the keyboard legend and keeps the minimap in the top-right corner, clear of both thumb arcs.</figcaption>
+      <img class="compact" src="../screenshots/godot/flow_spawn.png" alt="Phone layout at spawn: mission and wallet pills, N-badged minimap, translucent joystick, RUN, E and BAG buttons with captions">
+      <figcaption><b>Figure 7.1.</b> The phone layout at spawn, captured through the menu → loading → campus handover at 1920 × 1055. The joystick is small enough to leave the world visible; RUN, INTERACT and BAG stay on screen as labelled buttons, G appears only when a salute is possible, and NEXT replaces E during dialogue. The HUD hides the keyboard legend and keeps the minimap in the top-right corner, clear of both thumb arcs.</figcaption>
     </figure>
 
     <div class="note warn">
@@ -1775,10 +1766,12 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     <h1 class="sec"><span class="sec-no">08 · Admin Office interior</span>A sealed room inside a sealed building</h1>
 
     <p class="lead">
-      The Admin Office is the only interior in the game. It is not modelled from
-      an imported asset: <code>src/world/admin_office.gd</code> builds it from
-      low-poly boxes, so it stays cheap on a mobile GPU and matches the flat-shaded
-      look of the campus.
+      The Admin Office was the first of four walk-in interiors. Like the Central
+      Library, Room&nbsp;204 and the Canteen that followed, it is not modelled
+      from an imported asset: <code>src/world/admin_office.gd</code> builds it
+      from low-poly boxes, so it stays cheap on a mobile GPU and matches the
+      flat-shaded look of the campus. Beauty shots 13–15 show the three newer
+      rooms.
     </p>
 
     <table>
@@ -1972,24 +1965,23 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
 
     <p class="lead">
       The target is <strong>60&nbsp;fps</strong>, capped in code by
-      <code>Engine.max_fps = 60</code>. This section describes how the frame is
-      budgeted, which levers exist, and what the Windows build actually measured
-      on the integrated Radeon laptop used for development. Android slots are
-      marked and left empty because no handset was available.
+      <code>Engine.max_fps = 60</code>. This section describes the frame budget,
+      the levers, and what the Windows build measured on the integrated Radeon
+      laptop used for development. Android slots are empty because no handset
+      was available.
     </p>
 
     <h3>Sky, sun and atmosphere</h3>
     <p>
       The sky is the Sky3D addon (<code>res://addons/sky_3d/</code>), which owns
       the sky dome, the atmosphere, the clouds, the sun, the moon and the time of
-      day. Time is frozen at <code>current_time = 9.35</code> — the web build's
-      morning look — and only the visual side is used; the game clock is
-      independent. The dome is tuned with <code>atm_sun_intensity 16</code>,
+      day. Time is frozen at <code>current_time = 9.35</code>, the web build's
+      morning look; the game clock is independent. The dome is tuned with <code>atm_sun_intensity 16</code>,
       <code>atm_darkness 0.42</code>, <code>atm_thickness 0.62</code>,
       <code>fog_start 150</code>, <code>fog_end 760</code> and
       <code>fog_falloff 2.1</code>. The environment uses ACES tone mapping
-      (exposure 0.88, white 1.6) with a subtle glow (intensity 0.14, bloom 0.03,
-      HDR threshold 1.25).
+      (exposure 0.88, white 1.6) with a subtle glow (0.14, bloom 0.03,
+      HDR 1.25).
     </p>
 
     <h3>Draw-call strategy</h3>
@@ -2005,17 +1997,15 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
         <tr><td>Small-prop colliders</td><td>One shared <code>StaticBody3D</code> holding many box shapes</td><td>Dozens of physics bodies instead of hundreds</td></tr>
         <tr><td>Small props</td><td><code>cast_shadow = OFF</code> on bushes, kerbs, kerb caps, ground</td><td>Fewer shadow draws</td></tr>
         <tr><td>NPC skeletons</td><td>Deactivated beyond 95&nbsp;m; no floating name tags</td><td>64 characters, a fraction animated at any time</td></tr>
-        <tr><td>Minimap</td><td>Baked once into a <code>SubViewport</code> image with roads, zones, building footprints and labels; only the player arrow and objective dot redraw</td><td>No per-frame image rebuild</td></tr>
+        <tr><td>Minimap</td><td>Baked once into a <code>SubViewport</code> with roads, zones, footprints and labels; only the arrow and objective dot redraw</td><td>No per-frame image rebuild</td></tr>
       </tbody>
     </table>
 
     <h3>Deterministic scatter</h3>
     <p>
-      All vegetation uses the original's own linear congruential generator
-      (<code>src/util/lcg.gd</code>, multiplier 16807) seeded from
-      <code>props.seed = 5</code>. The same seed produces the same campus on
-      every machine and every run, which is what makes the headless suite's
-      determinism check meaningful and the screenshots reproducible.
+      All vegetation uses the original's LCG (<code>src/util/lcg.gd</code>,
+      multiplier 16807), seeded from <code>props.seed = 5</code>, so every
+      machine and run produces the same campus and the same screenshots.
     </p>
 
     <table>
@@ -2029,16 +2019,14 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       </tbody>
     </table>
     <p class="tbl-note">
-      Hardware: AMD Radeon integrated graphics, Godot 4.7.2 Forward+, 1920 × 1080
-      output. The run starts at 0.88 scale and 43.5&nbsp;fps, takes the adaptive
-      steps and settles at 0.60. A discrete GPU never leaves 0.88.
+      Hardware: AMD Radeon integrated, Godot 4.7.2 Forward+, 1920 × 1080. The
+      run starts at 0.88 / 43.5&nbsp;fps, steps down and settles at 0.60; a
+      discrete GPU never leaves 0.88.
     </p>
     <div class="note">
       <span class="note-l">Order of attack if the frame rate drops</span>
-      1. Lower <code>scaling_3d_scale</code> — the biggest, least visible win.
-      2. Reduce the grass draw distance, then the NPC animation distance.
-      3. Reduce the shadow distance and the number of splits.
-      4. Disable the glow pass.
+      Lower <code>scaling_3d_scale</code> first; then the grass and NPC
+      animation distances; then shadow distance and splits; glow last.
     </div>
   </div>
   <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 27 of 34</span></div>
@@ -2080,22 +2068,22 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     <ul>
       <li>Rendering at 78&nbsp;% of the screen and upscaling bilinearly — the most significant single saving, and the least noticeable at arm's length on a phone.</li>
       <li>If the frame rate still drops below 58&nbsp;fps for three seconds, the scale steps down (68, 58, 50&nbsp;%) and finally the sun shadow is turned off, so the game degrades instead of stuttering.</li>
-      <li>Halving the shadow map and halving the shadow distance removes most of the shadow-pass cost on tile-based mobile GPUs.</li>
+      <li>Halving the shadow map and distance removes most of the shadow-pass cost on tile-based mobile GPUs.</li>
       <li>Disabling the cumulus layer removes the most expensive part of Sky3D; the cirrus layer stays so the sky is not empty.</li>
-      <li>Shortening the fog end distance lets the horizon dissolve earlier, so less of the campus is ever rasterised.</li>
+      <li>A shorter fog end dissolves the horizon earlier, rasterising less campus.</li>
     </ul>
 
     <p>
       The same adaptive ladder runs on desktop. On the integrated Radeon laptop
       used for the Windows build, a heat-soaked session settled at 0.60 with
       <strong>40.3&nbsp;fps</strong> (24.8&nbsp;ms) in the spawn view. An A/B run
-      against the pre-HUD build measured 39.7&nbsp;fps, which is within noise:
-      the new mission, wallet and minimap widgets cost nothing measurable. An
+      against the pre-HUD build measured 39.7&nbsp;fps — within noise, so the
+      new mission, wallet and minimap widgets cost nothing measurable. An
       earlier, cool-machine session recorded 59.4&nbsp;fps at the same scale;
       that figure is not reproducible once the laptop is heat-soaked, so this
       report treats ~40&nbsp;fps as the conservative desktop result. The phone
-      profile measured 52.6&nbsp;fps at 0.78 in that earlier session, which is
-      why the phone ladder keeps the extra steps.
+      profile measured 52.6&nbsp;fps at 0.78, so the phone ladder keeps its
+      extra steps.
     </p>
 
     <table>
@@ -2138,33 +2126,35 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
   --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
   --script res://tests/run_tests.gd</pre>
     <p>
-      The suite is <strong>66 checks</strong> across five groups. The recorded
-      result is <strong>66 checks, 0 failures</strong> — the suite was
-      re-baselined after the perimeter road and the ECE / EEE / CSE / Chemical
-      re-grid (four ring-road checks and five panel-grid checks).
+      The suite is <strong>138 checks</strong> across nine groups. The recorded
+      result is <strong>138 checks, 0 failures</strong>. The original data
+      checks remain; the new groups walk every day's real mission state machine,
+      drive each minigame's win path, and cover the interiors, the bag and
+      item persistence.
     </p>
     <table>
       <caption>Suite composition</caption>
-      <thead><tr><th style="width:30%">Group</th><th class="num">Checks</th><th>What it asserts</th></tr></thead>
+      <thead><tr><th style="width:32%">Group</th><th class="num">Checks</th><th>What it asserts</th></tr></thead>
       <tbody>
         <tr><td>Coordinate system</td><td class="num">6</td><td>Plan (122, 462) → world (−65.1, 148.4) and back; campus size 217.0 × 261.8 m; <code>MAP_SCALE = 0.7</code></td></tr>
-        <tr><td>Campus data</td><td class="num">32</td><td>17 buildings, 12 street rectangles (8 campus roads + 4 perimeter strips, each verified on its own side), 5 zones, 6 walls, 2 gates, 14 lamps, 7 benches, 4 vending machines, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts; the four panel-block rectangles, CSE height and tint, the shared ECE/EEE column, equal panel rows; the Admin Block's rendered height; the five player tuning values; the spawn matches the player data</td></tr>
-        <tr><td>NPC census</td><td class="num">12</td><td>64 NPCs split into 6 / 18 / 9 / 3 / 10 / 8 / 1 / 9; the guard's and the colonel's plan positions; that the colonel carries his step-6 dialogue</td></tr>
-        <tr><td>Economy</td><td class="num">13</td><td>10 drinks, 4 dishes, 3 items; the Red Bull, Happy Faces and Buldak prices; Buldak's energy and its "spicy" flag; wallet 200, bank 2000, fee 250, energy 40/100</td></tr>
-        <tr><td>Seeded generator</td><td class="num">3</td><td>The same seed reproduces the same stream, the first value is reproducible, and values stay in [0, 1)</td></tr>
-        <tr class="tot"><td>Total</td><td class="num">66</td><td>Recorded result: 0 failures</td></tr>
+        <tr><td>Campus data</td><td class="num">32</td><td>17 buildings, 12 street rectangles, 5 zones, 6 walls, 2 gates, props and vegetation counts; panel-block rectangles; player tuning and spawn</td></tr>
+        <tr><td>NPC census</td><td class="num">12</td><td>64 NPCs split by role; the guard's and colonel's plan positions; the colonel's step-6 dialogue</td></tr>
+        <tr><td>Economy</td><td class="num">13</td><td>10 drinks, 4 dishes, 3 items; named prices; Buldak's energy and spicy flag; wallet 200, bank 2000, fee 250, energy 40/100</td></tr>
+        <tr><td>Seeded generator</td><td class="num">3</td><td>Same seed reproduces the same stream; first value reproducible; values stay in [0, 1)</td></tr>
+        <tr><td>Mission runner</td><td class="num">37</td><td>All 10 day tables: step types, NPC ids, world-space objectives, ID gating, minigame steps and completion</td></tr>
+        <tr><td>Campaign walk</td><td class="num">20</td><td>Every day completes its real step machine; talking to the guard never satisfies the ID check</td></tr>
+        <tr><td>Minigame win paths</td><td class="num">6</td><td>Quiz, typing, drill, dance, mash and command QTE reach their win state</td></tr>
+        <tr><td>New systems</td><td class="num">9</td><td>Three interiors instantiate; minigame, bag and day-complete overlays exist; item grants; lore lines</td></tr>
+        <tr class="tot"><td>Total</td><td class="num">138</td><td>Recorded result: 0 failures</td></tr>
       </tbody>
     </table>
     <div class="note">
-      <span class="note-l">Re-baselined with the perimeter road and the panel grid</span>
-      The suite originally asserted <code>roads == 8</code>, the count of the
-      web build's campus streets. The active <code>src/data/campus_data.json</code>
-      now carries <strong>12</strong> street rectangles — the eight campus roads
-      plus the four perimeter strips that ring the compound — so the
-      expectation was updated and four checks assert that the ring road exists
-      on the north, west, east and south side. Five further checks assert the
-      re-gridded panel-block rectangles, the shared ECE/EEE column and equal
-      row depths. Result: <strong>66 checks, 0 failures</strong>.
+      <span class="note-l">Regression that the campaign walk caught</span>
+      The Day&nbsp;3 objective <em>"Enter Room 204"</em> was authored in world
+      metres but converted through the plan-pixel mapping, so the marker and the
+      radius test landed over 200&nbsp;m away and the day could not finish. The step
+      now carries <code>"world": true</code>, and the walk test fails if any day
+      stops before its last step.
     </div>
   </div>
   <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 29 of 34</span></div>
@@ -2214,7 +2204,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <thead><tr><th style="width:26%">Check</th><th style="width:34%">How</th><th>What it covers</th></tr></thead>
       <tbody>
         <tr><td>Mobile renderer path</td><td>Build with the mobile feature tags set so <code>_mobile_gpu</code> is true</td><td>0.78 resolution scale, MSAA off, 2 shadow splits at 92 m, cumulus disabled, fog end 520 m, glow off</td></tr>
-        <tr><td>Touch preview</td><td>Launch with <code>-- --touch-preview</code></td><td>The phone HUD layout, the small on-screen stick, context-only E / G / NEXT buttons, the prompt without key art, the minimap relocation</td></tr>
+        <tr><td>Touch preview</td><td>Launch with <code>-- --touch-preview</code></td><td>The phone HUD layout, the small on-screen stick, context-only E / G / BAG / NEXT buttons, the prompt without key art, the minimap relocation</td></tr>
       </tbody>
     </table>
     <div class="note warn">
@@ -2248,29 +2238,25 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <caption>Known limitations</caption>
       <thead><tr><th style="width:6%">#</th><th style="width:26%">Limitation</th><th style="width:34%">Impact</th><th>Status</th></tr></thead>
       <tbody>
-        <tr><td class="num">1</td><td>Days&nbsp;3–10 are not ported</td><td>Only Day&nbsp;1 and the Day&nbsp;2 chain are playable; the five minigames (quiz, shootout, command drill, mash, dance) do not exist</td><td>Stub returns "Day N content is not ported yet."</td></tr>
-        <tr><td class="num">2</td><td>No physical-device validation</td><td>Touch latency, thermal behaviour and OEM GPU differences are unverified</td><td>Substituted by the mobile-renderer and touch-preview passes (§11.3)</td></tr>
-        <tr><td class="num">3</td><td>Perimeter ring road added by the port</td><td>The web build's campus has no ring road; the port added one so the compound reads as a real campus</td><td>Resolved — 12 street rectangles, 66 checks passing</td></tr>
-        <tr><td class="num">4</td><td>No shop, bank or inventory panels</td><td>The vending machines, the bank ATM and the inventory bag cannot be opened; the underlying data and rules are present. The settings modal is implemented.</td><td>Data layer complete, shop/bank/inventory UI missing</td></tr>
-        <tr><td class="num">5</td><td>No day-complete overlay</td><td>The web build's "Day 1 Complete!" panel — which also awards the ID card — is not reproduced</td><td><code>GameState.give_item()</code> exists and is ready</td></tr>
-        <tr><td class="num">6</td><td>No pause menu</td><td>The pause overlay is not reproduced; <code>Esc</code> only skips a dialogue line</td><td>Intro, welcome, settings, year, character, name, main menu, level select and loading are done</td></tr>
-        <tr><td class="num">7</td><td>Props are CC0 substitutes</td><td>Trees, bushes, grass, rocks and the road texture come from the Quaternius, Road Generator and SimpleGrassTextured packs, not from the original</td><td>Intentional — see Appendix B</td></tr>
-        <tr><td class="num">8</td><td>Facial animation is disabled</td><td>The Mixamo facial morph meshes render as white shapes in Godot, so eyes, brows and mouth are hidden</td><td>Deliberate; the body animations are intact</td></tr>
-        <tr><td class="num">8</td><td>No Android frame-rate data</td><td>Desktop is measured; no phone or iPhone was benchmarked</td><td>Desktop settles at 0.60 / 40.3&nbsp;fps (§10); the Android slots remain empty</td></tr>
-        <tr><td class="num">10</td><td>Both export presets are committed and built</td><td>Web build deployed to Pages; signed arm64 APK attached to release <code>v1.0</code></td><td>Described in §13</td></tr>
+        <tr><td class="num">1</td><td>No physical-device validation</td><td>Touch latency, thermal behaviour and OEM GPU differences are unverified</td><td>Substituted by the mobile-renderer and touch-preview passes (§11.3)</td></tr>
+        <tr><td class="num">2</td><td>No Android frame-rate data</td><td>Desktop is measured; no phone or iPhone was benchmarked</td><td>Desktop settles at 0.60 / 40.3&nbsp;fps (§10); the Android slots remain empty</td></tr>
+        <tr><td class="num">3</td><td>Props are CC0 substitutes</td><td>Trees, bushes, grass, rocks and the road texture come from the Quaternius, Road Generator and SimpleGrassTextured packs, not from the original</td><td>Intentional — see Appendix B</td></tr>
+        <tr><td class="num">4</td><td>Facial animation is disabled</td><td>The Mixamo facial morph meshes render as white shapes in Godot, so eyes, brows and mouth are hidden</td><td>Deliberate; the body animations are intact</td></tr>
+        <tr><td class="num">5</td><td>Two characters are static meshes</td><td>Laksmi and the gate guard have no skeleton, so they do not play the walk or salute clips</td><td>They stand at their posts; the other 62 NPCs animate</td></tr>
+        <tr><td class="num">6</td><td>One run clip, no separate walk clip</td><td>Six of the eight character rigs share a retargeted in-place run cycle; walking uses the same cycle at a lower playback speed</td><td>Visual compromise; movement speeds are unchanged</td></tr>
+        <tr><td class="num">7</td><td>No music</td><td>The original web game has no music bed; the port keeps voices and UI sound only</td><td>Design decision, not an omission</td></tr>
+        <tr><td class="num">8</td><td>No separate shop screen</td><td>Vending machines and the bank ATM complete their transaction directly from the <em>E</em> prompt; there is no full-screen shop UI</td><td>All 10 drinks and the bank flow are functional</td></tr>
       </tbody>
     </table>
 
     <h2>Future work, in order</h2>
     <ol>
-      <li><strong>Extend the headless suite</strong> beyond its 66 checks to cover the mission state machine, the economy predicates and the save format.</li>
-      <li><strong>Port Days&nbsp;3–10</strong> using the existing step schema, and implement the five minigames against the <code>mini</code> step type already reserved in <code>Mission</code>.</li>
-      <li><strong>Build the interactive panels</strong> — vending-machine shop, bank ATM and inventory bag — on top of the economy data that is already loaded.</li>
-      <li><strong>Validate on real hardware</strong>: an Android handset and an iPhone, capturing the phone screenshot that this report still carries as a placeholder.</li>
-      <li><strong>Benchmark a real Android handset</strong> and fill the remaining slots in §10; the desktop numbers are already recorded there.</li>
-      <li><strong>Add the day-complete overlay</strong> and wire the item awards through <code>GameState.give_item()</code> and <code>SaveSystem</code>.</li>
-      <li><strong>Add the pause menu</strong>, the last missing front-end overlay, and keep the settings modal reachable from it as well as from the main menu.</li>
-      <li><strong>Decide on music</strong>: the original has none, so any addition is a design decision requiring its own licence.</li>
+      <li><strong>Validate on real hardware</strong>: an Android handset and an iPhone, then fill the benchmark slots in §10 with device numbers.</li>
+      <li><strong>Add character variety</strong> — the largest optional visual gap. New student and staff meshes would replace repeated rigs without touching the mission code.</li>
+      <li><strong>Optional art pass</strong>: interior kits, vehicles and parade props, in that order, using the same low-poly material language.</li>
+      <li><strong>Separate walk and run clips</strong> per rig, plus idle variants, to remove the shared-cycle compromise.</li>
+      <li><strong>Localisation</strong> of the UI and subtitles; the voice clips are already Telugu and English.</li>
+      <li><strong>Cloud saves</strong> on top of the existing per-day <code>user://</code> slots.</li>
     </ol>
   </div>
   <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 31 of 34</span></div>
@@ -2335,7 +2321,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
 
     <h3>13.3 — Running from source</h3>
     <p>
-      <code>verify.ps1</code> runs the import, the 66-check suite, a 300-frame
+      <code>verify.ps1</code> runs the import, the 138-check suite, a 300-frame
       smoke run and the scripted tour in one command; the benchmark is separate
       (§10). The live build was also booted in a headless Chromium at 1280×720
       and reached the year-select screen, which confirms the deployed PCK and
@@ -2361,7 +2347,8 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td>Left-drag</td><td>Look</td><td>Yaw sensitivity 0.006, pitch 0.004; pitch clamped to 0.05–1.1 rad</td></tr>
         <tr><td><code>E</code></td><td>Talk / use / skip a line</td><td>One resolver: dialogue, vending machine, bank, Admin Office door, skip</td></tr>
         <tr><td><code>G</code></td><td>Salute</td><td>Also advances the Day&nbsp;1 salute step and makes the cadet company answer</td></tr>
-        <tr><td><code>Esc</code></td><td>Skip the current line / pause</td><td>The pause menu itself is not yet implemented</td></tr>
+        <tr><td><code>B</code></td><td>Student bag</td><td>Opens the bag; SHOW ID satisfies the gate check on every day</td></tr>
+        <tr><td><code>Esc</code></td><td>Skip the current line / pause</td><td>Finishes a typing line first; otherwise opens the pause overlay (RESUME / MAIN MENU)</td></tr>
       </tbody>
     </table>
 
@@ -2369,12 +2356,13 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
     <table>
       <thead><tr><th style="width:18%">Input</th><th style="width:28%">Action</th><th>Detail</th></tr></thead>
       <tbody>
-        <tr><td>Left stick</td><td>Move</td><td>76 px radius, 0.14 dead zone; feeds the same move vector as WASD</td></tr>
+        <tr><td>Left stick</td><td>Move</td><td>84 px radius, 0.14 dead zone; feeds the same move vector as WASD</td></tr>
         <tr><td>Outer ring</td><td>Run</td><td>Deflection ≥ 0.92 starts a run, ≤ 0.80 releases; the ring turns gold</td></tr>
         <tr><td>Drag (right area)</td><td>Look</td><td>Relative delta × <code>Settings.look_sensitivity</code> (0.3–2.5, default 1.0)</td></tr>
         <tr><td>Tap</td><td>Skip a dialogue line</td><td>Under 16 px of travel</td></tr>
         <tr><td><em>E</em> button</td><td>Talk / use</td><td>Visible only when an NPC or machine is in range; same resolver and radii as the keyboard</td></tr>
         <tr><td><em>G</em> button</td><td>Salute</td><td>Visible only when the Colonel or a salute step is in range</td></tr>
+        <tr><td><em>BAG</em> button</td><td>Student bag</td><td>Always visible outside dialogue; SHOW ID satisfies the gate check</td></tr>
         <tr><td><em>NEXT</em> button</td><td>Advance dialogue</td><td>Visible only while a dialogue is open</td></tr>
       </tbody>
     </table>
@@ -2392,9 +2380,6 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td>Camera boom in dialogue</td><td class="num">3.2 m</td><td><code>player.camera_distance_dialogue</code></td></tr>
         <tr><td>Camera boom in the office</td><td class="num">3.1 m</td><td>Overridden in <code>main.gd::_enter_office()</code></td></tr>
         <tr><td>Minimum boom</td><td class="num">1.2 m</td><td><code>player.camera_min_distance</code></td></tr>
-        <tr><td>Boom avoidance step</td><td class="num">0.4 m</td><td><code>player.gd::_update_camera()</code></td></tr>
-        <tr><td>Camera smoothing</td><td class="num">lerp 10.0 /s</td><td><code>player.camera_lerp</code></td></tr>
-        <tr><td>Camera height / look height</td><td class="num">1.5 m / 1.35 m</td><td><code>player.camera_height</code>, <code>camera_look_height</code></td></tr>
         <tr><td>NPC interaction radius</td><td class="num">3.8 m</td><td><code>player.interact_radius</code></td></tr>
         <tr><td>Machine / service radius</td><td class="num">3.4 m</td><td><code>player.machine_radius</code>, <code>service_radius</code></td></tr>
         <tr><td>Admin Office door radius</td><td class="num">2.8 m</td><td><code>player.office_door_radius</code></td></tr>
@@ -2439,16 +2424,16 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td><code>src/actors/player.gd</code></td><td>Character body, input, camera boom, interaction</td></tr>
         <tr><td><code>src/actors/npc.gd</code></td><td>NPC setup, models, routes, culling, line lookup</td></tr>
         <tr><td><code>src/world/campus_builder.gd</code></td><td>Ground, roads, kerbs, walls, gates, buildings, props</td></tr>
-        <tr><td><code>src/world/admin_office.gd</code></td><td>The Admin Office interior and the hall door</td></tr>
+        <tr><td><code>src/world/*_interior.gd</code></td><td>Admin Office, Central Library, Room 204 and Canteen interiors plus their campus doors</td></tr>
         <tr><td><code>src/world/original_models.gd</code></td><td>Imports and fits the original models</td></tr>
         <tr><td><code>src/world/props_factory.gd</code></td><td>Batches the CC0 scenery packs into MultiMeshes</td></tr>
         <tr><td><code>src/world/character_visual.gd</code></td><td>Loads the characters and drives their animations</td></tr>
-        <tr><td><code>src/ui/hud.gd</code></td><td>Mission, wallet, energy, dialogue, minimap, prompts</td></tr>
-        <tr><td><code>src/ui/main_menu.gd</code></td><td>Year, character, name and main-menu screens</td></tr>
-        <tr><td><code>src/ui/touch_controls.gd</code></td><td>Small virtual stick, look drag, context-only E / G / NEXT buttons</td></tr>
+        <tr><td><code>src/ui/hud.gd</code></td><td>HUD, pause overlay, mission, wallet, energy, dialogue, minimap, prompts</td></tr>
+        <tr><td><code>src/ui/main_menu.gd</code></td><td>Year, character, name and main-menu screens; minigames, bag and day-complete dialog</td></tr>
+        <tr><td><code>src/ui/touch_controls.gd</code></td><td>Small virtual stick, look drag, context-only E / G / BAG / NEXT buttons</td></tr>
         <tr><td><code>src/util/campus.gd</code>, <code>src/util/lcg.gd</code></td><td>Plan-pixel conversion; the 16807 generator</td></tr>
         <tr><td><code>src/data/*.json</code></td><td>Campus plan, the 64 NPCs, the economy tables</td></tr>
-        <tr><td><code>tests/run_tests.gd</code></td><td>The 66-check headless data suite</td></tr>
+        <tr><td><code>tests/run_tests.gd</code></td><td>The 138-check suite: data, campaign walk, minigame wins, interiors and inventory</td></tr>
         <tr><td><code>docs/</code></td><td>Analysis, architecture, asset ledger and this report</td></tr>
       </tbody>
     </table>

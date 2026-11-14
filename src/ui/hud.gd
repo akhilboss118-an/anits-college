@@ -99,6 +99,8 @@ var _pips: StepPips = null
 var _toast_panel: PanelContainer = null
 var _toast_tween: Tween = null
 var _toast_hiding: bool = false
+var _last_prompt_text: String = ""
+var _prompt_tween: Tween = null
 var _pause_card: PanelContainer = null
 var _pause_buttons: Array[Button] = []
 var _entrance_played: bool = false
@@ -858,6 +860,7 @@ void fragment() {
 		_add_control(controls_row, ["shift"], "Run")
 		_add_control(controls_row, ["e"], "Talk / use")
 		_add_control(controls_row, ["g"], "Salute")
+		_add_control(controls_row, ["b"], "Bag")
 		_add_control(controls_row, ["q"], "Turn camera")
 		_add_control(controls_row, ["esc"], "Pause")
 
@@ -1059,8 +1062,19 @@ func _relayout() -> void:
 	# - the brush strokes
 	_dialogue_art.slash_x = port + 24.0 * s
 	_dialogue_art.queue_redraw()
-	prompt_panel.add_theme_stylebox_override("panel",
-			_panel_style(Color(0.03, 0.07, 0.15, 0.92), Color(0.23, 0.63, 1.0, 0.9), s))
+	var pstyle := StyleBoxFlat.new()
+	pstyle.bg_color = Color(0.04, 0.08, 0.16, 0.94)
+	pstyle.border_color = Color(0.28, 0.72, 1.0, 0.95)
+	pstyle.set_border_width_all(int(round(2.0 * s)))
+	pstyle.set_corner_radius_all(int(round(18.0 * s)))
+	pstyle.content_margin_left = 16.0 * s
+	pstyle.content_margin_right = 18.0 * s
+	pstyle.content_margin_top = 8.0 * s
+	pstyle.content_margin_bottom = 8.0 * s
+	pstyle.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
+	pstyle.shadow_size = int(round(6.0 * s))
+	prompt_panel.add_theme_stylebox_override("panel", pstyle)
+	prompt_label.add_theme_font_size_override("font_size", int(round(15.0 * s)))
 
 	# --- minimap (always top right, below the pills) ---
 	var map_long := clampf(BASE_MINIMAP * s, 96.0, view.x * 0.26)
@@ -1519,8 +1533,13 @@ func _refresh_objective() -> void:
 	if step.has("pos"):
 		var pos: Array = step["pos"]
 		if pos.size() >= 2:
-			_objective_plan = Vector2(float(pos[0]), float(pos[1]))
-			_objective_world = Campus.map_to_world(_objective_plan)
+			if float(pos[0]) < -200.0:
+				# Target is inside an interior: point outside compass to the Room 204 door
+				_objective_plan = Vector2(155.0, 263.5)
+				_objective_world = Campus.map_to_world(_objective_plan)
+			else:
+				_objective_plan = Vector2(float(pos[0]), float(pos[1]))
+				_objective_world = Campus.map_to_world(_objective_plan)
 			_objective_valid = true
 		_update_mission_marker()
 		return
@@ -1532,8 +1551,16 @@ func _refresh_objective() -> void:
 		return
 	var node := _find_npc(npc_id)
 	if node != null:
-		_objective_world = node.global_position
-		_objective_plan = Campus.world_to_map(_objective_world)
+		var target_world: Vector3 = node.global_position
+		if npc_id == "clerk" and target_world.x < -200.0:
+			_objective_plan = Vector2(174.0, 331.0)
+			_objective_world = Campus.map_to_world(_objective_plan)
+		elif (npc_id == "arjun" or npc_id == "prof") and target_world.x < -200.0:
+			_objective_plan = Vector2(155.0, 263.5)
+			_objective_world = Campus.map_to_world(_objective_plan)
+		else:
+			_objective_world = target_world
+			_objective_plan = Campus.world_to_map(_objective_world)
 		_objective_valid = true
 	_update_mission_marker()
 
@@ -1551,10 +1578,33 @@ func _find_npc(npc_id: String) -> Node3D:
 func set_prompt(text: String) -> void:
 	if prompt_panel == null:
 		return
-	var shown := text.strip_edges() != ""
-	prompt_panel.visible = shown
-	if shown:
-		prompt_label.text = text
+	var trimmed := text.strip_edges()
+	var shown := trimmed != ""
+	if not shown:
+		if prompt_panel.visible:
+			if _prompt_tween and _prompt_tween.is_valid():
+				_prompt_tween.kill()
+			_prompt_tween = create_tween()
+			_prompt_tween.tween_property(prompt_panel, "modulate:a", 0.0, 0.14)
+			_prompt_tween.tween_callback(func(): prompt_panel.visible = false)
+		_last_prompt_text = ""
+		return
+
+	prompt_label.text = trimmed
+	if not prompt_panel.visible or _last_prompt_text != trimmed:
+		prompt_panel.visible = true
+		prompt_panel.pivot_offset = prompt_panel.size * 0.5
+		if _prompt_tween and _prompt_tween.is_valid():
+			_prompt_tween.kill()
+		if not prompt_panel.visible or prompt_panel.modulate.a < 0.2:
+			prompt_panel.modulate.a = 0.0
+			prompt_panel.scale = Vector2(0.92, 0.92)
+		_prompt_tween = create_tween()
+		_prompt_tween.set_parallel(true)
+		_prompt_tween.tween_property(prompt_panel, "modulate:a", 1.0, 0.15)
+		_prompt_tween.tween_property(prompt_panel, "scale", Vector2.ONE, 0.20)\
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_last_prompt_text = trimmed
 
 
 ## The speaker key (guard / prof / suresh / ...) picks the portrait. The web

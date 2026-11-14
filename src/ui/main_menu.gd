@@ -861,6 +861,16 @@ func _build_levels_screen() -> void:
 	back.pressed.connect(show_main)
 	_screen_levels.add_child(back)
 
+	var unlock_btn := _button("★ UNLOCK ALL LEVELS", 16)
+	unlock_btn.name = "UnlockAllBtn"
+	unlock_btn.custom_minimum_size = Vector2(260, 62)
+	unlock_btn.size = Vector2(260, 62)
+	unlock_btn.position = Vector2(250, 34)
+	unlock_btn.add_theme_color_override("font_color", GOLD)
+	unlock_btn.add_theme_color_override("font_hover_color", Color(1, 1, 0.8))
+	unlock_btn.pressed.connect(_on_unlock_all_pressed)
+	_screen_levels.add_child(unlock_btn)
+
 	var logo := Label.new()
 	logo.text = "ANITS"
 	logo.add_theme_font_size_override("font_size", 54)
@@ -977,7 +987,7 @@ func _make_level_card(n: int, level_name: String, pos: Vector2, card_size: Vecto
 	card.size = card_size
 	card.custom_minimum_size = card_size
 	card.focus_mode = Control.FOCUS_ALL
-	card.pressed.connect(_on_level_pressed.bind(n, open, card))
+	card.pressed.connect(_on_level_pressed.bind(n, card))
 	_screen_levels.add_child(card)
 	_level_cards.append(card)
 
@@ -1055,11 +1065,13 @@ func _make_level_card(n: int, level_name: String, pos: Vector2, card_size: Vecto
 			card.focus_exited.connect(_zoom_thumb.bind(thumb, 1.0))
 	if not open:
 		var dim := ColorRect.new()
+		dim.name = "LockVeil"
 		dim.color = Color(0.01, 0.03, 0.08, 0.66)
 		dim.size = frame.size
 		dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		frame.add_child(dim)
 		var lock := Lock.new()
+		lock.name = "LockIcon"
 		lock.size = Vector2(52, 64)
 		lock.position = Vector2((frame.size.x - 52.0) * 0.5, (frame.size.y - 64.0) * 0.5)
 		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1119,11 +1131,32 @@ func _make_level_card(n: int, level_name: String, pos: Vector2, card_size: Vecto
 	card.add_child(name_label)
 
 
-func _on_level_pressed(n: int, open: bool, card: Button) -> void:
+func _on_unlock_all_pressed() -> void:
+	if GameState:
+		GameState.unlocked_day = 10
+		GameState.give_item("id")
+		GameState.give_item("fee")
+		GameState.give_item("lib")
+	var ss: Node = get_node_or_null("/root/SaveSystem") if is_inside_tree() else null
+	if ss and ss.has_method("save_profile") and GameState:
+		ss.save_profile(GameState.profile, 10)
+	show_levels()
+	if _level_toast:
+		_level_toast.text = "★ ALL 10 LEVELS UNLOCKED! Select any Day to play! ★"
+		_level_toast.modulate.a = 1.0
+		if _level_toast_tween and _level_toast_tween.is_valid():
+			_level_toast_tween.kill()
+		_level_toast_tween = create_tween()
+		_level_toast_tween.tween_interval(2.2)
+		_level_toast_tween.tween_property(_level_toast, "modulate:a", 0.0, 0.5)
+
+
+func _on_level_pressed(n: int, card: Button) -> void:
+	var unlocked: int = 1
+	if GameState:
+		unlocked = clampi(GameState.unlocked_day, 1, LEVELS.size())
+	var open := n <= unlocked
 	if not open:
-		var unlocked: int = 1
-		if GameState:
-			unlocked = clampi(GameState.unlocked_day, 1, LEVELS.size())
 		if _level_toast:
 			_level_toast.text = "Complete Day %d to unlock this level" % maxi(1, n - 1)
 			_level_toast.modulate.a = 1.0
@@ -1178,14 +1211,17 @@ func _zoom_thumb(thumb: Control, factor: float) -> void:
 
 
 func _refresh_level_card(card: Button, n: int, open: bool, done: bool) -> void:
-	## Just the lock veil: the badge state is rebuilt by show_levels() on
-	## re-entry, so a finished day loses its lock immediately.
+	## Refresh lock veil, lock icon, card styles and label colors
 	var frame := card.get_child(0) as Control
 	if frame == null or frame.get_child_count() == 0:
 		return
 	var veil := frame.get_node_or_null("LockVeil")
-	if open and veil:
-		veil.queue_free()
+	var lock := frame.get_node_or_null("LockIcon")
+	if open:
+		if veil:
+			veil.queue_free()
+		if lock:
+			lock.queue_free()
 	elif not open and veil == null:
 		var dim := ColorRect.new()
 		dim.name = "LockVeil"
@@ -1193,11 +1229,31 @@ func _refresh_level_card(card: Button, n: int, open: bool, done: bool) -> void:
 		dim.size = frame.size
 		dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		frame.add_child(dim)
-		var lock := Lock.new()
-		lock.size = Vector2(52, 64)
-		lock.position = Vector2((frame.size.x - 52.0) * 0.5, (frame.size.y - 64.0) * 0.5)
-		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		frame.add_child(lock)
+		var lk := Lock.new()
+		lk.name = "LockIcon"
+		lk.size = Vector2(52, 64)
+		lk.position = Vector2((frame.size.x - 52.0) * 0.5, (frame.size.y - 64.0) * 0.5)
+		lk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		frame.add_child(lk)
+
+	var normal := card.get_theme_stylebox("normal") as StyleBoxFlat
+	if normal:
+		if done:
+			normal.bg_color = Color(0.030, 0.120, 0.150, 0.88)
+			normal.border_color = Color(0.40, 0.90, 0.62, 0.75)
+		elif open:
+			normal.bg_color = Color(0.030, 0.090, 0.200, 0.86)
+			normal.border_color = Color(0.42, 0.75, 1.0, 0.60)
+		else:
+			normal.bg_color = Color(0.020, 0.055, 0.120, 0.90)
+			normal.border_color = Color(0.34, 0.46, 0.62, 0.45)
+
+	for child in card.get_children():
+		if child is Label:
+			if child.text.begins_with("D A Y") or child.text.begins_with("DAY"):
+				child.add_theme_color_override("font_color", GOLD if open else Color(0.52, 0.62, 0.76, 0.8))
+			else:
+				child.add_theme_color_override("font_color", Color(1, 1, 1) if open else Color(0.66, 0.75, 0.88, 0.85))
 
 
 func _build_settings_screen() -> void:

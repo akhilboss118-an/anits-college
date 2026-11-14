@@ -41,6 +41,7 @@ func reset_progress() -> void:
 	energy = START_ENERGY
 	boost_seconds = 0.0
 	current_day = 1
+	_save_items()
 
 
 func unlock(day: int) -> void:
@@ -54,7 +55,16 @@ func give_item(item_id: String) -> bool:
 		return false
 	items[item_id] = true
 	EventBus.item_gained.emit(item_id)
+	_save_items()
 	return true
+
+
+## Documents are part of the profile: they must survive a restart so a player
+## who resumes on Day 4 still carries the ID card, fee receipt and library card.
+func _save_items() -> void:
+	var ss: Node = get_node_or_null("/root/SaveSystem")
+	if ss and ss.has_method("save_items"):
+		ss.save_items(items)
 
 
 func has_item(item_id: String) -> bool:

@@ -4,7 +4,8 @@ This folder is the complete, evidence-based specification for rebuilding the ANI
 web game (**"ANITS – First Day"**, https://anits-college.vercel.app/) as a native Godot 4
 project for Windows and Android.
 
-**Status: analysis complete — the specification is ready to build from.**
+**Status: implemented — the Godot port ships the full 10-day campaign.**
+This folder remains the evidence-based specification it was built from.
 Every fact in these documents was read out of the game's own source
 (`ANITS-WEB GAME/`) or measured on the running build. Nothing is guessed; everything that is
 genuinely unknown is listed in [`MISSING_INFORMATION.md`](MISSING_INFORMATION.md).
@@ -14,7 +15,8 @@ genuinely unknown is listed in [`MISSING_INFORMATION.md`](MISSING_INFORMATION.md
 ## Project status (live)
 
 **The Godot project is running: the V2 campus, the player, the camera, all 64 NPCs, the
-dialogue system and the full Day 1 mission chain work end to end.**
+dialogue system, the full 10-day campaign, four walk-in interiors, five minigames and the
+student bag work end to end.**
 
 | Item | State |
 |---|---|
@@ -25,8 +27,8 @@ dialogue system and the full Day 1 mission chain work end to end.**
 | NPCs | **64** in `src/data/npcs.json` (6 quest + 18 cadets + 9 route students + 3 basketball + 10 named walkers + 8 standing + Remy + 9 girls), all repositioned onto the V2 plan |
 | Economy | `src/data/economy.json` — 10 drinks, 4 dishes, 3 items |
 | Systems | world builder (ground/roads/kerbs/walls/gates/buildings/props/collision), player controller + third-person camera with building avoidance, NPC bodies + routes, dialogue with the original lines, mission runner, HUD (mission, dialogue, subtitles, wallet, energy, minimap, prompts, toasts), front-end menu (year → character → name → main → level select) |
-| Tests | `tests/run_tests.gd` — **61 checks, 0 failures** (headless) |
-| Day 1 | **plays start to finish**: guard → gate → Laksmi → Prof. Rao → Suresh → Arjun → salute → Colonel → *"Day 1 Complete!"* |
+| Tests | `tests/run_tests.gd` — **138 checks, 0 failures** (headless) |
+| Campaign | **all 10 days play start to finish**, from the Day 1 tour through fees, Room 204, the library quiz, basketball, NCC drill, lab manual, canteen challenge and the final quiz |
 
 ### Run it
 
@@ -105,8 +107,8 @@ Screenshots from the Godot build land in `docs/screenshots/godot/`.
 - The game is a **third-person campus life-sim**: walk around an ANITS-style college, talk to
   64 characters, and complete 10 scripted "days" (fee payment, library card, basketball,
   NCC parade, lab signatures, canteen challenge, fest, first class).
-- The campus is **217 × 262 m**, flat, with 17 buildings, 8 roads, 3 zones, 150 trees and a
-  91-car parking lot.
+- The campus is **217 × 262 m**, flat, with 17 buildings, 12 roads (including the perimeter
+  ring), 5 zones, 150 trees and a 91-car parking lot.
 - The money, the energy, the shop and the save system are all small and **data-driven** — the
   port is mostly a translation job, not a design job.
 - The one genuinely risky area is **asset licensing**: only the temple carries a public

@@ -170,16 +170,20 @@ static func _is_foliage(model_id: String, surface: int) -> bool:
 
 static func _wind_for(model_id: String) -> float:
 	if model_id.begins_with("Grass_Wispy"):
-		return 0.14
+		return 0.18
 	if model_id.begins_with("Grass"):
-		return 0.09
+		return 0.12
 	if model_id.begins_with("Fern"):
-		return 0.05
+		return 0.08
 	if model_id.begins_with("Flower"):
-		return 0.04
+		return 0.06
 	if model_id.begins_with("Bush"):
-		return 0.025
-	return 0.055
+		return 0.085
+	if model_id.begins_with("Pine"):
+		return 0.14
+	if model_id.contains("Tree"):
+		return 0.22
+	return 0.08
 
 
 static func _alpha_for(model_id: String) -> float:
@@ -256,11 +260,14 @@ void vertex() {
 	// Static per-instance value: two trees of the same species never look
 	// stamped out of the same mould.  One hash per vertex, no time term.
 	v_jitter = hash11(dot(origin.xz, vec2(12.9898, 78.233)) + origin.y * 0.37);
-	float bend = h * h;
-	float gust = sin(TIME * wind_speed + phase) * 0.7
-		+ sin(TIME * wind_speed * 0.37 + phase * 1.7) * 0.3;
+	float bend = pow(h, 1.5);
+	float gust = sin(TIME * wind_speed + phase) * 0.65
+		+ sin(TIME * wind_speed * 0.38 + phase * 1.7) * 0.25
+		+ sin(TIME * wind_speed * 1.82 + phase * 3.1) * 0.10;
+	float gust_z = cos(TIME * wind_speed * 0.76 + phase * 1.1) * 0.65
+		+ sin(TIME * wind_speed * 1.4 + phase * 2.3) * 0.20;
 	VERTEX.x += gust * wind_strength * bend;
-	VERTEX.z += cos(TIME * wind_speed * 0.8 + phase) * wind_strength * 0.55 * bend;
+	VERTEX.z += gust_z * wind_strength * 0.65 * bend;
 }
 
 void fragment() {

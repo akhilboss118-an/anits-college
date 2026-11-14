@@ -14,10 +14,23 @@ const MENU_SCRIPT := preload("res://src/ui/main_menu.gd")
 const TOUCH_SCRIPT := preload("res://src/ui/touch_controls.gd")
 const SKY3D_SCRIPT := preload("res://addons/sky_3d/src/Sky3D.gd")
 const ADMIN_OFFICE_SCRIPT := preload("res://src/world/admin_office.gd")
+const LIBRARY_SCRIPT := preload("res://src/world/library_interior.gd")
+const CLASSROOM_SCRIPT := preload("res://src/world/classroom_interior.gd")
+const CANTEEN_SCRIPT := preload("res://src/world/canteen_interior.gd")
+const MINIGAME_SCRIPT := preload("res://src/ui/minigame_overlay.gd")
+const INVENTORY_SCRIPT := preload("res://src/ui/inventory_panel.gd")
+const LEVEL_COMPLETE_SCRIPT := preload("res://src/ui/level_complete_dialog.gd")
 
 var world: Node3D
 var campus: Node3D
 var admin_office: AdminOffice
+var library_interior: LibraryInterior
+var classroom_interior: ClassroomInterior
+var canteen_interior: CanteenInterior
+var minigame_overlay: MinigameOverlay
+var inventory_panel: InventoryPanel
+var level_complete_dialog: LevelCompleteDialog
+var atm_kiosk: Node3D
 var player: CharacterBody3D
 var hud: CanvasLayer
 var menu: CanvasLayer
@@ -26,7 +39,11 @@ var npcs: Array = []
 var mission_marker: Node3D
 var marker_target: Node3D = null
 var marker_pulse: Label3D = null
+var marker_distance_badge: Label3D = null
+var _dust_particles: CPUParticles3D = null
+var _leaf_particles: CPUParticles3D = null
 var in_office: bool = false
+var current_interior: String = ""
 var _marker_time: float = 0.0
 var _check_mode: bool = false
 var _beauty_mode: bool = false
@@ -149,19 +166,18 @@ func _build_environment() -> void:
 		e.ambient_light_sky_contribution = 0.42
 		e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 		e.tonemap_mode = Environment.TONE_MAPPER_ACES
-		e.tonemap_exposure = 0.88
-		e.tonemap_white = 1.6
-		# A warmer, punchier image: a touch more contrast and colour, with
-		# bloom that only picks up genuinely bright highlights (glass, metal,
-		# the sun on the road) instead of washing the whole frame out.
+		e.tonemap_exposure = 0.92
+		e.tonemap_white = 1.55
+		# A warmer, filmic image: rich coastal morning contrast and natural saturation,
+		# with bloom picking up sun on car glass, metallic rails and the campus road.
 		e.adjustment_enabled = true
-		e.adjustment_brightness = 1.0
-		e.adjustment_contrast = 1.05
-		e.adjustment_saturation = 1.03
+		e.adjustment_brightness = 1.02
+		e.adjustment_contrast = 1.08
+		e.adjustment_saturation = 1.05
 		e.glow_enabled = true
-		e.glow_intensity = 0.26
-		e.glow_bloom = 0.05
-		e.glow_hdr_threshold = 1.05
+		e.glow_intensity = 0.30
+		e.glow_bloom = 0.08
+		e.glow_hdr_threshold = 1.02
 		e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 		# Sky3D draws its own screen-space atmospheric fog.
 		e.fog_enabled = false
@@ -177,6 +193,15 @@ func _build_environment() -> void:
 			e.ssao_sharpness = 0.96
 			e.ssao_light_affect = 0.18
 			_ssao = true
+			# Volumetric sun shafts / god rays across campus buildings and trees
+			e.volumetric_fog_enabled = true
+			e.volumetric_fog_density = 0.0032
+			e.volumetric_fog_albedo = Color(1.0, 0.95, 0.88)
+			e.volumetric_fog_emission = Color(0.12, 0.10, 0.06)
+			e.volumetric_fog_emission_energy = 0.35
+			e.volumetric_fog_anisotropy = 0.62
+			e.volumetric_fog_length = 160.0
+			e.volumetric_fog_ambient_inject = 0.25
 
 	var sun := sky3d.sun
 	if sun:
@@ -185,6 +210,8 @@ func _build_environment() -> void:
 		sun.directional_shadow_max_distance = 128.0
 		sun.shadow_bias = 0.0008
 		sun.shadow_blur = 1.05
+		if _renderer == "forward_plus" and not _mobile_gpu:
+			sun.light_volumetric_fog_energy = 1.45
 		_sun = sun
 
 	if _mobile_gpu:
@@ -248,23 +275,115 @@ func _on_start(profile: Dictionary) -> void:
 	GameState.profile = profile
 	GameState.is_girl = profile.get("char", "boy") == "girl"
 	GameState.uniform_year = int(profile.get("year", 2024))
-	_build_campus()
-	_build_player()
-	_build_npcs()
-	_build_hud()
+
+	if world == null:
+		_build_campus()
+		_build_player()
+		_build_npcs()
+		_build_hud()
+
+		if minigame_overlay == null:
+			minigame_overlay = MINIGAME_SCRIPT.new()
+			add_child(minigame_overlay)
+			minigame_overlay.minigame_completed.connect(_on_minigame_completed)
+
+		if inventory_panel == null:
+			inventory_panel = INVENTORY_SCRIPT.new()
+			add_child(inventory_panel)
+			inventory_panel.id_shown.connect(_on_id_shown)
+
+		if level_complete_dialog == null:
+			level_complete_dialog = LEVEL_COMPLETE_SCRIPT.new()
+			add_child(level_complete_dialog)
+			level_complete_dialog.next_day_requested.connect(_start_next_day)
+			level_complete_dialog.menu_requested.connect(_to_main_menu)
+
+		if not Mission.minigame_triggered.is_connected(_on_minigame_triggered):
+			Mission.minigame_triggered.connect(_on_minigame_triggered)
+		if not Mission.completed.is_connected(_on_mission_completed):
+			Mission.completed.connect(_on_mission_completed)
+		if not Mission.step_changed.is_connected(_on_step_changed):
+			Mission.step_changed.connect(_on_step_changed)
+		if not Dialogue.line_shown.is_connected(_on_line):
+			Dialogue.line_shown.connect(_on_line)
+		if not Dialogue.dialogue_started.is_connected(_on_dialogue_started):
+			Dialogue.dialogue_started.connect(_on_dialogue_started)
+		if not Dialogue.dialogue_ended.is_connected(_on_dialogue_ended):
+			Dialogue.dialogue_ended.connect(_on_dialogue_ended)
+		if not EventBus.notification.is_connected(_on_notification):
+			EventBus.notification.connect(_on_notification)
+	else:
+		if hud:
+			hud.visible = true
+		if _touch_mode and touch_controls:
+			touch_controls.visible = true
+		if player:
+			player.teleport_to_plan(122, 448)
+			player.input_enabled = true
+		current_interior = ""
+		in_office = false
+
 	# The level grid starts any unlocked day; Day 1 is the tutorial.
 	GameState.current_day = clampi(int(profile.get("day", 1)), 1, GameState.MAX_DAYS)
+	# Every day after Day 1 opens at the gate ID check. The card is issued on
+	# Day 1, but a player who restarts and jumps straight to Day 2 must still
+	# have it, otherwise the gate would soft-lock.
+	if GameState.current_day >= 2:
+		GameState.give_item("id")
+	_sync_special_npcs_for_day()
 	Mission.start_day(GameState.current_day)
-	Mission.step_changed.connect(_on_step_changed)
-	Dialogue.line_shown.connect(_on_line)
-	Dialogue.dialogue_started.connect(_on_dialogue_started)
-	Dialogue.dialogue_ended.connect(_on_dialogue_ended)
-	EventBus.notification.connect(_on_notification)
 	_on_step_changed(0, Mission.steps.size(), str(Mission.current().get("text", "")))
 	# The menu kept its loading screen up while the campus was built; fade it
 	# out now that the first gameplay frame is ready.
 	if menu and menu.has_method("dismiss_loading"):
 		menu.dismiss_loading()
+
+
+func _on_minigame_triggered(cfg: Dictionary) -> void:
+	if player:
+		player.input_enabled = false
+	if touch_controls:
+		touch_controls.visible = false
+	if minigame_overlay:
+		minigame_overlay.start_minigame(cfg)
+
+
+func _on_minigame_completed(won: bool) -> void:
+	if player:
+		player.input_enabled = true
+	if touch_controls:
+		touch_controls.visible = true
+	if won:
+		Mission.notify_minigame_won()
+		if hud:
+			hud.toast("Challenge Completed! Objective updated.", 3.0)
+		_update_marker()
+
+
+func _on_id_shown() -> void:
+	if Mission.current().get("type") == "idcheck":
+		Mission.advance()
+		if hud:
+			hud.toast("Bajirao: \"ID verified! Welcome to ANITS.\" Gate opened.", 3.0)
+		_update_marker()
+
+
+func _on_mission_completed(d: int) -> void:
+	if level_complete_dialog:
+		level_complete_dialog.show_day_completed(d)
+
+
+func _start_next_day(next_day: int) -> void:
+	GameState.current_day = next_day
+	player.teleport_to_plan(122, 448)
+	player.snap_camera()
+	current_interior = ""
+	in_office = false
+	_sync_special_npcs_for_day()
+	Mission.start_day(next_day)
+	_on_step_changed(0, Mission.steps.size(), str(Mission.current().get("text", "")))
+	if hud:
+		hud.toast("Day %d: %s" % [next_day, Mission.current().get("text", "")], 4.0)
 
 
 func _build_campus() -> void:
@@ -285,7 +404,62 @@ func _build_campus() -> void:
 		var admin_centre := Campus.map_to_world(Vector2((r[0] + r[2]) * 0.5, (r[1] + r[3]) * 0.5))
 		var k := OriginalModels.scale_for("admin",
 			Vector2(r[2] - r[0], r[3] - r[1]))
-		admin_office.build_hall_door(Vector3(admin_centre.x, 0.0, admin_centre.y), k)
+		admin_office.build_hall_door(Vector3(admin_centre.x, 0.0, admin_centre.z), k)
+
+	# Central Library interior
+	library_interior = LIBRARY_SCRIPT.new()
+	library_interior.name = "LibraryInterior"
+	world.add_child(library_interior)
+	library_interior.build()
+	var lib_door_pos := Campus.map_to_world(Vector2(99.0, 175.0))
+	library_interior.build_campus_door(Vector3(lib_door_pos.x, 0.0, lib_door_pos.z), -PI * 0.5)
+
+	# Room 204 (CSE Lecture Hall) interior
+	classroom_interior = CLASSROOM_SCRIPT.new()
+	classroom_interior.name = "ClassroomInterior"
+	world.add_child(classroom_interior)
+	classroom_interior.build()
+	var room_door_pos := Campus.map_to_world(Vector2(155.0, 263.5))
+	classroom_interior.build_campus_door(Vector3(room_door_pos.x, 0.0, room_door_pos.z), PI * 0.5)
+
+	# College Canteen interior
+	canteen_interior = CANTEEN_SCRIPT.new()
+	canteen_interior.name = "CanteenInterior"
+	world.add_child(canteen_interior)
+	canteen_interior.build()
+	var can_door_pos := Campus.map_to_world(Vector2(286.0, 126.0))
+	canteen_interior.build_campus_door(Vector3(can_door_pos.x, 0.0, can_door_pos.z), -PI * 0.5)
+
+	# Bank ATM kiosk on east wall of Bank building
+	var atm_pos := Campus.map_to_world(Vector2(81.0, 408.0))
+	atm_kiosk = Node3D.new()
+	atm_kiosk.name = "BankATM"
+	atm_kiosk.position = Vector3(atm_pos.x, 0.0, atm_pos.z)
+	world.add_child(atm_kiosk)
+
+	var atm_mat := CampusBuilder.mat(Color("#1d428a"), 0.4)
+	var white_mat := CampusBuilder.mat(Color("#ffffff"), 0.3)
+	CampusBuilder.box(atm_kiosk, Vector3(0.9, 2.1, 0.7), Vector3(0, 1.05, 0), atm_mat, "ATMBody")
+	CampusBuilder.add_collider(atm_kiosk, Vector3(0.9, 2.1, 0.7), Vector3(0, 0, 0), "ATMCol")
+
+	var screen_mat := StandardMaterial3D.new()
+	screen_mat.albedo_color = Color("#00a4e4")
+	screen_mat.emission_enabled = true
+	screen_mat.emission = Color("#00a4e4")
+	screen_mat.emission_energy_multiplier = 0.8
+	CampusBuilder.box(atm_kiosk, Vector3(0.5, 0.35, 0.05), Vector3(0.36, 1.45, 0), screen_mat, "ATMScreen")
+	CampusBuilder.box(atm_kiosk, Vector3(0.35, 0.15, 0.1), Vector3(0.36, 1.15, 0), white_mat, "Keypad")
+
+	var atm_lbl := Label3D.new()
+	atm_lbl.text = "24/7 ATM"
+	atm_lbl.font_size = 20
+	atm_lbl.modulate = Color("#ffd54a")
+	atm_lbl.position = Vector3(0.36, 1.85, 0)
+	atm_lbl.rotation.y = PI * 0.5
+	atm_kiosk.add_child(atm_lbl)
+
+	atm_kiosk.add_to_group("interactables")
+	atm_kiosk.add_to_group("atm")
 	mission_marker = Node3D.new()
 	mission_marker.name = "MissionMarker"
 	mission_marker.position.y = 0.09
@@ -331,6 +505,111 @@ func _build_campus() -> void:
 	exclaim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mission_marker.add_child(exclaim)
 	marker_pulse = exclaim
+
+	# A 3D floating distance badge directly beneath the objective beacon
+	var dist_badge := Label3D.new()
+	dist_badge.name = "MarkerDistanceBadge"
+	dist_badge.text = "OBJECTIVE"
+	dist_badge.font_size = 38
+	dist_badge.pixel_size = 0.0075
+	dist_badge.outline_size = 14
+	dist_badge.modulate = Color(1.0, 0.94, 0.70)
+	dist_badge.outline_modulate = Color(0.04, 0.08, 0.16, 0.95)
+	dist_badge.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	dist_badge.no_depth_test = true
+	dist_badge.render_priority = 21
+	dist_badge.position.y = 1.95
+	dist_badge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mission_marker.add_child(dist_badge)
+	marker_distance_badge = dist_badge
+
+	_build_ambient_particles()
+
+
+func _build_ambient_particles() -> void:
+	if world == null:
+		return
+	# 1. Golden morning sunlit dust motes
+	_dust_particles = CPUParticles3D.new()
+	_dust_particles.name = "DustMotes"
+	_dust_particles.amount = 44
+	_dust_particles.lifetime = 6.0
+	_dust_particles.preprocess = 2.0
+	_dust_particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	_dust_particles.emission_box_extents = Vector3(24.0, 4.0, 24.0)
+	_dust_particles.gravity = Vector3(0.04, -0.04, 0.02)
+	_dust_particles.initial_velocity_min = 0.15
+	_dust_particles.initial_velocity_max = 0.45
+	_dust_particles.spread = 180.0
+
+	var dust_mesh := QuadMesh.new()
+	dust_mesh.size = Vector2(0.09, 0.09)
+	var dust_mat := StandardMaterial3D.new()
+	dust_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	dust_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dust_mat.albedo_color = Color(1.0, 0.94, 0.72, 0.45)
+	dust_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	dust_mesh.material = dust_mat
+	_dust_particles.mesh = dust_mesh
+	world.add_child(_dust_particles)
+
+	# 2. Fluttering amber leaves
+	_leaf_particles = CPUParticles3D.new()
+	_leaf_particles.name = "FlutteringLeaves"
+	_leaf_particles.amount = 24
+	_leaf_particles.lifetime = 5.5
+	_leaf_particles.preprocess = 1.5
+	_leaf_particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	_leaf_particles.emission_box_extents = Vector3(20.0, 3.5, 20.0)
+	_leaf_particles.gravity = Vector3(0.35, -0.55, 0.20)
+	_leaf_particles.initial_velocity_min = 0.3
+	_leaf_particles.initial_velocity_max = 0.8
+	_leaf_particles.angular_velocity_min = -45.0
+	_leaf_particles.angular_velocity_max = 45.0
+	_leaf_particles.damping_min = 0.2
+	_leaf_particles.damping_max = 0.5
+
+	var leaf_mesh := QuadMesh.new()
+	leaf_mesh.size = Vector2(0.14, 0.11)
+	var leaf_mat := StandardMaterial3D.new()
+	leaf_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	leaf_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	leaf_mat.albedo_color = Color(0.88, 0.65, 0.28, 0.82)
+	leaf_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	leaf_mesh.material = leaf_mat
+	_leaf_particles.mesh = leaf_mesh
+	world.add_child(_leaf_particles)
+
+
+func _current_objective_title() -> String:
+	var s := Mission.current()
+	if s.is_empty():
+		return "Objective"
+	var text: String = str(s.get("text", ""))
+	var npc_id: String = str(s.get("npc", ""))
+	if npc_id == "guard":
+		return "Guard Bajirao"
+	elif npc_id == "clerk":
+		return "Admin Office"
+	elif npc_id == "prof":
+		return "Prof. Rao"
+	elif npc_id == "suresh":
+		return "Suresh (IT)"
+	elif npc_id == "arjun":
+		return "Arjun (Canteen)" if current_interior != "classroom" else "Arjun (Room 204)"
+	elif npc_id == "colonel":
+		return "Col. Singh (NCC)"
+	if s.has("pos"):
+		var p: Array = s["pos"]
+		if float(p[0]) < -200.0 or (s.has("where") and str(s["where"]).contains("204")):
+			return "Room 204 (CSE)"
+	if str(s.get("type", "")) == "bank":
+		return "Bank ATM"
+	if str(s.get("type", "")) == "salute":
+		return "Parade Ground"
+	if text.length() > 22:
+		return text.substr(0, 20) + "..."
+	return text
 
 
 func _build_player() -> void:
@@ -384,7 +663,14 @@ func _build_touch_controls() -> void:
 	touch_controls.run_changed.connect(_on_touch_run)
 	touch_controls.interact_pressed.connect(_interact)
 	touch_controls.salute_pressed.connect(_salute)
+	if touch_controls.has_signal("bag_pressed"):
+		touch_controls.bag_pressed.connect(_on_touch_bag)
 	touch_controls.tapped.connect(_on_touch_tap)
+
+
+func _on_touch_bag() -> void:
+	if inventory_panel:
+		inventory_panel.toggle()
 
 
 func _on_touch_move(value: Vector2) -> void:
@@ -435,8 +721,16 @@ func _update_marker() -> void:
 	mission_marker.visible = true
 	if s.has("pos"):
 		var p: Array = s["pos"]
-		var w := Campus.map_to_world(Vector2(p[0], p[1]))
-		mission_marker.position = Vector3(w.x, 0.09, w.z)
+		var is_interior := bool(s.get("world", false))
+		if is_interior and current_interior != "classroom" and classroom_interior:
+			# Target is inside Classroom 204 while player is outside: point to Room 204 door on campus!
+			var door := classroom_interior.hall_door_pos
+			mission_marker.position = Vector3(door.x, 0.09, door.z)
+		elif is_interior:
+			mission_marker.position = Vector3(float(p[0]), 0.09, float(p[1]))
+		else:
+			var w := Campus.map_to_world(Vector2(p[0], p[1]))
+			mission_marker.position = Vector3(w.x, 0.09, w.z)
 	else:
 		var target := _npc_by_id(str(s.get("npc", "")))
 		if target:
@@ -444,12 +738,38 @@ func _update_marker() -> void:
 				# Point at the Admin hall door, not at Laksmi inside the sealed room.
 				var door := admin_office.hall_door_pos
 				mission_marker.position = Vector3(door.x, 0.09, door.z)
+			elif ((target.npc_id == "arjun" and GameState and GameState.current_day == 3) or (target.npc_id == "prof" and GameState and GameState.current_day == 10)) and current_interior != "classroom" and classroom_interior:
+				# Point at the Classroom 204 door on campus
+				var door := classroom_interior.hall_door_pos
+				mission_marker.position = Vector3(door.x, 0.09, door.z)
 			else:
 				marker_target = target
 				mission_marker.position = Vector3(target.global_position.x, 0.09,
 					target.global_position.z)
 		else:
 			mission_marker.visible = false
+
+
+func _sync_special_npcs_for_day() -> void:
+	var arjun_npc := _npc_by_id("arjun")
+	var prof_npc := _npc_by_id("prof")
+	if GameState and GameState.current_day == 3 and classroom_interior and arjun_npc:
+		arjun_npc.place_at(classroom_interior.CENTER + Vector3(1.2, 0.0, 0.6), 0.0)
+	elif arjun_npc:
+		var d := CampusDB.main_npc("arjun")
+		if not d.is_empty():
+			var p: Array = d.get("pos", [268, 128])
+			var w := Campus.map_to_world(Vector2(p[0], p[1]))
+			arjun_npc.place_at(w, float(d.get("facing", 0.0)))
+
+	if GameState and GameState.current_day == 10 and classroom_interior and prof_npc:
+		prof_npc.place_at(classroom_interior.lecturer_pos, 0.0)
+	elif prof_npc:
+		var d := CampusDB.main_npc("prof")
+		if not d.is_empty():
+			var p: Array = d.get("pos", [129, 287])
+			var w := Campus.map_to_world(Vector2(p[0], p[1]))
+			prof_npc.place_at(w, float(d.get("facing", 0.0)))
 
 
 func _npc_by_id(npc_id: String) -> Node3D:
@@ -462,6 +782,7 @@ func _npc_by_id(npc_id: String) -> Node3D:
 func _enter_office() -> void:
 	if admin_office == null or player == null:
 		return
+	current_interior = "admin_office"
 	in_office = true
 	player.global_position = admin_office.entry_pos
 	player.velocity = Vector3.ZERO
@@ -479,10 +800,101 @@ func _enter_office() -> void:
 func _exit_office() -> void:
 	if admin_office == null or player == null:
 		return
+	current_interior = ""
 	in_office = false
 	player.global_position = admin_office.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = PI * 0.5
+	player.pitch = 0.24
+	player.camera_distance_override = 0.0
+	player.snap_camera()
+	_update_marker()
+
+
+func _enter_library() -> void:
+	if library_interior == null or player == null:
+		return
+	current_interior = "library"
+	in_office = false
+	player.global_position = library_interior.entry_pos
+	player.velocity = Vector3.ZERO
+	player.yaw = PI
+	player.pitch = 0.20
+	player.camera_distance_override = 3.6
+	player.snap_camera()
+	_update_marker()
+	if hud and not _check_mode:
+		hud.toast("Central Library. Quiet study zone & reference stacks.", 2.6)
+
+
+func _exit_library() -> void:
+	if library_interior == null or player == null:
+		return
+	current_interior = ""
+	in_office = false
+	player.global_position = library_interior.hall_return_pos
+	player.velocity = Vector3.ZERO
+	player.yaw = -PI * 0.5
+	player.pitch = 0.24
+	player.camera_distance_override = 0.0
+	player.snap_camera()
+	_update_marker()
+
+
+func _enter_classroom() -> void:
+	if classroom_interior == null or player == null:
+		return
+	current_interior = "classroom"
+	in_office = false
+	player.global_position = classroom_interior.entry_pos
+	player.velocity = Vector3.ZERO
+	player.yaw = -PI * 0.5
+	player.pitch = 0.20
+	player.camera_distance_override = 3.4
+	player.snap_camera()
+	_update_marker()
+	if hud and not _check_mode:
+		hud.toast("Room 204 - CSE Lecture Hall.", 2.6)
+
+
+func _exit_classroom() -> void:
+	if classroom_interior == null or player == null:
+		return
+	current_interior = ""
+	in_office = false
+	player.global_position = classroom_interior.hall_return_pos
+	player.velocity = Vector3.ZERO
+	player.yaw = PI * 0.5
+	player.pitch = 0.24
+	player.camera_distance_override = 0.0
+	player.snap_camera()
+	_update_marker()
+
+
+func _enter_canteen() -> void:
+	if canteen_interior == null or player == null:
+		return
+	current_interior = "canteen"
+	in_office = false
+	player.global_position = canteen_interior.entry_pos
+	player.velocity = Vector3.ZERO
+	player.yaw = PI
+	player.pitch = 0.20
+	player.camera_distance_override = 3.8
+	player.snap_camera()
+	_update_marker()
+	if hud and not _check_mode:
+		hud.toast("ANITS Canteen. Hot snacks, chai & meals counter.", 2.6)
+
+
+func _exit_canteen() -> void:
+	if canteen_interior == null or player == null:
+		return
+	current_interior = ""
+	in_office = false
+	player.global_position = canteen_interior.hall_return_pos
+	player.velocity = Vector3.ZERO
+	player.yaw = -PI * 0.5
 	player.pitch = 0.24
 	player.camera_distance_override = 0.0
 	player.snap_camera()
@@ -581,6 +993,20 @@ func _process(delta: float) -> void:
 		mission_marker.scale = Vector3(pulse * marker_scale, marker_scale, pulse * marker_scale)
 		if marker_pulse:
 			marker_pulse.position.y = 2.55 + sin(_marker_time * 2.0) * 0.14
+		if marker_distance_badge and player:
+			marker_distance_badge.position.y = 1.95 + sin(_marker_time * 2.0) * 0.10
+			var dist := player.global_position.distance_to(mission_marker.global_position)
+			var title := _current_objective_title()
+			if dist < 2.8:
+				marker_distance_badge.text = "★ REACHED ★"
+				marker_distance_badge.modulate = Color(0.45, 1.0, 0.55)
+			else:
+				marker_distance_badge.text = "◆ %s · %dm" % [title, int(round(dist))]
+				marker_distance_badge.modulate = Color(1.0, 0.94, 0.70)
+	if player and _dust_particles:
+		_dust_particles.global_position = player.global_position + Vector3(0, 2.5, 0)
+	if player and _leaf_particles:
+		_leaf_particles.global_position = player.global_position + Vector3(0, 3.5, 0)
 	_adaptive_quality(delta)
 
 ## The frame rate is watched on every platform: if the device cannot hold 55 fps
@@ -609,10 +1035,12 @@ func _degrade_quality() -> void:
 	match _quality_step:
 		1:
 			viewport.scaling_3d_scale = 0.68 if _mobile_gpu else 0.78
-			# Drop the most expensive post effect first, then shadows.
-			if _env and _ssao:
-				_env.ssao_enabled = false
-				_ssao = false
+			# Drop the most expensive post effects first, then shadows.
+			if _env:
+				if _ssao:
+					_env.ssao_enabled = false
+					_ssao = false
+				_env.volumetric_fog_enabled = false
 			viewport.msaa_3d = Viewport.MSAA_DISABLED
 		2:
 			viewport.scaling_3d_scale = 0.58 if _mobile_gpu else 0.68
@@ -633,16 +1061,58 @@ func _update_prompt() -> void:
 	if Dialogue.active:
 		hud.set_prompt("")
 		return
-	if in_office and player.global_position.distance_to(admin_office.exit_pos) < 2.4:
+	# Leaving interiors
+	if in_office and admin_office and player.global_position.distance_to(admin_office.exit_pos) < 2.4:
 		hud.set_prompt("Leave the Admin Office")
 		return
-	if player.interact_target != null and player.interact_target.is_in_group("admin_office_door"):
-		hud.set_prompt("Enter the Admin Office")
+	if current_interior == "library" and library_interior and player.global_position.distance_to(library_interior.exit_pos) < 2.4:
+		hud.set_prompt("Leave Central Library")
+		return
+	if current_interior == "classroom" and classroom_interior and player.global_position.distance_to(classroom_interior.exit_pos) < 2.4:
+		hud.set_prompt("Leave Room 204")
+		return
+	if current_interior == "canteen" and canteen_interior and player.global_position.distance_to(canteen_interior.exit_pos) < 2.4:
+		hud.set_prompt("Leave the Canteen")
+		return
+
+	# Entering interiors from campus
+	if player.interact_target != null:
+		if player.interact_target.is_in_group("admin_office_door"):
+			hud.set_prompt("Enter the Admin Office")
+			return
+		if player.interact_target.is_in_group("library_door"):
+			hud.set_prompt("Enter Central Library")
+			return
+		if player.interact_target.is_in_group("classroom_door"):
+			hud.set_prompt("Enter Room 204 (CSE)")
+			return
+		if player.interact_target.is_in_group("canteen_door"):
+			hud.set_prompt("Enter the Canteen")
+			return
+		if player.interact_target.is_in_group("classroom_seat"):
+			hud.set_prompt("Sit at Desk (Room 204)")
+			return
+		if player.interact_target.is_in_group("atm"):
+			hud.set_prompt("Withdraw Rs. 250 (Bank ATM)")
+			return
+		if player.interact_target.name.begins_with("Vending"):
+			hud.set_prompt("Buy Cold Drink (Rs. 20)")
+			return
+		if player.interact_target.is_in_group("notice_board"):
+			var title: String = str(player.interact_target.get_meta("board_title", "Notice Board"))
+			hud.set_prompt("Read %s" % title)
+			return
+		if player.interact_target.is_in_group("water_cooler"):
+			hud.set_prompt("Drink Fresh RO Water (ANITS)")
+			return
+
+	if Mission.current().get("type") == "idcheck" and player.dialogue_nearby != null:
+		hud.set_prompt("Show your ID card (press B)")
 		return
 	if player.dialogue_nearby != null:
 		hud.set_prompt("Talk to %s" % str(player.dialogue_nearby.get("display_name")))
 	elif player.interact_target != null:
-		hud.set_prompt("Use vending machine")
+		hud.set_prompt("Interact")
 	else:
 		hud.set_prompt("")
 
@@ -665,6 +1135,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				_interact()
 			KEY_G:
 				_salute()
+			KEY_B:
+				if inventory_panel:
+					var is_id: bool = Mission.current().get("type") == "idcheck"
+					inventory_panel.open(is_id)
 
 
 func _toggle_pause() -> void:
@@ -702,9 +1176,20 @@ func _to_main_menu() -> void:
 	get_tree().paused = false
 	if hud:
 		hud.set_paused_visible(false)
+		hud.visible = false
 	if touch_controls:
-		touch_controls.visible = true
-	get_tree().reload_current_scene()
+		touch_controls.visible = false
+	if level_complete_dialog:
+		level_complete_dialog.visible = false
+	if minigame_overlay:
+		minigame_overlay.visible = false
+	if inventory_panel:
+		inventory_panel.visible = false
+	if player:
+		player.input_enabled = false
+	if menu:
+		menu.visible = true
+		menu.show_levels()
 
 
 func _interact() -> void:
@@ -713,14 +1198,78 @@ func _interact() -> void:
 		return
 	if player == null:
 		return
+	# Leaving interiors
 	if in_office and admin_office \
 			and player.global_position.distance_to(admin_office.exit_pos) < 2.4:
 		_exit_office()
 		return
-	if player.interact_target != null \
-			and player.interact_target.is_in_group("admin_office_door"):
-		_enter_office()
+	if current_interior == "library" and library_interior \
+			and player.global_position.distance_to(library_interior.exit_pos) < 2.4:
+		_exit_library()
 		return
+	if current_interior == "classroom" and classroom_interior \
+			and player.global_position.distance_to(classroom_interior.exit_pos) < 2.4:
+		_exit_classroom()
+		return
+	if current_interior == "canteen" and canteen_interior \
+			and player.global_position.distance_to(canteen_interior.exit_pos) < 2.4:
+		_exit_canteen()
+		return
+
+	# Entering interiors or interactables
+	if player.interact_target != null:
+		if player.interact_target.is_in_group("admin_office_door"):
+			_enter_office()
+			return
+		if player.interact_target.is_in_group("library_door"):
+			_enter_library()
+			return
+		if player.interact_target.is_in_group("classroom_door"):
+			_enter_classroom()
+			return
+		if player.interact_target.is_in_group("canteen_door"):
+			_enter_canteen()
+			return
+		if player.interact_target.is_in_group("classroom_seat"):
+			var seat_pos: Vector3 = player.interact_target.global_position
+			player.global_position = Vector3(seat_pos.x, 0.12, seat_pos.z)
+			player.rotation.y = PI
+			if hud:
+				hud.toast("Seated in Room 204. Ready for class lecture!", 3.0)
+			return
+		if player.interact_target.is_in_group("atm"):
+			GameState.deposit(250)
+			if hud:
+				hud.toast("Withdrew Rs. 250 from ATM. Wallet: Rs. %d" % GameState.wallet, 3.0)
+			Mission.notify_check("bank")
+			return
+		if player.interact_target.name.begins_with("Vending") or player.interact_target.is_in_group("interactables"):
+			if player.interact_target.name.begins_with("Vending"):
+				if GameState.can_afford(20):
+					GameState.spend(20)
+					GameState.add_energy(25)
+					var d_num := GameState.drinks_tried_count() + 1
+					GameState.try_drink("drink_%d" % d_num)
+					if hud:
+						hud.toast("Cold drink enjoyed! Energy restored (+25).", 3.0)
+					if GameState.drinks_tried_count() >= 2:
+						Mission.notify_check("drinks")
+				else:
+					if hud:
+						hud.toast("Not enough cash! Drinks cost Rs. 20.", 3.0)
+				return
+			if player.interact_target.is_in_group("notice_board"):
+				var title: String = str(player.interact_target.get_meta("board_title", "Campus Notice"))
+				var desc: String = str(player.interact_target.get_meta("board_desc", ""))
+				if hud:
+					hud.toast("📋 [%s]\n%s" % [title, desc], 5.0)
+				return
+			if player.interact_target.is_in_group("water_cooler"):
+				GameState.add_energy(20)
+				if hud:
+					hud.toast("💧 Chilled RO Water! Rehydrated and restored +20 Energy.", 3.5)
+				return
+
 	if player.dialogue_nearby == null:
 		var dbg := ""
 		if player:
@@ -733,10 +1282,15 @@ func _interact() -> void:
 			dbg += " player_wp=" + str(player.global_position.round())
 		print("  [interact] no npc nearby" + dbg)
 		return
+
 	var npc := player.dialogue_nearby as Node3D
 	var step := Mission.current()
-	var key := str(step.get("line", "")) if str(step.get("npc", "")) == npc.npc_id else ""
-	var lines: Array = npc.lines_for(key) if key != "" else npc.idle_lines()
+	var lines: Array = []
+	if step.has("lines") and (step["lines"] as Dictionary).has(npc.npc_id):
+		lines = step["lines"][npc.npc_id]
+	else:
+		var key := str(step.get("line", "")) if str(step.get("npc", "")) == npc.npc_id else ""
+		lines = npc.lines_for(key) if key != "" else npc.idle_lines()
 	if lines.is_empty():
 		lines = ["..."]
 	Dialogue.start(npc.display_name, lines, npc.npc_id)
@@ -908,6 +1462,7 @@ func _teleport_near(npc_id: String) -> void:
 		await get_tree().process_frame
 		return
 	in_office = false
+	current_interior = ""
 	player.camera_distance_override = 0.0
 	var npc := _npc_by_id(npc_id)
 	if npc == null:
@@ -1098,6 +1653,27 @@ func _run_beauty() -> void:
 		player.camera.look_at(seat + Vector3(0.2, 1.25, -1.0), Vector3.UP)
 		await get_tree().process_frame
 		await _shot("%s/12_admin_office.png" % out_dir)
+
+	# 13 - inside the Central Library
+	if library_interior:
+		player.camera.global_position = library_interior.position + Vector3(3.2, 1.85, 4.0)
+		player.camera.look_at(library_interior.position + Vector3(-1.8, 1.25, -1.2), Vector3.UP)
+		await get_tree().process_frame
+		await _shot("%s/13_central_library.png" % out_dir)
+
+	# 14 - inside Room 204 (CSE Lecture Hall)
+	if classroom_interior:
+		player.camera.global_position = classroom_interior.position + Vector3(2.6, 1.8, 4.0)
+		player.camera.look_at(classroom_interior.position + Vector3(0.0, 1.55, -4.2), Vector3.UP)
+		await get_tree().process_frame
+		await _shot("%s/14_classroom_204.png" % out_dir)
+
+	# 15 - inside the College Canteen
+	if canteen_interior:
+		player.camera.global_position = canteen_interior.position + Vector3(2.5, 1.85, 4.2)
+		player.camera.look_at(canteen_interior.position + Vector3(0.0, 1.5, -3.2), Vector3.UP)
+		await get_tree().process_frame
+		await _shot("%s/15_campus_canteen.png" % out_dir)
 
 	print("=== BEAUTY DONE ===")
 	get_tree().quit(0)

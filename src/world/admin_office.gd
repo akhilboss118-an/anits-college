@@ -938,6 +938,14 @@ func build_hall_door(admin_centre: Vector3, k: float) -> void:
 	_door_node.add_to_group("admin_office_door")
 	add_child(_door_node)
 
+	# Additional entrance trigger on the front south porch of Admin Block
+	var porch_door := Node3D.new()
+	porch_door.name = "AdminOfficePorchDoor"
+	porch_door.position = admin_centre - position + Vector3(0.0, 0.0, 13.0 * k)
+	porch_door.add_to_group("interactables")
+	porch_door.add_to_group("admin_office_door")
+	add_child(porch_door)
+
 
 # ------------------------------------------------------------------ animation
 

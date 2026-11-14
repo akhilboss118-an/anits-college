@@ -104,6 +104,35 @@ func _build_visual(data: Dictionary) -> void:
 		var beret := str(data.get("beret", ""))
 		if beret != "":
 			_visual.set_beret_colour(Color.html(beret))
+		if route.size() <= 1 and group_name == "student" and (npc_id.hash() % 3 == 0) and model in ["remy", "girl"]:
+			var phone := Node3D.new()
+			phone.name = "PhoneProp"
+			var p_mesh := BoxMesh.new()
+			p_mesh.size = Vector3(0.08, 0.15, 0.01)
+			var p_mi := MeshInstance3D.new()
+			p_mi.mesh = p_mesh
+			var p_mat := StandardMaterial3D.new()
+			p_mat.albedo_color = Color.html("#1a1a24")
+			p_mat.roughness = 0.4
+			p_mi.material_override = p_mat
+			phone.add_child(p_mi)
+
+			var s_mesh := BoxMesh.new()
+			s_mesh.size = Vector3(0.07, 0.13, 0.005)
+			var s_mi := MeshInstance3D.new()
+			s_mi.mesh = s_mesh
+			var s_mat := StandardMaterial3D.new()
+			s_mat.albedo_color = Color.html("#55aaff")
+			s_mat.emission_enabled = true
+			s_mat.emission = Color.html("#55aaff")
+			s_mat.emission_energy_multiplier = 0.8
+			s_mi.material_override = s_mat
+			s_mi.position = Vector3(0, 0, 0.006)
+			phone.add_child(s_mi)
+
+			phone.position = Vector3(0.22, 1.05, 0.28)
+			phone.rotation = Vector3(0.4, 0.2, -0.2)
+			_visual.add_child(phone)
 
 	# NPCs are not solid in the original game (you can walk through them),
 	# so they carry no collision shape and never block the camera boom.

@@ -9,6 +9,13 @@ var _checks: int = 0
 
 
 func _initialize() -> void:
+	_deferred_run()
+
+
+func _deferred_run() -> void:
+	# Let the SceneTree deliver _ready() to nodes the tests add (the UI
+	# overlays build their controls there) before exercising them.
+	await process_frame
 	print("=== ANITS Phase 0 test suite ===")
 	_run_all()
 	print("--- %d checks, %d failures ---" % [_checks, _failures])
@@ -21,6 +28,10 @@ func _run_all() -> void:
 	_test_npc_census()
 	_test_economy_data()
 	_test_lcg_determinism()
+	_test_mission_all_days()
+	_test_campaign_walk()
+	_test_minigame_wins()
+	_test_new_systems()
 
 
 # ---------------------------------------------------------------- helpers
@@ -185,3 +196,206 @@ func _test_lcg_determinism() -> void:
 	var d := LCG.new(5)
 	_check("first value reproducible", is_equal_approx(first, d.randf()))
 	_check("values in [0,1)", first >= 0.0 and first < 1.0)
+
+
+func _test_campaign_walk() -> void:
+	## Walks every day's real step machine to the end: NPC talks, gate ID
+	## checks, plan/world position objectives, salutes, checks and minigames.
+	## This catches soft-locks such as an interior objective authored in world
+	## metres being fed through the plan-pixel converter.
+	print("[campaign walk - all 10 days reach the end]")
+	var mr := preload("res://src/autoload/mission_runner.gd").new()
+	root.add_child(mr)
+	var gs: Node = root.get_node_or_null("GameState")
+	var ss: Node = root.get_node_or_null("SaveSystem")
+	var wallet_before: int = gs.wallet if gs else 0
+	var items_before: Dictionary = (gs.items as Dictionary).duplicate() if gs else {}
+
+	for d in range(1, 11):
+		mr.start_day(d)
+		var guard := 0
+		var idcheck_ok := true
+		while not mr.finished and guard < 40:
+			guard += 1
+			var s: Dictionary = mr.current()
+			var t := str(s.get("type", ""))
+			match t:
+				"npc":
+					if bool(s.get("check_fee", false)) and gs and gs.wallet < 250:
+						gs.wallet = 250
+					var before := mr.index
+					mr.notify_talked_to(str(s.get("npc", "")))
+					if mr.index == before:
+						break
+				"idcheck":
+					# Talking to the guard must NOT satisfy the gate check;
+					# only the bag's SHOW ID button advances it.
+					var before_id := mr.index
+					mr.notify_talked_to("guard")
+					if mr.index != before_id:
+						idcheck_ok = false
+					mr.advance()
+				"at":
+					var pos: Array = s.get("pos", [0, 0])
+					var p: Vector3
+					if bool(s.get("world", false)):
+						p = Vector3(float(pos[0]), 0.0, float(pos[1]))
+					else:
+						p = Campus.map_to_world(Vector2(pos[0], pos[1]))
+					mr.notify_position(p)
+				"salute":
+					mr.notify_salute()
+				"chk":
+					mr.notify_check(str(s.get("check", "")))
+				"mini":
+					mr.notify_minigame_won()
+				_:
+					break
+		_check("day %d completes all steps" % d, mr.finished,
+			"-> stopped at %d/%d (%s)" % [mr.index, mr.steps.size(), str(mr.current().get("text", ""))])
+		_check("day %d ID check waits for the card" % d, idcheck_ok)
+
+	# Tests must not leak wallet/items into the player's real profile.
+	if gs:
+		gs.wallet = wallet_before
+		gs.items = items_before
+	if ss and ss.has_method("save_items"):
+		ss.save_items(items_before)
+	mr.free()
+
+
+func _test_minigame_wins() -> void:
+	## Drives the real win path of every minigame used by the campaign.
+	print("[minigame win paths]")
+	var script := preload("res://src/ui/minigame_overlay.gd")
+
+	var quiz: Node = script.new()
+	root.add_child(quiz)
+	quiz.start_minigame({"kind": "quiz", "title": "TEST", "need": 2, "qs": [
+		["Q1", ["A", "B"], 0], ["Q2", ["A", "B"], 1]]})
+	for i in 2:
+		quiz._pick_quiz_opt(int(quiz._quiz_qs[i][2]))
+	_check("quiz answers score a win", quiz._quiz_ok >= 2 and quiz._result_box.visible)
+	quiz.free()
+
+	var typing: Node = script.new()
+	root.add_child(typing)
+	typing.start_minigame({"kind": "typing", "title": "TEST", "need": 2,
+		"words": ["SAMOSA", "CHAI"], "time_per_word": 10.0})
+	for wi in 2:
+		var word: String = ["SAMOSA", "CHAI"][wi]
+		for ci in word.length():
+			typing._handle_type_char(word.substr(ci, 1))
+	_check("typing eats every samosa", typing._type_eaten >= 2 and typing._result_box.visible)
+	typing.free()
+
+	var drill: Node = script.new()
+	root.add_child(drill)
+	drill.start_minigame({"kind": "drill", "title": "TEST", "time": 30.0})
+	for i in 25:
+		drill._step_foot(i % 2)
+	_check("drill reaches the 100 m mark", drill._drill_dist >= 100.0 and drill._result_box.visible)
+	drill.free()
+
+	var dance: Node = script.new()
+	root.add_child(dance)
+	dance.start_minigame({"kind": "dance", "title": "TEST", "time": 30.0})
+	for i in 10:
+		dance._hit_dance_move(int(dance._dance_target_move))
+	_check("dance fills the crowd hype", dance._dance_hype >= 80.0 and dance._result_box.visible)
+	dance.free()
+
+	var mash: Node = script.new()
+	root.add_child(mash)
+	mash.start_minigame({"kind": "mash", "title": "TEST", "hits": 5, "secs": 8.0})
+	for i in 5:
+		mash._mash_hit()
+	_check("mash challenge reaches its target", mash._mash_count >= 5 and mash._result_box.visible)
+	mash.free()
+
+	var cmd: Node = script.new()
+	root.add_child(cmd)
+	cmd.start_minigame({"kind": "cmd", "title": "TEST", "n": 4, "need": 4,
+		"keys": ["ArrowUp", "ArrowLeft", "ArrowRight"]})
+	for i in 4:
+		cmd._handle_cmd_key(str(cmd._cmd_seq[cmd._cmd_idx]))
+	_check("command QTE answers every call", cmd._cmd_ok >= 4 and cmd._result_box.visible)
+	cmd.free()
+
+
+func _test_mission_all_days() -> void:
+	print("[mission runner - 10 days]")
+	var mr := preload("res://src/autoload/mission_runner.gd").new()
+	for d in range(1, 11):
+		mr.start_day(d)
+		_eq("day %d active" % d, mr.day, d)
+		_check("day %d has steps" % d, mr.steps.size() >= 4, "-> %d steps" % mr.steps.size())
+		var has_valid_fields := true
+		for s in mr.steps:
+			if not (s is Dictionary and s.has("text") and s.has("type")):
+				has_valid_fields = false
+				break
+		_check("day %d steps valid format" % d, has_valid_fields)
+
+	# Verify specific mechanics
+	mr.start_day(2)
+	_check("day 2 has bank withdrawal check", mr.steps.any(func(s): return s.get("type") == "chk" and s.get("check") == "bank"))
+
+	mr.start_day(4)
+	var d4_quiz := mr.steps.filter(func(s): return s.get("type") == "mini" and s.get("mini", {}).get("kind") == "quiz")
+	_check("day 4 has library quiz", d4_quiz.size() == 1 and d4_quiz[0].mini.qs.size() == 3)
+
+	mr.start_day(5)
+	var d5_shoot := mr.steps.filter(func(s): return s.get("type") == "mini" and s.get("mini", {}).get("kind") == "shoot")
+	_check("day 5 has basketball shootout", d5_shoot.size() == 1 and d5_shoot[0].mini.shots == 5)
+
+	mr.start_day(6)
+	var d6_drill := mr.steps.filter(func(s): return s.get("type") == "mini" and s.get("mini", {}).get("kind") == "drill")
+	_check("day 6 has ncc drill running cadence", d6_drill.size() == 1 and d6_drill[0].mini.time >= 20.0)
+
+	mr.start_day(8)
+	var d8_typing := mr.steps.filter(func(s): return s.get("type") == "mini" and s.get("mini", {}).get("kind") == "typing")
+	_check("day 8 has samosa typing eating", d8_typing.size() == 1 and d8_typing[0].mini.words.size() >= 5)
+
+	mr.start_day(9)
+	var d9_dance := mr.steps.filter(func(s): return s.get("type") == "mini" and s.get("mini", {}).get("kind") == "dance")
+	_check("day 9 has fest dance battle with hype", d9_dance.size() == 1 and d9_dance[0].mini.target_hype >= 75.0)
+
+	mr.start_day(10)
+	var d10_quiz := mr.steps.filter(func(s): return s.get("type") == "mini" and s.get("mini", {}).get("kind") == "quiz")
+	_check("day 10 has first class quiz", d10_quiz.size() == 1 and d10_quiz[0].mini.qs.size() == 4)
+
+	mr.free()
+
+
+func _test_new_systems() -> void:
+	print("[new systems & interiors]")
+	# Interiors
+	var lib = preload("res://src/world/library_interior.gd").new()
+	_check("library interior instances", lib != null)
+	lib.free()
+
+	var cls = preload("res://src/world/classroom_interior.gd").new()
+	_check("classroom interior instances", cls != null)
+	cls.free()
+
+	var can = preload("res://src/world/canteen_interior.gd").new()
+	_check("canteen interior instances", can != null)
+	can.free()
+
+	# UI Systems
+	var minigame = preload("res://src/ui/minigame_overlay.gd").new()
+	_check("minigame overlay instances", minigame != null)
+	minigame.free()
+
+	var inv = preload("res://src/ui/inventory_panel.gd").new()
+	_check("inventory panel instances", inv != null)
+	_check("inventory has default id", inv.has_item("id"))
+	inv.add_item("receipt")
+	_check("inventory add receipt works", inv.has_item("receipt"))
+	inv.free()
+
+	var dlg = preload("res://src/ui/level_complete_dialog.gd").new()
+	_check("level complete dialog instances", dlg != null)
+	_eq("lore lines count", dlg.COMPLETION_LINES.size(), 10)
+	dlg.free()

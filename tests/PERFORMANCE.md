@@ -2,8 +2,8 @@
 
 Scope: the campus scene built by `src/main.gd` → `src/world/campus_builder.gd`
 → `src/world/props_factory.gd`, i.e. 17 buildings, 150 trees, 130 bushes,
-4200 grass tufts, 91 cars, ~800 ground-cover props, the sealed Admin Office
-interior, a Sky3D sky and 64 animated NPCs.
+4200 grass tufts, 91 cars, ~800 ground-cover props, four walk-in interiors
+(Admin Office, Central Library, Room 204, Canteen), a Sky3D sky and 64 NPCs.
 
 **Measured on 13 Nov 2026** — see §0 below; the bench harness runs and the
 numbers are recorded there. Everything from §1 onwards is the design plan and
@@ -20,16 +20,19 @@ Forward+ on D3D12, VSync off during the measurement.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Default camera, first measurement | 1.00 | — | 40.6 | 578 | 1.37 M | 492 MB | below target |
 | Spawn viewpoint, desktop start | 0.88 | — | 43.5 | 132 | 2.10 M | 474 MB | below target |
-| Spawn viewpoint, adaptive 3 steps | 0.88 | **0.60** | **59.4** | 132 | 1.43 M | — | **PASS** |
+| Spawn viewpoint, adaptive 3 steps (cool session) | 0.88 | **0.60** | **59.4** | 132 | 1.43 M | — | reference only |
+| Spawn viewpoint, adaptive ladder (heat-soaked) | 0.88 | **0.60** | **40.3** | 132 | 1.43 M | — | conservative result |
 | Spawn viewpoint, phone profile | 0.78 | — | 52.6 | 132 | 2.16 M | 439 MB | below target |
 
 The adaptive ladder (`main.gd::_adaptive_quality`) is now active on **every**
 platform: it samples the frame rate, and after 3 s below 58 fps it drops the 3D
 render scale one step (desktop 0.88 → 0.78 → 0.68 → 0.60; phones 0.78 → 0.68 →
-0.58 → 0.50) and then turns the sun shadow off. On the integrated laptop it
-settles at 0.60 and holds ~59.4 fps; on a discrete GPU it stays at 0.88. This is
-the intended behaviour: the game protects the 60 fps contract instead of
-dropping frames.
+0.58 → 0.50) and then turns the sun shadow off. A cool session on the integrated
+laptop settled at 0.60 and held ~59.4 fps, but that figure is not reproducible
+once the machine is heat-soaked: the conservative result is 40.3 fps at 0.60.
+On a discrete GPU it stays at 0.88. The ladder still protects the frame rate by
+stepping down instead of dropping frames, but this integrated GPU does not meet
+the 60 fps contract under sustained load.
 
 Bench command used:
 
