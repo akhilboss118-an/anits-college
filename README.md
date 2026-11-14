@@ -141,10 +141,10 @@ More in [`docs/screenshots/godot/`](docs/screenshots/godot/).
 
 ## Report
 
-A 32-page technical report covering the port — architecture, campus and roads,
-character pipeline, walk cycle, UI, touch controls, rendering, performance,
-testing and deployment — is at
-[`docs/ANITS_Godot_Report.pdf`](docs/ANITS_Godot_Report.pdf) (25.9 MB). The
+A 34-page technical report covering the port — architecture, campus and roads,
+character pipeline, walk cycle, uniforms by joining year, UI, touch controls,
+rendering, performance, testing and deployment — is at
+[`docs/ANITS_Godot_Report.pdf`](docs/ANITS_Godot_Report.pdf) (29.5 MB). The
 source is [`docs/report/report.html`](docs/report/report.html); rebuild it with
 `docs/report/build_report.ps1`.
 
