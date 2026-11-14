@@ -66,6 +66,7 @@ func _build_visual() -> void:
 	if _visual:
 		add_child(_visual)
 		_visual.rotation.y = yaw
+		_visual.apply_uniform(int(GameState.uniform_year) if GameState else 2024)
 
 
 func _physics_process(delta: float) -> void:
@@ -108,9 +109,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _look(relative: Vector2) -> void:
-	var sens := float(tuning.get("mouse_yaw", 0.006)) * look_sensitivity
+	# Read live so the Settings slider takes effect immediately, including
+	# while a level is already running.
+	var mult: float = Settings.look_sensitivity if Settings else look_sensitivity
+	look_sensitivity = mult
+	var sens := float(tuning.get("mouse_yaw", 0.006)) * mult
 	yaw -= relative.x * sens
-	pitch = clampf(pitch + relative.y * float(tuning.get("mouse_pitch", 0.004)) * look_sensitivity,
+	pitch = clampf(pitch + relative.y * float(tuning.get("mouse_pitch", 0.004)) * mult,
 		float(tuning.get("pitch_min", 0.05)), float(tuning.get("pitch_max", 1.1)))
 
 

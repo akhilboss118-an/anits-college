@@ -81,15 +81,51 @@ const SURFACE := {
 	"guard":      {"roughness": 0.9, "emission": 0.0, "normal_scale": 1.0},
 }
 
+## Year-based uniforms, exactly the three body textures used by the web build
+## (js/uniform.js). 2024 is the original cream/brown texture that ships with
+## the two player models; 2023 and 2025 replace it with the rose and sky-blue
+## sheets. The paths are relative to the project root, not the web folder.
+const UNIFORM_TEXTURES := {
+	2023: {
+		"boy": "res://third_party/anits_original/uni2023_boy.jpg",
+		"girl": "res://third_party/anits_original/uni2023_amy.jpg",
+	},
+	2025: {
+		"boy": "res://third_party/anits_original/uni2025_boy.jpg",
+		"girl": "res://third_party/anits_original/uni2025_amy.jpg",
+	},
+}
+
+## Chunni (dupatta) colours for the girl rig: [fabric, emissive], taken from
+## js/uniform.js. 2024 has no chunni, like the web build.
+const CHUNNI_COLOURS := {
+	2023: [Color(0.086, 0.086, 0.106), Color(0.020, 0.020, 0.027)],
+	2025: [Color(0.043, 0.082, 0.267), Color(0.016, 0.039, 0.157)],
+}
+
+## The girl's clothing panels live in the Acc_MAT surface's COLOR_0 array, not
+## in the body texture. These are the exact three source/target pairs from
+## js/uniform.js (cream, brown, tan -> rose/black or sky/navy).
+const UNIFORM_VCOL := {
+	2023: [
+		[Color(0.86, 0.80, 0.68), Color(0.60, 0.32, 0.42)],
+		[Color(0.30, 0.21, 0.15), Color(0.48, 0.24, 0.33)],
+		[Color(0.54, 0.42, 0.29), Color(0.03, 0.03, 0.04)],
+	],
+	2025: [
+		[Color(0.86, 0.80, 0.68), Color(0.22, 0.45, 0.68)],
+		[Color(0.30, 0.21, 0.15), Color(0.19, 0.35, 0.55)],
+		[Color(0.54, 0.42, 0.29), Color(0.04, 0.07, 0.20)],
+	],
+}
+
 ## How fast the idle loop runs. The web build plays the cadet idle at 0.12
 ## ("same pose for everyone, only a very slow breath") and everything else at
 ## a slow sway - never at full speed.
 const IDLE_SPEED := 0.15
 const IDLE_SPEED_CADET := 0.12
 
-## The web build tints the girl rig warm so she does not look like a twin of
-## the boy player (js/game.js: m.color.setRGB(1,.74,.6)).
-const GIRL_TINT := Color(1.0, 0.74, 0.6)
+
 
 ## Bones the NCC kit is rigged to.
 const HEAD_BONES := ["mixamorighead", "head"]
@@ -120,6 +156,13 @@ var _run_lean := 0.0
 ## track exactly like the web build's `stride * pk`. Playback is driven from
 ## this so the feet always move at the same speed as the character.
 var _stride_m := 1.4
+
+# --- year-based uniform (player + menu previews) --------------------------
+var _uniform_year := 2024
+var _body_surfaces: Array = []      ## body material copies + original textures
+var _vertex_surfaces: Array = []    ## girl clothing surfaces + COLOR_0 arrays
+var _chunni: MeshInstance3D = null  ## girl-only dupatta for 2023 / 2025
+var _chunni_attach: BoneAttachment3D = null
 
 # --- NCC kit (cadets only) -----------------------------------------------
 var _kit_beret: Node3D = null
@@ -175,9 +218,6 @@ func build() -> void:
 		model_scale = s
 		inst.scale = Vector3(s, s, s)
 		inst.position.y = -box.position.y * s
-	if model_id == "girl" and _tint == Color.WHITE:
-		_tint = GIRL_TINT
-
 	anim = _find_anim(inst)
 	walk_clip = _resolve_clip(anim, str(cfg.get("walk", "")))
 	idle_clip = _resolve_clip(anim, str(cfg.get("idle", "")))
@@ -216,6 +256,7 @@ func build() -> void:
 		anim.animation_finished.connect(_on_anim_finished)
 
 	_tweak_materials(inst)
+	_collect_uniform_surfaces(inst)
 
 
 ## Bakes every Hips position track in place: X/Z are pinned to the first key
@@ -339,38 +380,39 @@ func _tweak_materials(node: Node) -> void:
 	# here as well as its children.
 	var self_mi := node as MeshInstance3D
 	if self_mi and self_mi.mesh:
-		self_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		if _is_overlay_mesh(self_mi):
-			# facial morph card - it renders as a white patch in Godot
-			self_mi.visible = false
-		else:
-			for i in self_mi.mesh.get_surface_count():
-				_tweak_surface(self_mi, i)
+		_tweak_mesh(self_mi)
 	for child in node.get_children():
 		var mi := child as MeshInstance3D
 		if mi and mi.mesh:
-			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-			if _is_overlay_mesh(mi):
-				# facial morph card - it renders as a white patch in Godot
-				mi.visible = false
-			else:
-				for i in mi.mesh.get_surface_count():
-					_tweak_surface(mi, i)
+			_tweak_mesh(mi)
 		_tweak_materials(child)
 
 
-## True when one of the mesh surfaces uses a material that only exists for the
-## three.js face morphs. Remy's "Eyes" and "Eyelashes" meshes use the body
-## atlas, so they stay visible.
-func _is_overlay_mesh(mi: MeshInstance3D) -> bool:
-	for i in mi.mesh.get_surface_count():
+func _tweak_mesh(mi: MeshInstance3D) -> void:
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	var surface_count := mi.mesh.get_surface_count()
+	# Only hide the whole mesh when EVERY surface is a facial morph card.
+	# b_colonel.glb repeats his body under a transparent eyelash material on
+	# the same mesh; hiding the mesh removes the real body and head, so the
+	# overlay surfaces are hidden individually instead.
+	var all_overlay := surface_count > 0
+	for i in surface_count:
 		var mat := mi.get_active_material(i)
-		if mat is StandardMaterial3D:
-			if _is_overlay_material(mat as StandardMaterial3D):
-				return true
-	return false
+		var overlay := false
+		if mat is StandardMaterial3D and _is_overlay_material(mat as StandardMaterial3D):
+			overlay = true
+		if not overlay:
+			all_overlay = false
+	if all_overlay:
+		# Facial morph card - it renders as a white patch in Godot.
+		mi.visible = false
+		return
+	for i in surface_count:
+		_tweak_surface(mi, i)
 
 
+## True when the surface is a facial morph card (e.g. the transparent BLEND
+## materials Mixamo bakes for eyes / brows / mouth).
 func _is_overlay_material(mat: StandardMaterial3D) -> bool:
 	# a fully transparent BLEND card (the Mixamo FacialAnimMap materials)
 	if mat.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED and mat.albedo_color.a <= 0.02:
@@ -419,9 +461,9 @@ func _tweak_surface(mi: MeshInstance3D, surface: int) -> void:
 		mi.set_surface_override_material(surface, copy)
 		return
 
-	if model_id == "colonel" and lower.contains("eyelash"):
-		# b_colonel.glb repeats the whole body mesh under an "eyelashes"
-		# material; drawing it twice only z-fights, so it is made invisible.
+	if _is_overlay_material(src):
+		# Facial morph cards (eyes / brows / mouth / the colonel's duplicated
+		# transparent eyelash body) are invisible, per surface.
 		copy.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		copy.albedo_color = Color(1, 1, 1, 0)
 		copy.albedo_texture = null
@@ -430,8 +472,13 @@ func _tweak_surface(mi: MeshInstance3D, surface: int) -> void:
 		mi.set_surface_override_material(surface, copy)
 		return
 
-	# Keep the authored base colour; only the NPC tint multiplies it.
-	if copy.albedo_texture == null:
+	# Keep the authored base colour; only the NPC tint multiplies it. The girl
+	# GLB is the exception: its authored albedo is a leftover orange FBX
+	# colour (1, 0.548, 0.36). The web build throws it away - white for the
+	# player, g.tint for the girl students - so use the tint alone there.
+	if model_id == "girl":
+		copy.albedo_color = Color(_tint.r, _tint.g, _tint.b, src.albedo_color.a)
+	elif copy.albedo_texture == null:
 		copy.albedo_color = Color(src.albedo_color.r * _tint.r,
 			src.albedo_color.g * _tint.g, src.albedo_color.b * _tint.b, 1.0)
 	else:
@@ -466,6 +513,271 @@ func _guard_key(mat_name: String, surface: int) -> String:
 	if surface >= 0 and surface < GUARD_ORDER.size():
 		return GUARD_ORDER[surface]
 	return ""
+
+
+# ---------------------------------------------------------------- uniforms
+
+## Applies one of the three joining-year uniforms to this visual. Only the two
+## player models have uniforms; NPCs keep their authored clothes.
+func apply_uniform(year: int) -> void:
+	if year != 2023 and year != 2024 and year != 2025:
+		year = 2024
+	_uniform_year = year
+
+	var tex: Texture2D = null
+	if year != 2024:
+		tex = _uniform_texture(year)
+		if tex == null:
+			push_warning("Uniform %d texture missing for model '%s'" % [year, model_id])
+
+	for part in _body_surfaces:
+		var mat := part.get("material") as StandardMaterial3D
+		if mat == null:
+			continue
+		var use: Texture2D = tex
+		if use == null:
+			use = part.get("original") as Texture2D
+		mat.albedo_texture = use
+		if mat.emission_enabled:
+			mat.emission_texture = use
+
+	_apply_vertex_colours(year)
+	_apply_chunni(year)
+
+
+func _uniform_texture(year: int) -> Texture2D:
+	var table: Dictionary = UNIFORM_TEXTURES.get(year, {})
+	var path := str(table.get(model_id, ""))
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	var res := load(path)
+	return res as Texture2D
+
+
+## Remembers the body surface and its original cream/brown texture, plus the
+## girl's vertex-coloured clothing surface. The materials are the duplicates
+## made by `_tweak_surface`, so changing them only affects this character.
+func _collect_uniform_surfaces(node: Node) -> void:
+	if not _body_surfaces.is_empty() or not _vertex_surfaces.is_empty():
+		return
+	var mi := node as MeshInstance3D
+	if mi and mi.mesh:
+		for i in mi.mesh.get_surface_count():
+			var mat := mi.get_active_material(i) as StandardMaterial3D
+			if mat == null:
+				continue
+			var fmt: int = mi.mesh.surface_get_format(i)
+			if mat.resource_name.to_lower().contains("body"):
+				_body_surfaces.append({
+					"mesh": mi,
+					"surface": i,
+					"material": mat,
+					"original": mat.albedo_texture,
+				})
+			if model_id == "girl" and mat.vertex_color_use_as_albedo \
+					and (fmt & Mesh.ARRAY_FORMAT_COLOR):
+				var arrays := mi.mesh.surface_get_arrays(i)
+				_vertex_surfaces.append({
+					"mesh": mi,
+					"surface": i,
+					"original_mesh": mi.mesh,
+					"original_colors": arrays[Mesh.ARRAY_COLOR],
+					"mesh_copy": null,
+				})
+	for child in node.get_children():
+		_collect_uniform_surfaces(child)
+
+
+## Recolours the girl's cream/brown/tan clothing panels by rewriting the
+## COLOR_0 array. The mesh is duplicated first, because the imported mesh is
+## shared with the menu preview and any other instance.
+func _apply_vertex_colours(year: int) -> void:
+	for part in _vertex_surfaces:
+		var mi := part.get("mesh") as MeshInstance3D
+		if mi == null or not is_instance_valid(mi):
+			continue
+		var original_mesh := part.get("original_mesh") as ArrayMesh
+		if original_mesh == null:
+			continue
+		if year == 2024:
+			mi.mesh = original_mesh
+			continue
+		# The year slider can fire dozens of times, so each recoloured mesh is
+		# built once and cached on the part.
+		var copies: Dictionary = part.get("mesh_copies", {})
+		part["mesh_copies"] = copies
+		var copy := copies.get(year) as ArrayMesh
+		if copy == null:
+			var surface := int(part.get("surface", 0))
+			var source := part.get("original_colors") as PackedColorArray
+			var cols := PackedColorArray()
+			cols.resize(source.size())
+			for i in source.size():
+				cols[i] = _map_uniform_colour(source[i], year)
+			# ArrayMesh has no surface_set_arrays() in Godot 4.7, so the
+			# duplicate is rebuilt surface by surface with the recoloured
+			# COLOR_0 array.
+			copy = ArrayMesh.new()
+			for s in original_mesh.get_surface_count():
+				var arrays := original_mesh.surface_get_arrays(s)
+				if s == surface:
+					arrays[Mesh.ARRAY_COLOR] = cols
+				copy.add_surface_from_arrays(original_mesh.surface_get_primitive_type(s), arrays)
+				copy.surface_set_name(s, original_mesh.surface_get_name(s))
+				copy.surface_set_material(s, original_mesh.surface_get_material(s))
+			copies[year] = copy
+		mi.mesh = copy
+
+
+func _map_uniform_colour(colour: Color, year: int) -> Color:
+	var table: Array = UNIFORM_VCOL.get(year, [])
+	for pair in table:
+		var from: Color = pair[0]
+		if absf(colour.r - from.r) < 0.04 \
+				and absf(colour.g - from.g) < 0.04 \
+				and absf(colour.b - from.b) < 0.04:
+			var to: Color = pair[1]
+			return Color(to.r, to.g, to.b, colour.a)
+	return colour
+
+
+## The girl rig gets a navy/black chunni for 2023 and 2025, mirroring the
+## ribbon mesh built by js/uniform.js. It is parented to Spine2 through a
+## BoneAttachment3D, so it follows the walk, talk and salute animations.
+func _apply_chunni(year: int) -> void:
+	if model_id != "girl":
+		return
+	if year == 2024:
+		if _chunni:
+			_chunni.visible = false
+		return
+	if _chunni == null:
+		_build_chunni()
+	if _chunni == null:
+		return
+	var colours: Array = CHUNNI_COLOURS.get(year, [])
+	if colours.size() >= 2:
+		var mat := _chunni.material_override as StandardMaterial3D
+		if mat:
+			mat.albedo_color = colours[0]
+			mat.emission = colours[1]
+	_chunni.visible = true
+
+
+func _build_chunni() -> void:
+	if holder == null:
+		return
+	var skel := _find_skeleton(holder)
+	if skel == null:
+		return
+	var spine := _find_bone(skel, ["mixamorigspine2", "spine2"])
+	var neck := _find_bone(skel, ["mixamorigneck", "neck"])
+	var left_arm := _find_bone(skel, ["mixamorigleftarm", "leftarm"])
+	var right_arm := _find_bone(skel, ["mixamorigrightarm", "rightarm"])
+	var hips := _find_bone(skel, ["mixamorighips", "hips"])
+	if spine < 0 or neck < 0 or left_arm < 0 or right_arm < 0 or hips < 0:
+		return
+
+	var neck_t := skel.get_bone_global_rest(neck)
+	var left_t := skel.get_bone_global_rest(left_arm)
+	var right_t := skel.get_bone_global_rest(right_arm)
+	var hips_t := skel.get_bone_global_rest(hips)
+	var n := neck_t.origin
+	var a := left_t.origin
+	var b := right_t.origin
+	var h := hips_t.origin
+	var w := a.distance_to(b)
+	var u := n.y - h.y
+	var cx := (a.x + b.x) * 0.5
+	var cz := (a.z + b.z) * 0.5
+	var s := signf(a.x - b.x)
+	if is_zero_approx(s):
+		s = 1.0
+	if w < 0.001 or absf(u) < 0.001:
+		return
+
+	# The control polygon from js/uniform.js, mirrored around the back.
+	var half := [
+		Vector3(0.20, h.y + 0.04 * u, 0.44),
+		Vector3(0.24, h.y + 0.40 * u, 0.45),
+		Vector3(0.34, n.y - 0.08 * u, 0.34),
+		Vector3(0.44, n.y - 0.01 * u, 0.12),
+		Vector3(0.42, n.y + 0.01 * u, -0.12),
+		Vector3(0.27, n.y + 0.01 * u, -0.34),
+	]
+	var pts: Array[Vector3] = []
+	for p in half:
+		pts.append(Vector3(cx + float(p.x) * w * s, float(p.y), cz + float(p.z) * w))
+	pts.append(Vector3(cx, n.y + 0.01 * u, cz - 0.4 * w))
+	for i in range(half.size() - 1, -1, -1):
+		var p: Vector3 = half[i]
+		pts.append(Vector3(cx - float(p.x) * w * s, float(p.y), cz + float(p.z) * w))
+
+	var curve := Curve3D.new()
+	curve.bake_interval = 0.01
+	for p in pts:
+		curve.add_point(p)
+	var total := curve.get_baked_length()
+	if total < 0.001:
+		return
+
+	var spine_inv := skel.get_bone_global_rest(spine).affine_inverse()
+	var samples := 90
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in samples + 1:
+		var t := float(i) / float(samples)
+		var p := curve.sample_baked(total * t)
+		var ahead := curve.sample_baked(total * minf(t + 0.004, 1.0))
+		var behind := curve.sample_baked(total * maxf(t - 0.004, 0.0))
+		var tangent := (ahead - behind).normalized()
+		if tangent.length_squared() < 0.5:
+			tangent = Vector3(0.0, 0.0, 1.0)
+		var ay := minf(p.y, n.y - 0.3 * u)
+		var outward := Vector3(p.x - cx, p.y - ay, p.z - cz)
+		if outward.length_squared() < 0.0001:
+			outward = Vector3(0.0, 0.0, 1.0)
+		outward = outward.normalized()
+		var side := tangent.cross(outward)
+		if side.length_squared() < 0.0001:
+			side = Vector3(1.0, 0.0, 0.0)
+		side = side.normalized()
+		var half_w := w * (0.17 + 0.05 * sin(PI * t))
+		var centre := p + outward * 0.02
+		st.add_vertex(spine_inv * (centre + side * half_w))
+		st.add_vertex(spine_inv * (centre - side * half_w))
+	for i in samples:
+		var k := i * 2
+		st.add_index(k)
+		st.add_index(k + 1)
+		st.add_index(k + 2)
+		st.add_index(k + 1)
+		st.add_index(k + 3)
+		st.add_index(k + 2)
+	st.generate_normals()
+
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = "Chunni"
+	mat.albedo_color = Color(0.086, 0.086, 0.106)
+	mat.roughness = 0.9
+	mat.metallic = 0.0
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.emission_enabled = true
+	mat.emission = Color(0.020, 0.020, 0.027)
+	mat.emission_energy_multiplier = 0.8
+
+	_chunni = MeshInstance3D.new()
+	_chunni.name = "Chunni"
+	_chunni.mesh = st.commit()
+	_chunni.material_override = mat
+	_chunni.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	_chunni.visible = false
+
+	_chunni_attach = BoneAttachment3D.new()
+	_chunni_attach.name = "ChunniBone"
+	_chunni_attach.bone_name = skel.get_bone_name(spine)
+	skel.add_child(_chunni_attach)
+	_chunni_attach.add_child(_chunni)
 
 
 # ------------------------------------------------------------------- the NCC kit

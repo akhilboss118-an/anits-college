@@ -88,9 +88,21 @@ func _test_campus_data() -> void:
 	_eq("grass instances", (db.campus.get("props", {}) as Dictionary).get("grass_instances"), 4200)
 
 	var cse := db.building_by_name("CSE Block")
-	_arr_eq("CSE rect", cse.get("rect", []), [102, 246, 156, 281])
+	_arr_eq("CSE rect", cse.get("rect", []), [100, 248, 155, 279])
 	_eq("CSE height", cse.get("height"), 11.5)
 	_eq("CSE tint", cse.get("tint"), "#cfe3ff")
+	# The four panel blocks form a clean 2x2 grid: equal 31 px depth, shared
+	# x edges per column, and 2 px clear of every road.
+	var ece := db.building_by_name("ECE Block")
+	_arr_eq("ECE rect", ece.get("rect", []), [173, 248, 232, 279])
+	var eee := db.building_by_name("EEE Block")
+	_arr_eq("EEE rect", eee.get("rect", []), [173, 206, 232, 237])
+	var chem := db.building_by_name("Chemical Block")
+	_arr_eq("Chemical rect", chem.get("rect", []), [100, 206, 155, 237])
+	_check("ECE/EEE share column", ece.get("rect")[0] == eee.get("rect")[0]
+		and ece.get("rect")[2] == eee.get("rect")[2])
+	_check("panel grid rows equal", ece.get("rect")[3] - ece.get("rect")[1]
+		== chem.get("rect")[3] - chem.get("rect")[1])
 	var admin := db.building_by_name("ADMIN BLOCK")
 	_eq("ADMIN rendered height", admin.get("rendered_height"), 16.954)
 

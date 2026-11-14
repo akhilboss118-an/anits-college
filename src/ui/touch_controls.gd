@@ -3,20 +3,24 @@ extends CanvasLayer
 ## Touch controls - layout at a glance.
 ##
 ##   +----------------------------------------------------------+
-##   |                                            [ NEXT ]     |  NEXT only
-##   |                                     [ G ]   [ RUN ]     |  while a
-##   |  ( o )                                      [ E ]       |  dialogue
-##   |  MOVE                                          ^        |  is open
-##   |     virtual stick      drag anywhere = orbit the camera  |
+##   |                                                          |
+##   |                                      [ NEXT ]            |  NEXT only
+##   |                                        [ G ]             |  during a
+##   |   ( ^ )                            ( E )             |  dialogue
+##   | ( < o > )                            INTERACT           |
+##   |   ( v )                          ( RUN )             |
+##   |  MOVE pad                            RUN               |
 ##   +----------------------------------------------------------+
 ##
-## Bottom-left: a virtual joystick.  The base and the knob are always drawn;
-## they are dim while idle and light up while a finger is down.  The "MOVE"
-## hint fades out the first time the stick is used.
+## Bottom-left: a large virtual joystick with directional chevrons.  The
+## base and the knob light up while a finger is down, and the ring turns
+## gold while the character runs.  Pushing the stick to the outer edge also
+## runs.
 ##
-## Bottom-right: E (interact), G (salute) and a RUN toggle that latches (tap
-## to run, tap again to walk).  E and G light up while the action is possible.
-## NEXT appears while a dialogue is open and advances it.
+## Bottom-right: a RUN button (toggle run) to the left of an E button
+## (interact); both carry a caption pill underneath.  E turns gold while an
+## interaction is available.  G (salute) appears only when the Colonel or a
+## salute step is in range, and NEXT only while a dialogue is open.
 ##
 ## Anywhere else: drag to orbit the camera, tap to advance a dialogue.
 ##
@@ -39,46 +43,110 @@ signal run_changed(running: bool)
 
 const HUD_SCRIPT := preload("res://src/ui/hud.gd")
 
-const JOY_RADIUS := 104.0        ## base radius, unscaled
-const JOY_MARGIN := 30.0         ## gap to the screen edge, unscaled
+const JOY_RADIUS := 84.0         ## base radius (unscaled)
+const JOY_MARGIN := 22.0         ## gap to the screen edge, unscaled
 const DEAD_ZONE := 0.14
+const RUN_ON := 0.92             ## deflection that starts a run
+const RUN_OFF := 0.80            ## hysteresis so the run does not flicker
 const TAP_SLOP := 16.0
-const BTN_E := 100.0
-const BTN_G := 84.0
-const BTN_RUN := 92.0
-const BTN_NEXT := 92.0
-const BTN_GAP := 16.0
-const BTN_EDGE := 14.0
+const BTN_E := 86.0
+const BTN_RUN := 86.0
+const BTN_G := 68.0
+const BTN_NEXT := 86.0
+const BTN_GAP := 14.0
+const BTN_EDGE := 16.0
+const PILL_H := 26.0
+const PILL_GAP := 7.0
 
 
 class JoystickDraw:
 	extends Control
-	## The joystick is one flat drawing: an outer glow, the base, two rings and
-	## the knob.  It is repainted only when the value, the state or the layout
-	## changes - never every frame.
+	## One flat drawing: an outer shadow, the base, a thin inner ring, four
+	## directional chevrons and the knob.  Repainted only when the state or
+	## value changes - never every frame.
 
 	var center := Vector2.ZERO
 	var value := Vector2.ZERO
 	var active := false
-	var radius := 104.0
-	var knob_radius := 36.0
+	var running := false
+	var radius := JOY_RADIUS
+	var knob_radius := 38.0
 
 	func _draw() -> void:
-		var ring := Color(0.86, 0.93, 1.0, 0.62 if active else 0.34)
-		var fill := Color(0.05, 0.10, 0.20, 0.46 if active else 0.26)
-		draw_circle(center, radius * 1.07, Color(0.02, 0.05, 0.11, 0.20))
+		var u := radius / JOY_RADIUS
+		var accent := Color(1.0, 0.84, 0.32) if running else Color(0.95, 0.97, 1.0)
+		var ring_alpha := 0.88 if active or running else 0.42
+		var chev_alpha := 0.82 if active or running else 0.46
+		var fill := Color(0.035, 0.06, 0.11, 0.62 if active else 0.44)
+
+		# Soft shadow, navy glass base, bright rim and a faint inner ring.
+		draw_circle(center, radius * 1.04, Color(0.01, 0.02, 0.04, 0.28))
 		draw_circle(center, radius, fill)
-		draw_arc(center, radius, 0.0, TAU, 44, ring, 3.0, true)
-		draw_arc(center, radius * 0.58, 0.0, TAU, 30,
-				Color(ring.r, ring.g, ring.b, ring.a * 0.45), 1.5, true)
+		draw_arc(center, radius, 0.0, TAU, 64,
+				Color(accent.r, accent.g, accent.b, ring_alpha), 2.6 * u, true)
+		draw_arc(center, radius * 0.62, 0.0, TAU, 48,
+				Color(1.0, 1.0, 1.0, 0.10), 1.2 * u, true)
+
+		# Four filled directional chevrons.
+		var tip_r := radius * 0.80
+		var back_r := radius * 0.635
+		var half_w := radius * 0.125
+		for i in 4:
+			var ang := -PI * 0.5 + float(i) * PI * 0.5
+			var dir := Vector2(cos(ang), sin(ang))
+			var perp := Vector2(-dir.y, dir.x)
+			var tip := center + dir * tip_r
+			var back := center + dir * back_r
+			var p := PackedVector2Array([back + perp * half_w, tip, back - perp * half_w])
+			draw_colored_polygon(p, Color(accent.r, accent.g, accent.b, chev_alpha))
+
+		# The knob: cream disc, dark rim, small gold core when running.
 		var knob := center + value * maxf(0.0, radius - knob_radius)
-		var knob_colour := Color(0.94, 0.97, 1.0, 0.94) if active \
-				else Color(0.84, 0.91, 1.0, 0.55)
-		draw_circle(knob, knob_radius + 4.0, Color(0.02, 0.05, 0.11, 0.40))
-		draw_circle(knob, knob_radius, knob_colour)
-		if not active:
-			# Idle: a small dot marks the rest position of the knob.
-			draw_circle(center, 4.0, Color(0.94, 0.97, 1.0, 0.40))
+		var knob_col := Color(0.94, 0.96, 0.99, 0.96) if active \
+				else Color(0.84, 0.87, 0.92, 0.84)
+		draw_circle(knob, knob_radius + 3.0 * u, Color(0.01, 0.02, 0.04, 0.36))
+		draw_circle(knob, knob_radius, knob_col)
+		draw_arc(knob, knob_radius, 0.0, TAU, 48,
+				Color(0.10, 0.16, 0.26, 0.48), 1.6 * u, true)
+		draw_circle(knob, knob_radius * 0.17,
+				Color(1.0, 0.84, 0.32, 0.95) if running else Color(0.26, 0.38, 0.58, 0.55))
+
+
+class RunIcon:
+	extends Control
+	## White sprinter pictogram, drawn by hand.
+
+	func _draw() -> void:
+		var u := minf(size.x, size.y) / 96.0
+		var fg := Color(0.96, 0.97, 1.0)
+		var lw := 6.4 * u
+		# Head.
+		draw_circle(Vector2(64.0 * u, 20.0 * u), 6.6 * u, fg)
+		# Torso: shoulder to hip.
+		var shoulder := Vector2(58.0 * u, 32.0 * u)
+		var hip := Vector2(45.0 * u, 54.0 * u)
+		_seg(shoulder, hip, lw, fg)
+		# Front leg: hip -> knee -> foot.
+		_seg(hip, Vector2(62.0 * u, 64.0 * u), lw, fg)
+		_seg(Vector2(62.0 * u, 64.0 * u), Vector2(76.0 * u, 60.0 * u), lw, fg)
+		# Back leg: hip -> knee -> foot.
+		_seg(hip, Vector2(34.0 * u, 72.0 * u), lw, fg)
+		_seg(Vector2(34.0 * u, 72.0 * u), Vector2(20.0 * u, 80.0 * u), lw, fg)
+		# Front arm: shoulder -> elbow -> hand.
+		_seg(shoulder, Vector2(74.0 * u, 40.0 * u), lw, fg)
+		_seg(Vector2(74.0 * u, 40.0 * u), Vector2(82.0 * u, 30.0 * u), lw, fg)
+		# Back arm: shoulder -> elbow -> hand.
+		_seg(shoulder, Vector2(36.0 * u, 42.0 * u), lw, fg)
+		_seg(Vector2(36.0 * u, 42.0 * u), Vector2(28.0 * u, 34.0 * u), lw, fg)
+		# Two short speed lines behind the runner.
+		var trail := Color(0.96, 0.97, 1.0, 0.45)
+		draw_line(Vector2(10.0 * u, 46.0 * u), Vector2(24.0 * u, 46.0 * u), trail, 3.0 * u, true)
+		draw_line(Vector2(6.0 * u, 56.0 * u), Vector2(18.0 * u, 56.0 * u), trail, 3.0 * u, true)
+
+	func _seg(a: Vector2, b: Vector2, width: float, colour: Color) -> void:
+		draw_line(a, b, colour, width, true)
+		draw_circle(a, width * 0.5, colour)
+		draw_circle(b, width * 0.5, colour)
 
 
 var _root: Control
@@ -91,16 +159,20 @@ var _look_index: int = -1
 var _look_last := Vector2.ZERO
 var _look_travel := 0.0
 var _buttons: Array[Button] = []
-var _button_run: Button
 var _button_e: Button
 var _button_g: Button
 var _button_next: Button
-var _hint: Label
+var _button_run: Button
+var _pill_run: PanelContainer
+var _pill_e: PanelContainer
+var _pill_run_label: Label
+var _pill_e_label: Label
 var _ui_scale: float = 1.0
 var _safe: Vector4 = Vector4.ZERO
 var _style_scale: float = -1.0
+var _joy_run: bool = false
 var _run_latched: bool = false
-var _suppress_run: bool = false
+var _run_effective: bool = false
 var _dialogue_open: bool = false
 var _action_available: bool = false
 var _salute_available: bool = false
@@ -128,26 +200,28 @@ func _ready() -> void:
 	_draw_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_draw_layer)
 
+	_button_run = _make_button("", BTN_RUN)
+	_button_run.pressed.connect(_on_run_toggled)
+	var run_icon := RunIcon.new()
+	run_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	run_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_button_run.add_child(run_icon)
+
 	_button_e = _make_button("E", BTN_E)
 	_button_e.pressed.connect(_on_interact)
 	_button_g = _make_button("G", BTN_G)
 	_button_g.pressed.connect(_on_salute)
-	_button_run = _make_button("RUN", BTN_RUN)
-	_button_run.toggle_mode = true
-	_button_run.toggled.connect(_on_run_toggled)
+	_button_g.visible = false
 	_button_next = _make_button("NEXT", BTN_NEXT)
 	_button_next.pressed.connect(_on_next)
 	_button_next.visible = false
 
-	_hint = Label.new()
-	_hint.text = "MOVE"
-	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
-	_hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
-	_hint.add_theme_constant_override("outline_size", 4)
-	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(_hint)
+	_pill_run = _make_pill()
+	_pill_run_label = _pill_run.get_child(0) as Label
+	_pill_run_label.text = "RUN"
+	_pill_e = _make_pill()
+	_pill_e_label = _pill_e.get_child(0) as Label
+	_pill_e_label.text = "INTERACT"
 
 	_root.resized.connect(_layout)
 	get_viewport().size_changed.connect(_layout)
@@ -165,14 +239,37 @@ func _make_button(text: String, diameter: float) -> Button:
 	button.grow_vertical = Control.GROW_DIRECTION_END
 	button.size = Vector2(diameter, diameter)
 	button.pivot_offset = Vector2(diameter, diameter) * 0.5
-	button.add_theme_font_size_override("font_size", int(diameter * 0.30))
-	button.add_theme_color_override("font_color", Color(1, 1, 1, 0.96))
+	button.add_theme_font_size_override("font_size", int(diameter * 0.34))
+	button.add_theme_color_override("font_color", Color(1, 1, 1, 0.97))
 	button.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
 	button.add_theme_color_override("font_pressed_color", Color(1.0, 0.9, 0.45, 1))
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	_root.add_child(button)
 	_buttons.append(button)
 	return button
+
+
+func _make_pill() -> PanelContainer:
+	var pill := PanelContainer.new()
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.03, 0.06, 0.12, 0.80)
+	sb.border_color = Color(1.0, 1.0, 1.0, 0.12)
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(999)
+	sb.content_margin_left = 12.0
+	sb.content_margin_right = 12.0
+	sb.content_margin_top = 3.0
+	sb.content_margin_bottom = 3.0
+	pill.add_theme_stylebox_override("panel", sb)
+	var label := Label.new()
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", Color(0.98, 0.98, 0.98, 0.95))
+	label.add_theme_constant_override("outline_size", 0)
+	pill.add_child(label)
+	_root.add_child(pill)
+	return pill
 
 
 func _button_style(bg: Color, border: Color, width: float, radius: float) -> StyleBoxFlat:
@@ -187,40 +284,52 @@ func _button_style(bg: Color, border: Color, width: float, radius: float) -> Sty
 	style.content_margin_right = 0
 	style.content_margin_top = 0
 	style.content_margin_bottom = 0
-	style.shadow_color = Color(0, 0, 0, 0.35)
-	style.shadow_size = 4
-	style.shadow_offset = Vector2(0, 2)
+	style.shadow_color = Color(0, 0, 0, 0.42)
+	style.shadow_size = 6
+	style.shadow_offset = Vector2(0, 3)
 	return style
 
 
 func _apply_button_style(button: Button, state: int) -> void:
-	## state: 0 = idle, 1 = available (the action can be used), 2 = latched
-	## (RUN is on).  The "pressed" box carries the latched look for the
-	## toggle button, which Godot renders while the button is turned on.
+	## state: 0 = idle, 1 = available (the action can be used), 2 = latched.
 	var diameter: float = button.size.x
 	var radius := diameter * 0.5
 	match state:
 		1:
 			button.add_theme_stylebox_override("normal",
-					_button_style(Color(0.11, 0.19, 0.34, 0.66), Color(1.0, 0.86, 0.34, 0.98), 3.0, radius))
+					_button_style(Color(0.10, 0.16, 0.28, 0.80), Color(1.0, 0.86, 0.34, 0.98), 3.0, radius))
 			button.add_theme_stylebox_override("hover",
-					_button_style(Color(0.16, 0.26, 0.44, 0.78), Color(1.0, 0.92, 0.45, 1.0), 3.0, radius))
+					_button_style(Color(0.15, 0.24, 0.40, 0.90), Color(1.0, 0.92, 0.45, 1.0), 3.0, radius))
 			button.add_theme_stylebox_override("pressed",
-					_button_style(Color(0.22, 0.36, 0.56, 0.90), Color(1.0, 0.94, 0.48, 1.0), 3.0, radius))
+					_button_style(Color(0.22, 0.34, 0.52, 0.95), Color(1.0, 0.94, 0.48, 1.0), 3.0, radius))
 		2:
 			button.add_theme_stylebox_override("normal",
-					_button_style(Color(0.52, 0.36, 0.05, 0.80), Color(1.0, 0.88, 0.36, 1.0), 3.0, radius))
+					_button_style(Color(0.30, 0.23, 0.08, 0.88), Color(1.0, 0.88, 0.36, 1.0), 3.0, radius))
 			button.add_theme_stylebox_override("hover",
-					_button_style(Color(0.62, 0.44, 0.06, 0.88), Color(1.0, 0.93, 0.45, 1.0), 3.0, radius))
+					_button_style(Color(0.40, 0.31, 0.10, 0.94), Color(1.0, 0.93, 0.45, 1.0), 3.0, radius))
 			button.add_theme_stylebox_override("pressed",
-					_button_style(Color(0.58, 0.40, 0.06, 0.86), Color(1.0, 0.90, 0.40, 1.0), 3.0, radius))
+					_button_style(Color(0.48, 0.37, 0.12, 0.96), Color(1.0, 0.90, 0.40, 1.0), 3.0, radius))
 		_:
 			button.add_theme_stylebox_override("normal",
-					_button_style(Color(0.04, 0.09, 0.19, 0.52), Color(0.93, 0.80, 0.32, 0.62), 2.0, radius))
+					_button_style(Color(0.05, 0.09, 0.16, 0.70), Color(0.85, 0.90, 1.0, 0.38), 2.0, radius))
 			button.add_theme_stylebox_override("hover",
-					_button_style(Color(0.09, 0.16, 0.30, 0.68), Color(1.0, 0.87, 0.38, 0.92), 3.0, radius))
+					_button_style(Color(0.09, 0.15, 0.26, 0.82), Color(0.90, 0.94, 1.0, 0.60), 2.0, radius))
 			button.add_theme_stylebox_override("pressed",
-					_button_style(Color(0.20, 0.34, 0.54, 0.88), Color(1.0, 0.92, 0.45, 1.0), 3.0, radius))
+					_button_style(Color(0.14, 0.22, 0.36, 0.90), Color(1.0, 0.88, 0.40, 0.95), 2.5, radius))
+
+
+func _apply_run_style() -> void:
+	_apply_button_style(_button_run, 2 if _run_latched else 0)
+
+
+func _emit_run_effective() -> void:
+	var effective := _run_latched or _joy_run
+	if effective == _run_effective:
+		return
+	_run_effective = effective
+	_draw_layer.running = effective
+	_draw_layer.queue_redraw()
+	run_changed.emit(effective)
 
 
 func _layout() -> void:
@@ -242,40 +351,60 @@ func _layout() -> void:
 			view.y - _safe.w - margin - radius)
 	_draw_layer.center = _joy_center
 	_draw_layer.radius = radius
-	_draw_layer.knob_radius = radius * 0.34
+	_draw_layer.knob_radius = radius * 0.32
 	_draw_layer.queue_redraw()
-	_hint.position = Vector2(_joy_center.x - 70.0 * s, _joy_center.y + radius + 6.0 * s)
-	_hint.size = Vector2(140.0 * s, 24.0 * s)
-	_hint.add_theme_font_size_override("font_size", int(round(14.0 * s)))
 
-	# --- right hand cluster (E, G, RUN, NEXT) ---
+	# --- right hand cluster: caption pills always sit at the bottom edge ---
 	var d_e := BTN_E * s
-	var d_g := BTN_G * s
 	var d_r := BTN_RUN * s
+	var d_g := BTN_G * s
 	var d_n := BTN_NEXT * s
 	var gap := BTN_GAP * s
 	var edge := BTN_EDGE * s
+	var pill_h := PILL_H * s
+	var pill_gap := PILL_GAP * s
 	var right_edge := view.x - _safe.z - edge
 	var bottom_edge := view.y - _safe.w - edge
-	_place(_button_e, Vector2(right_edge - d_e, bottom_edge - d_e), d_e)
-	_place(_button_g, Vector2(right_edge - d_g, bottom_edge - d_e - gap - d_g), d_g)
-	_place(_button_run, Vector2(right_edge - d_e - gap - d_r, bottom_edge - d_r), d_r)
-	_place(_button_next, Vector2(right_edge - d_e - gap - d_n, bottom_edge - d_r - gap - d_n), d_n)
+	var pill_y := bottom_edge - pill_h
+	var button_y := pill_y - pill_gap - maxf(d_e, d_r)
+
+	_place(_button_e, Vector2(right_edge - d_e, button_y + (maxf(d_e, d_r) - d_e)), d_e)
+	_place(_button_run, Vector2(right_edge - d_e - gap - d_r, button_y + (maxf(d_e, d_r) - d_r)), d_r)
+	_place(_button_g, Vector2(right_edge - d_g, button_y - gap - d_g), d_g)
+	# NEXT replaces E in the same slot while a dialogue is open.
+	_place(_button_next, Vector2(right_edge - d_n, button_y + (maxf(d_e, d_n) - d_n)), d_n)
+
+	_place_pill(_pill_run, Vector2(_button_run.position.x + d_r * 0.5, pill_y), pill_h, s)
+	_place_pill(_pill_e, Vector2(_button_e.position.x + d_e * 0.5, pill_y), pill_h, s)
 
 	if not is_equal_approx(s, _style_scale):
 		_style_scale = s
 		for button in _buttons:
-			button.add_theme_font_size_override("font_size", int(button.size.x * 0.30))
+			button.add_theme_font_size_override("font_size", int(button.size.x * 0.34))
 		_apply_button_style(_button_e, 1 if _action_available else 0)
 		_apply_button_style(_button_g, 1 if _salute_available else 0)
-		_apply_button_style(_button_run, 2 if _run_latched else 0)
 		_apply_button_style(_button_next, 0)
+		_apply_run_style()
+		_pill_run_label.add_theme_font_size_override("font_size", int(round(11.0 * s)))
+		_pill_e_label.add_theme_font_size_override("font_size", int(round(11.0 * s)))
+		_pill_run_label.add_theme_constant_override("outline_size", 2)
+		_pill_e_label.add_theme_constant_override("outline_size", 2)
+		_pill_run_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+		_pill_e_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
 
 
 func _place(button: Button, pos: Vector2, diameter: float) -> void:
 	button.size = Vector2(diameter, diameter)
 	button.pivot_offset = Vector2(diameter, diameter) * 0.5
 	button.position = pos
+
+
+func _place_pill(pill: PanelContainer, centre: Vector2, height: float, s: float) -> void:
+	pill.reset_size()
+	pill.size = Vector2(0, height)
+	var min_w := pill.get_combined_minimum_size().x
+	pill.size = Vector2(min_w, height)
+	pill.position = Vector2(centre.x - min_w * 0.5, centre.y)
 
 
 # -------------------------------------------------------------------- input
@@ -332,11 +461,14 @@ func _update_joystick(point: Vector2) -> void:
 		value = value.normalized() * ((value.length() - DEAD_ZONE) / (1.0 - DEAD_ZONE))
 	_joy_value = value
 	move_changed.emit(value)
+	# Pushing the stick to the outer ring runs; easing back releases it.
+	var auto_run := value.length() >= (RUN_OFF if _joy_run else RUN_ON)
+	if auto_run != _joy_run:
+		_joy_run = auto_run
+		_emit_run_effective()
 	_draw_layer.value = value
 	if not _draw_layer.active:
 		_draw_layer.active = true
-		if _hint.modulate.a > 0.0:
-			_hint.modulate.a = 0.0
 	_draw_layer.queue_redraw()
 
 
@@ -344,6 +476,9 @@ func _release_joystick() -> void:
 	if _joy_value != Vector2.ZERO:
 		_joy_value = Vector2.ZERO
 		move_changed.emit(Vector2.ZERO)
+	if _joy_run:
+		_joy_run = false
+		_emit_run_effective()
 	_draw_layer.value = Vector2.ZERO
 	if _draw_layer.active:
 		_draw_layer.active = false
@@ -375,12 +510,10 @@ func _on_next() -> void:
 	tapped.emit()
 
 
-func _on_run_toggled(on: bool) -> void:
-	if _suppress_run:
-		return
-	_run_latched = on
-	_apply_button_style(_button_run, 2 if on else 0)
-	run_changed.emit(on)
+func _on_run_toggled() -> void:
+	_run_latched = not _run_latched
+	_apply_run_style()
+	_emit_run_effective()
 
 
 ## Optional: drive the NEXT button from the game instead of the `Dialogue`
@@ -411,7 +544,6 @@ func _process(delta: float) -> void:
 	_update_action_state()
 	_update_salute_state()
 	_update_step()
-	_sync_run_state()
 
 
 func _update_dialogue_state() -> void:
@@ -423,7 +555,7 @@ func _update_dialogue_state() -> void:
 	if open == _dialogue_open:
 		return
 	_dialogue_open = open
-	_button_next.visible = open
+	_refresh_button_visibility()
 	if open:
 		_release_joystick()
 
@@ -440,6 +572,9 @@ func _update_action_state() -> void:
 		return
 	_action_available = available
 	_apply_button_style(_button_e, 1 if available else 0)
+	_pill_e_label.add_theme_color_override("font_color",
+			Color(1.0, 0.84, 0.32) if available else Color(0.98, 0.98, 0.98, 0.95))
+	_refresh_button_visibility()
 
 
 func _update_salute_state() -> void:
@@ -452,6 +587,18 @@ func _update_salute_state() -> void:
 		return
 	_salute_available = available
 	_apply_button_style(_button_g, 1 if available else 0)
+	_refresh_button_visibility()
+
+
+## E and RUN stay on screen (dimmed or gold); G is context-only; NEXT only
+## replaces E while a dialogue is open.
+func _refresh_button_visibility() -> void:
+	_button_e.visible = not _dialogue_open
+	_button_run.visible = not _dialogue_open
+	_button_g.visible = _salute_available and not _dialogue_open
+	_button_next.visible = _dialogue_open
+	_pill_e.visible = _button_e.visible
+	_pill_run.visible = _button_run.visible
 
 
 func _near_colonel() -> bool:
@@ -490,25 +637,6 @@ func _find_npc(npc_id: String) -> Node3D:
 		if node != null and str(node.get("npc_id")) == npc_id:
 			return node
 	return null
-
-
-func _sync_run_state() -> void:
-	## The game clears `touch_run` when a dialogue starts or ends, so the
-	## latched button follows the player instead of lying about the state.
-	var p := _player_node()
-	if p == null:
-		return
-	var value: Variant = p.get("touch_run")
-	if typeof(value) != TYPE_BOOL:
-		return
-	var on: bool = value
-	if on == _run_latched:
-		return
-	_run_latched = on
-	_suppress_run = true
-	_button_run.button_pressed = on
-	_suppress_run = false
-	_apply_button_style(_button_run, 2 if on else 0)
 
 
 func _player_node() -> Node:

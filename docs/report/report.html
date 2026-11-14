@@ -9,7 +9,7 @@
 /* ==========================================================================
    ANITS Godot 4 Port — Technical Report stylesheet
    Self-contained: no external fonts, no CDN, no network resources.
-   Print target: A4 portrait, 30 designed pages, explicit page boxes.
+   Print target: A4 portrait, 33 designed pages, explicit page boxes.
    ========================================================================== */
 
 :root{
@@ -239,6 +239,46 @@ figcaption b{ color:var(--navy); }
   margin-bottom:1mm;
 }
 .pair figure{ margin-bottom:2mm; }
+.uniforms{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:4mm;
+  margin:0 0 2.4mm;
+}
+.uniform-year{
+  border:0.5pt solid var(--rule);
+  background:#f7f9fc;
+  padding:2mm;
+  border-radius:2px;
+}
+.uniform-imgs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.4mm;
+  align-items:end;
+}
+.uniform-imgs img{
+  display:block;
+  width:100%;
+  height:auto;
+  border:0.5pt solid var(--rule);
+  background:#0b1118;
+}
+.uniform-cap{
+  font-size:7.4pt;
+  line-height:1.35;
+  color:var(--muted);
+  margin-top:1.6mm;
+}
+.uniform-cap b{ color:var(--navy); }
+.quad{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:3.2mm 4mm;
+  margin-bottom:1mm;
+}
+.quad figure{ margin-bottom:1.4mm; }
+.quad figcaption{ font-size:7.2pt; line-height:1.3; }
 figure.compact img{
   max-height:58mm;
   width:auto;
@@ -454,7 +494,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><th>Source build</th><td><code>ANITS-WEB GAME/</code> — <code>js/game.js</code> (1.85 MB), <code>js/levels.js</code>, <code>js/menu.js</code>, <code>js/voice.js</code>, <code>index.html</code>, <code>css/</code></td></tr>
         <tr><th>Target project</th><td><code>new-game-project/</code> — <code>project.godot</code>, main scene <code>res://src/main.tscn</code></td></tr>
         <tr><th>Engine / renderer</th><td>Godot 4.7.2 stable · Forward+ · D3D12 (Windows) · Jolt Physics</td></tr>
-        <tr><th>Report version</th><td>1.0 — issued 12 November 2026</td></tr>
+        <tr><th>Report version</th><td>1.0 — issued 13 November 2026</td></tr>
         <tr><th>Scope</th><td>Front end, campus world, Day&nbsp;1 mission chain, HUD, touch controls, Admin Office interior, voice and dialogue, test and build pipeline</td></tr>
         <tr><th>Status</th><td>Day&nbsp;1 plays end to end; Days&nbsp;2–10 are stubbed; no music track is implemented (see §10)</td></tr>
       </tbody>
@@ -472,13 +512,14 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
     </p>
     <p style="font-size:8.4pt;color:var(--muted);max-width:150mm">
       All figures in this report were read from the shipping source of both projects.
-      No measured frame-rate numbers are claimed; benchmark slots are marked
-      <code>&lt;!-- BENCH: --&gt;</code> and left empty on purpose.
+      Desktop frame-rate figures are measured and labelled with their hardware and
+      sample window; the Android slots are marked <code>&lt;!-- BENCH: --&gt;</code>
+      and left empty because no handset was available.
     </p>
   </div>
   <div class="cv-foot">
     <span><b>ANITS College Simulation</b> · Godot 4 Port · Technical Report v1.0</span>
-    <span>Page 1 of 30</span>
+    <span>Page 1 of 34</span>
   </div>
 </section>
 
@@ -496,16 +537,16 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td class="toc-n">04</td><td>Campus layout &amp; roads</td><td class="toc-s">Coordinate system, 17 buildings, 12 street rectangles, props</td><td class="toc-p">11</td></tr>
         <tr><td class="toc-n">05</td><td>Day&nbsp;1 mission flow</td><td class="toc-s">The eight-step script and the gate/marker machinery</td><td class="toc-p">15</td></tr>
         <tr><td class="toc-n">06</td><td>UI, HUD &amp; main menu</td><td class="toc-s">Anchored HUD panels and the six-screen front end</td><td class="toc-p">18</td></tr>
-        <tr><td class="toc-n">07</td><td>Touch controls (mobile)</td><td class="toc-s">Virtual stick, look-drag, E / G / RUN buttons</td><td class="toc-p">21</td></tr>
-        <tr><td class="toc-n">08</td><td>Admin Office interior</td><td class="toc-s">The sealed waiting room, the desk, the glass doors</td><td class="toc-p">22</td></tr>
-        <tr><td class="toc-n">09</td><td>Characters, voice &amp; dialogue</td><td class="toc-s">64 NPCs, 632 recordings, per-character voice profiles, no music</td><td class="toc-p">23</td></tr>
-        <tr><td class="toc-n">10</td><td>Rendering &amp; the 60&nbsp;fps strategy</td><td class="toc-s">PC pipeline, mobile quality ladder, budget and levers</td><td class="toc-p">25</td></tr>
-        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">61-check headless suite, scripted tour, mobile preview</td><td class="toc-p">27</td></tr>
-        <tr><td class="toc-n">12</td><td>Known limitations &amp; future work</td><td class="toc-s">Open items, in priority order</td><td class="toc-p">29</td></tr>
-        <tr><td class="toc-n">13</td><td>Build &amp; deploy</td><td class="toc-s">Signed Android APK and the GitHub Pages web build</td><td class="toc-p">30</td></tr>
-        <tr><td class="toc-n">A</td><td>Appendix A - Controls reference</td><td class="toc-s">Keyboard, mouse and touch bindings</td><td class="toc-p">31</td></tr>
-        <tr><td class="toc-n">B</td><td>Appendix B - Asset credits</td><td class="toc-s">Sources and licence status of every asset family</td><td class="toc-p">32</td></tr>
-        <tr><td class="toc-n">C</td><td>Appendix C - File map</td><td class="toc-s">Every source file in the Godot project and what it does</td><td class="toc-p">32</td></tr>
+        <tr><td class="toc-n">07</td><td>Touch controls (mobile)</td><td class="toc-s">Small joystick, look-drag, context-only E / G / NEXT</td><td class="toc-p">23</td></tr>
+        <tr><td class="toc-n">08</td><td>Admin Office interior</td><td class="toc-s">The sealed waiting room, the desk, the glass doors</td><td class="toc-p">24</td></tr>
+        <tr><td class="toc-n">09</td><td>Characters, voice &amp; dialogue</td><td class="toc-s">64 NPCs, 632 recordings, per-character voice profiles, no music</td><td class="toc-p">25</td></tr>
+        <tr><td class="toc-n">10</td><td>Rendering &amp; the 60&nbsp;fps strategy</td><td class="toc-s">PC pipeline, mobile quality ladder, budget and levers</td><td class="toc-p">27</td></tr>
+        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">66-check headless suite, scripted tour, mobile preview</td><td class="toc-p">29</td></tr>
+        <tr><td class="toc-n">12</td><td>Known limitations &amp; future work</td><td class="toc-s">Open items, in priority order</td><td class="toc-p">31</td></tr>
+        <tr><td class="toc-n">13</td><td>Build &amp; deploy</td><td class="toc-s">Signed Android APK and the GitHub Pages web build</td><td class="toc-p">32</td></tr>
+        <tr><td class="toc-n">A</td><td>Appendix A - Controls reference</td><td class="toc-s">Keyboard, mouse and touch bindings</td><td class="toc-p">33</td></tr>
+        <tr><td class="toc-n">B</td><td>Appendix B - Asset credits</td><td class="toc-s">Sources and licence status of every asset family</td><td class="toc-p">34</td></tr>
+        <tr><td class="toc-n">C</td><td>Appendix C - File map</td><td class="toc-s">Every source file in the Godot project and what it does</td><td class="toc-p">34</td></tr>
       </tbody>
     </table>
 
@@ -524,11 +565,11 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td><code>src/…</code>, <code>docs/…</code></td><td>A path inside the Godot project. Paths are relative to <code>new-game-project/</code>.</td></tr>
         <tr><td><code>ANITS-WEB GAME/…</code></td><td>A path inside the original web build — the ground truth for the port.</td></tr>
         <tr><td>Dashed grey frame</td><td>A screenshot that has <strong>not yet been captured</strong>. The frame prints the exact filename to drop in; see the Appendix in <code>docs/report/README.md</code>.</td></tr>
-        <tr><td><code>&lt;!-- BENCH: --&gt;</code></td><td>An empty measurement slot, deliberately left empty. No frame-rate number is claimed anywhere in this report.</td></tr>
+        <tr><td><code>&lt;!-- BENCH: --&gt;</code></td><td>An Android measurement slot left empty because no handset was available. Desktop measurements are recorded with their hardware and sample window in §10.</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 2 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 2 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 3 — EXEC SUMMARY I ============================ -->
@@ -551,7 +592,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <div class="kpi"><div class="k-v">17</div><div class="k-l">buildings generated from data</div></div>
       <div class="kpi"><div class="k-v">64</div><div class="k-l">NPCs with original lines</div></div>
       <div class="kpi"><div class="k-v">632</div><div class="k-l">voice recordings replayed</div></div>
-      <div class="kpi"><div class="k-v">61</div><div class="k-l">headless checks, 0 failures</div></div>
+      <div class="kpi"><div class="k-v">66</div><div class="k-l">headless checks, 0 failures</div></div>
     </div>
 
     <h2>The porting thesis</h2>
@@ -581,7 +622,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <li><strong>Audio.</strong> <code>src/autoload/voice_bank.gd</code> replays the original's own 632 MP3 recordings, matched to the line text through <code>clips.json</code> (340 lines) and <code>clips_girl.json</code> (310 lines), and reuses the original per-character pitch/rate profiles.</li>
     </ul>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 3 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 3 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 4 — EXEC SUMMARY II ============================ -->
@@ -595,13 +636,13 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <caption>Delivered scope — verified against the running build</caption>
       <thead><tr><th style="width:30%">Area</th><th>What exists today</th><th style="width:26%">Evidence</th></tr></thead>
       <tbody>
-        <tr><td>Front end</td><td>Year select (2023–2025 uniform), character select (Mike / Amy), 14-character name entry, main menu. Ported from <code>js/menu.js</code>.</td><td><code>src/ui/main_menu.gd</code></td></tr>
+        <tr><td>Front end</td><td>All nine screens: Little Hearts intro, year select (2023–2025 uniform), character select (Mike / Amy), 14-character name entry, welcome card, main menu, settings, level select and loading. Ported from <code>js/cinematic.js</code> and <code>js/menu.js</code>.</td><td><code>src/ui/main_menu.gd</code></td></tr>
         <tr><td>Campus world</td><td>17 buildings, 12 street rectangles, 5 zones, 6 wall runs, hinged main gate + Back Gate arch, kerbs, footpaths, crosswalk, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts in 32 culled chunks, 14 lamps, 7 benches, 4 vending machines.</td><td><code>campus_data.json</code>, <code>campus_builder.gd</code></td></tr>
         <tr><td>Player</td><td>Walk 2.4&nbsp;m/s, run 5.6&nbsp;m/s, energy-drink boost ×1.3 for 30&nbsp;s, no jump, 1.3&nbsp;m step-up, third-person boom at 5.4&nbsp;m with building avoidance down to 1.2&nbsp;m.</td><td><code>src/actors/player.gd</code>, <code>campus_data.json</code></td></tr>
-        <tr><td>NPCs</td><td>All 64 characters, original models, original routes, original dialogue; distance-culled skeletons at 95&nbsp;m and name labels at 62&nbsp;m.</td><td><code>src/actors/npc.gd</code>, <code>npcs.json</code></td></tr>
+        <tr><td>NPCs</td><td>All 64 characters, original models, original routes, original dialogue; distance-culled skeletons at 95&nbsp;m. Floating name tags are removed — names appear only in dialogue.</td><td><code>src/actors/npc.gd</code>, <code>npcs.json</code></td></tr>
         <tr><td>Mission</td><td>Day&nbsp;1 complete: guard → gate → Laksmi → Prof.&nbsp;Rao → Suresh → Arjun → salute → Colonel Singh.</td><td><code>mission_runner.gd</code>, tour screenshots 01–08</td></tr>
         <tr><td>HUD</td><td>Mission panel, wallet and energy, dialogue panel, subtitles, interaction prompt, minimap, toasts, keyboard legend — all anchor-based, so they survive any aspect ratio.</td><td><code>src/ui/hud.gd</code></td></tr>
-        <tr><td>Touch</td><td>Virtual stick (68&nbsp;px, 0.14 dead zone), look-drag anywhere, and <em>E</em> / <em>G</em> / <em>RUN</em> buttons that call the same resolvers as the keyboard.</td><td><code>src/ui/touch_controls.gd</code></td></tr>
+        <tr><td>Touch</td><td>Small 76&nbsp;px virtual stick with auto-run at the outer ring, look-drag anywhere, and context-only <em>E</em> / <em>G</em> / <em>NEXT</em> buttons that call the same resolvers as the keyboard.</td><td><code>src/ui/touch_controls.gd</code></td></tr>
         <tr><td>Admin Office</td><td>The sealed waiting room with sliding glass doors, Laksmi at her desk, sofas, bookshelves, restroom cubicle and the hall door that teleports the player in and out.</td><td><code>src/world/admin_office.gd</code></td></tr>
         <tr><td>Voice</td><td>632 original MP3s, original pitch/rate per character, Telugu subtitle track from the same clip tables. <strong>No music bed is implemented</strong> — see §10.</td><td><code>src/autoload/voice_bank.gd</code></td></tr>
       </tbody>
@@ -635,11 +676,12 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <span class="note-l">How the numbers in this report were obtained</span>
       Static reading of both code bases, plus a scripted in-engine verification
       tour (<code>-- --check</code>) that walks the Day&nbsp;1 route and writes ten
-      screenshots to <code>docs/screenshots/godot/</code>. No measurement of
-      frame rate is claimed; see §10 for the empty benchmark slots.
+      screenshots to <code>docs/screenshots/godot/</code>. Desktop frame rate was
+      measured on the integrated Radeon laptop used for the Windows build; the
+      Android slots remain empty because no handset was available (§10).
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 4 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 4 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 5 — AT A GLANCE ============================ -->
@@ -673,7 +715,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Streets</td><td>12 rectangles</td><td>8 campus roads + 4 perimeter strips</td></tr>
         <tr><td>Zones</td><td>5</td><td>parade ground, basketball, power supply, central lawn, parking</td></tr>
         <tr><td>Walls / gates</td><td>6 wall runs, 2 gates</td><td>Hinged main gate (8.2 m pillars), Back Gate arch</td></tr>
-        <tr><td>NPCs</td><td>64</td><td>Full breakdown in §9, page 21</td></tr>
+        <tr><td>NPCs</td><td>64</td><td>Full breakdown in §9, page 25</td></tr>
         <tr><td>Vegetation</td><td>150 trees, 130 bushes, 4&nbsp;200 grass tufts</td><td>32 distance-culled chunks, 85 m radius</td></tr>
         <tr><td>Props</td><td>91 cars, 14 lamps, 7 benches, 4 vending machines</td><td>Bank ATM and noodle-bar service points</td></tr>
       </tbody>
@@ -690,11 +732,11 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Energy</td><td>40 of 100</td><td>Spent by running and by the energy drinks</td></tr>
         <tr><td>Inventory economy</td><td>10 drinks, 4 dishes, 3 items</td><td><code>src/data/economy.json</code></td></tr>
         <tr><td>HUD elements</td><td>Mission, wallet, energy, dialogue, subtitle, prompt, minimap, toast, key legend</td><td><code>src/ui/hud.gd</code></td></tr>
-        <tr><td>Touch controls</td><td>Stick + look-drag + E / G / RUN</td><td>68 px radius, 0.14 dead zone</td></tr>
+        <tr><td>Touch controls</td><td>Small stick + look-drag + context E / G / NEXT</td><td>76 px radius, 0.14 dead zone, auto-run at 0.92</td></tr>
         <tr><td>Voice</td><td>632 MP3s, 340 + 310 clip entries</td><td>Master / Music / SFX / Voice / UI buses</td></tr>      </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 5 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 5 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 6 — PORTING METHOD ============================ -->
@@ -736,7 +778,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       headless test suite does (§11).
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 6 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 6 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 7 — PAIR: GATE ============================ -->
@@ -762,7 +804,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <figure>
         <span class="tag godot">Godot 4 port</span>
         <img src="../screenshots/godot/01_spawn_gate.png" alt="Godot port: the player stands on the entrance boulevard outside the ANITS main gate, with the Admin Block ahead and the mission marker to the right.">
-        <figcaption><b>Figure 3.2 (Godot).</b> <code>docs/screenshots/godot/01_spawn_gate.png</code> — the first frame of the scripted tour. The HUD shows <em>DAY 1 · MISSION 1 / 8</em>; the mission marker disc sits to the right of the road, where the guard is.</figcaption>
+        <figcaption><b>Figure 3.2 (Godot).</b> <code>docs/screenshots/godot/01_spawn_gate.png</code> — the first frame of the scripted tour. The HUD shows <em>MISSION 1 / 8</em> with the gold distance readout; the billboard <em>!</em> marker sits to the right of the road, where the guard is.</figcaption>
       </figure>
     </div>
 
@@ -788,7 +830,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       the layout are the original's.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 7 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 7 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 8 — PAIR: ADMIN ============================ -->
@@ -845,7 +887,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       sealed inside the room — see §8.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 8 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 8 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 9 — PAIR: CSE / IT ============================ -->
@@ -904,7 +946,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       cadets 1.7/1.62/1.6&nbsp;m, Colonel Singh 1.85&nbsp;m, Remy 1.75&nbsp;m.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 9 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 9 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 10 — PAIR: CANTEEN / NCC ============================ -->
@@ -961,7 +1003,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       expansion used, and the reason the headless suite can assert the count.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 10 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 10 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 11 — CAMPUS LAYOUT I ============================ -->
@@ -1039,7 +1081,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       what the headless suite asserts (§11.1).
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 11 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 11 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 12 — BUILDINGS ============================ -->
@@ -1062,16 +1104,16 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Mechanical Block</td><td>[101, 116, 226, 156]</td><td class="num">10 m</td><td>lowpoly_row (9 bays)</td><td>S</td></tr>
         <tr><td>Stair Auditorium</td><td>[115, 157, 156, 196]</td><td class="num">11 m</td><td>stair_auditorium</td><td>S</td></tr>
         <tr><td>Workshop</td><td>[183, 157, 222, 187]</td><td class="num">7 m</td><td>workshop</td><td>S</td></tr>
-        <tr><td>Chemical Block</td><td>[109, 205, 155, 239]</td><td class="num">11.5 m</td><td>panel_block</td><td>E</td></tr>
-        <tr><td>EEE Block</td><td>[172, 201, 232, 231]</td><td class="num">11.5 m</td><td>panel_block</td><td>W</td></tr>
-        <tr><td>CSE Block</td><td>[102, 246, 156, 281]</td><td class="num">11.5 m</td><td>panel_block</td><td>E</td></tr>
-        <tr><td>ECE Block</td><td>[170, 244, 230, 279]</td><td class="num">11.5 m</td><td>panel_block</td><td>W</td></tr>
+        <tr><td>Chemical Block</td><td>[100, 206, 155, 237]</td><td class="num">11.5 m</td><td>panel_block</td><td>E</td></tr>
+        <tr><td>EEE Block</td><td>[173, 206, 232, 237]</td><td class="num">11.5 m</td><td>panel_block</td><td>W</td></tr>
+        <tr><td>CSE Block</td><td>[100, 248, 155, 279]</td><td class="num">11.5 m</td><td>panel_block</td><td>E</td></tr>
+        <tr><td>ECE Block</td><td>[173, 248, 232, 279]</td><td class="num">11.5 m</td><td>panel_block</td><td>W</td></tr>
         <tr><td>ADMIN BLOCK</td><td>[97, 291, 232, 331]</td><td class="num">12 m<br><small>16.954 m rendered</small></td><td>admin_block (× 0.98)</td><td>NS</td></tr>
         <tr><td>IT Block</td><td>[260, 143, 282, 237]</td><td class="num">11 m</td><td>lowpoly_row (6 bays)</td><td>W</td></tr>
         <tr><td>Civil Block (N)</td><td>[276, 61, 358, 117]</td><td class="num">14 m</td><td>lowpoly_row (2 bays)</td><td>W</td></tr>
         <tr><td>Civil Block (S)</td><td>[288, 137, 356, 224]</td><td class="num">14 m</td><td>lowpoly_row (4 bays)</td><td>W</td></tr>
         <tr><td>CSM Block</td><td>[286, 226, 319, 246]</td><td class="num">7 m</td><td>lowpoly_row (3 bays)</td><td>S</td></tr>
-        <tr><td>Canteen</td><td>[286, 120, 314, 136]</td><td class="num">5 m</td><td>cafe</td><td>WE</td></tr>
+        <tr><td>Canteen</td><td>[286, 119, 314, 135]</td><td class="num">5 m</td><td>cafe</td><td>WE</td></tr>
         <tr><td>Temple</td><td>[102, 331, 122, 349]</td><td class="num">4 m</td><td>temple (× 11)</td><td>E</td></tr>
         <tr><td>Magic Spot</td><td>[62, 349, 80, 366]</td><td class="num">5 m</td><td>noodle_bar</td><td>E</td></tr>
         <tr><td>Gate Canteen</td><td>[62, 375, 80, 395]</td><td class="num">5 m</td><td>cafe</td><td>WE</td></tr>
@@ -1082,7 +1124,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
     <h3>How a building is placed</h3>
     <ul>
       <li><strong>lowpoly_row</strong> — repeats the <code>lp</code> unit along the plot. The unit width is derived from the model's own depth and the building height, the number of units from the plot length, and the remainder is distributed as an equal gap. Each unit gets its own box collider.</li>
-      <li><strong>panel_block</strong> — the classroom-panel block (CSE, ECE, EEE, Chemical). The web build scales so the block's <em>length</em> fits the plot depth and stretches X by 1.3; the Godot build reproduces both factors and then recolours the palette atlas.</li>
+      <li><strong>panel_block</strong> — the classroom-panel block (CSE, ECE, EEE, Chemical). The web build scales so the block's <em>length</em> fits the plot depth and stretches X by 1.3; the Godot build reproduces both factors and then recolours the palette atlas. The four blocks are re-gridded into a clean 2 × 2 layout: equal 31&nbsp;px depth, shared column edges, and 2&nbsp;px clearance from every road.</li>
       <li><strong>admin_block</strong> — the imported original with two colliding wings and an open central corridor, as described in §3.</li>
       <li><strong>Single-model plots</strong> — the bank, café, temple and workshop are fitted to their rectangle and given one box collider.</li>
     </ul>
@@ -1092,12 +1134,14 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       Every building carries a solid navy signboard bolted to its facade with a
       gold trim strip, and a <code>Label3D</code> in white capitals. The board is
       sized from the name length and clamped to 72&nbsp;% of the facade, so long
-      names such as <em>ADMIN BLOCK</em> and <em>MAGIC SPOT</em> stay inside the
-      building frontage. The sign faces the building's <em>face</em> side, which
-      is also where the web game put its labels.
+      names such as <em>ADMIN &amp; ADMISSIONS</em> and <em>MAGIC SPOT</em> stay
+      inside the building frontage. The Admin Block keeps the JSON key
+      <code>"ADMIN BLOCK"</code> for lookups, while its visible facade sign names
+      the admission office inside. The sign faces the building's <em>face</em>
+      side, which is also where the web game put its labels.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 12 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 12 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 13 — ROADS ============================ -->
@@ -1153,7 +1197,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       </figure>
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 13 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 13 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 14 — CAMPUS LANDMARKS ============================ -->
@@ -1218,7 +1262,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       same window grids and the same colours as the original.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 14 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 14 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 14 — DAY 1 TABLE ============================ -->
@@ -1272,7 +1316,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       unusable — he stands inside a company of 18 cadets.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 15 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 15 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 15 — DAY 1 GATE ============================ -->
@@ -1313,7 +1357,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <figure>
         <span class="tag godot">Godot 4 port · step 3</span>
         <img src="../screenshots/godot/03_admin.png" alt="Godot port: inside the Admin Office, facing Laksmi through the open sliding glass doors, with the interaction prompt at the bottom.">
-        <figcaption><b>Figure 5.2.</b> <code>docs/screenshots/godot/03_admin.png</code> — step 3. The HUD reads <em>DAY 1 · MISSION 3 / 8</em>; the prompt bar shows <em>Talk to Laksmi (Admin)</em> with the <em>E</em> key art from the Controller Icons pack.</figcaption>
+        <figcaption><b>Figure 5.2.</b> <code>docs/screenshots/godot/03_admin.png</code> — step 3. The HUD reads <em>MISSION 3 / 8</em> with the objective and a 3 m distance; the prompt bar shows <em>Talk to Laksmi (Admin)</em> with the <em>E</em> key art from the Controller Icons pack.</figcaption>
       </figure>
     </div>
 
@@ -1336,7 +1380,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       Leaving reverses it through <code>hall_return_pos</code>.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 16 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 16 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 16 — DAY 1 REST ============================ -->
@@ -1367,7 +1411,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <figure>
         <span class="tag godot">Step 8 · Colonel Singh</span>
         <img src="../screenshots/godot/08_colonel.png" alt="Godot port: Colonel Singh at the parade ground with the cadet formation behind him.">
-        <figcaption><b>Figure 5.6.</b> <code>08_colonel.png</code> — the final conversation. The tour approaches from the east so the whole cadet company is in frame rather than the backs of two heads.</figcaption>
+        <figcaption><b>Figure 5.6.</b> <code>08_colonel.png</code> — the final conversation, now presented through the gold-accent dialogue panel: a painted portrait of Colonel Singh, the gold speaker name, the typewriter line and the NEXT affordance. The tour approaches from the east so the whole cadet company is in frame.</figcaption>
       </figure>
     </div>
 
@@ -1393,7 +1437,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       that triggers it is not built. This is listed in §12.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 17 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 17 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 17 — HUD ============================ -->
@@ -1406,33 +1450,34 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       The HUD is one <code>CanvasLayer</code> at layer&nbsp;10, built entirely
       from anchors and containers rather than absolute pixel positions, so the
       same layout is correct on a 16:9 laptop, a 20:9 phone and a 4:3 tablet.
-      Touch mode shrinks the type, narrows the panels and hides the keyboard
-      legend.
+      It follows the mobile-game reference: a mission pill, a wallet pill, a
+      round pause button and an N-badged minimap, with the touch layer adding a
+      translucent joystick and caption-pill action buttons. Touch mode shrinks
+      the type, narrows the panels and hides the keyboard legend.
     </p>
 
     <figure>
       <span class="tag godot">Godot 4 port · HUD in situ</span>
-      <img src="../screenshots/godot/01_spawn_gate.png" alt="Godot port: the full HUD over the campus — mission panel top-left, wallet and energy top-right, key legend bottom-left, minimap bottom-right.">
-      <figcaption><b>Figure 6.1.</b> <code>docs/screenshots/godot/01_spawn_gate.png</code> — the desktop HUD. The key legend along the bottom uses the Controller Icons pack's key artwork; the minimap is a baked <code>ImageTexture</code> with only the player marker redrawn each frame.</figcaption>
+      <img src="../screenshots/godot/01_spawn_gate.png" alt="Godot port: the new HUD over the campus — mission pill top-left, wallet and pause top-right, N-badged minimap below them, key legend bottom-left.">
+      <figcaption><b>Figure 6.1.</b> <code>docs/screenshots/godot/01_spawn_gate.png</code> — the desktop HUD at the main gate. The mission pill carries the objective and a gold distance readout; the wallet pill carries the coin balance and the green energy bar; the round button opens the pause overlay. The minimap is a baked <code>SubViewport</code> image with building names, an N badge and a player arrow that rotates with the controller yaw.</figcaption>
     </figure>
 
     <table>
       <caption>HUD panel inventory</caption>
       <thead><tr><th style="width:20%">Element</th><th style="width:31%">Content</th><th>Behaviour</th></tr></thead>
       <tbody>
-        <tr><td>Mission panel</td><td>Top-left, 460&nbsp;px wide (330 in touch), navy on translucent black, gold title</td><td>Title reads <code>DAY n · MISSION k / m</code>; body is the current step text, word-wrapped</td></tr>
-        <tr><td>Wallet</td><td>Top-right, right-aligned, <code>Rs.200 | bank Rs.2000</code></td><td>Updated by <code>update_wallet(wallet, bank)</code></td></tr>
-        <tr><td>Energy</td><td>Top-right under the wallet: numeric value + progress bar</td><td>Bar is 160&nbsp;px wide in desktop, 120&nbsp;px in touch; maximum 100</td></tr>
-        <tr><td>Toast</td><td>Top-centre, green, fading in and out</td><td>Used for mission messages, the Admin Office announcement and the salute reply</td></tr>
-        <tr><td>Dialogue panel</td><td>Bottom-centre, 560 × 90&nbsp;px (470 in touch), gold speaker name</td><td>Shown by <code>show_dialogue()</code>, hidden by <code>hide_dialogue()</code></td></tr>
-        <tr><td>Subtitle</td><td>Bottom-centre above the dialogue panel</td><td>English by default, Telugu when <code>Settings.subtitle_language == "te"</code></td></tr>
-        <tr><td>Interaction prompt</td><td>Bottom-centre, with the <em>E</em> key art (hidden in touch mode)</td><td>Reads <em>Talk to …</em>, <em>Use vending machine</em>, <em>Enter the Admin Office</em> or <em>Leave the Admin Office</em></td></tr>
-        <tr><td>Minimap</td><td>Bottom-right (top-right in touch mode, out of the thumb arc)</td><td>Baked once from the campus data: roads, zones and building rectangles, plus a live player dot</td></tr>
+        <tr><td>Mission pill</td><td>Top-left, 470&nbsp;px wide (340 in touch), navy glass with a pin icon and a chevron</td><td>Reads <code>MISSION k / m</code>, the current objective and a gold distance readout on the title row; the body wraps to the pill width</td></tr>
+        <tr><td>Wallet pill</td><td>Top-right, left of the pause button, coin icon + balance</td><td>Updated by <code>update_wallet()</code>; the green energy bar and bolt icon below it are updated by <code>update_energy()</code></td></tr>
+        <tr><td>Pause button</td><td>Top-right corner, 46&nbsp;px round navy button</td><td>Emits <code>pause_requested</code>; opens the pause overlay (RESUME / MAIN MENU). <code>Esc</code> pauses too, after finishing a typing line</td></tr>
+        <tr><td>Minimap</td><td>Top-right below the pills, rounded, with an N badge</td><td>Baked once from the campus data into a <code>SubViewport</code>: roads, zones, tinted building footprints and names. Only the player arrow and objective dot redraw</td></tr>
+        <tr><td>Dialogue panel</td><td>Bottom-centre, brush-stroke navy panel with a gold frame and a portrait</td><td>Gold speaker name, 55&nbsp;cps typewriter, pulsing next hint and a NEXT button; <em>E</em> or a tap finishes the line, a second press advances it</td></tr>
+        <tr><td>Prompt</td><td>Bottom-centre above the dialogue panel</td><td>Reads <em>Talk to …</em>, <em>Use vending machine</em>, <em>Enter the Admin Office</em> or <em>Leave the Admin Office</em>; hidden in touch mode, where the E caption carries the same information</td></tr>
+        <tr><td>Toast</td><td>Top-centre, green, fading in and out</td><td>Mission messages, the Admin Office announcement and the salute reply</td></tr>
         <tr><td>Key legend</td><td>Bottom-left, desktop only</td><td>WASD move, Shift run, E talk/use, G salute, Q turn camera, Esc pause</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 18 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 18 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 18 — MAIN MENU ============================ -->
@@ -1444,33 +1489,34 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     <p class="lead">
       The web build's front end is nine DOM screens: intro, year, character,
       name, welcome, main menu, settings, level select and loading. The Godot
-      build implements the six that carry the player from launch into Day&nbsp;1
-      — year, character, name, main menu, level select and loading — on a
-      centred 1600 × 1080 design canvas so the layout is identical on every
-      aspect ratio.
+      build implements <strong>all nine</strong> on a centred 1600 × 1080 design
+      canvas so the layout is identical on every aspect ratio.
     </p>
 
     <table>
-      <caption>Front-end screens</caption>
-      <thead><tr><th style="width:16%">Screen</th><th style="width:28%">Content</th><th>Source / port</th></tr></thead>
+      <caption>Front-end screens — all nine implemented</caption>
+      <thead><tr><th style="width:15%">Screen</th><th style="width:47%">Content</th><th>Source / port</th></tr></thead>
       <tbody>
-        <tr><td>Year select</td><td>Slider 2023–2025, large year numeral, uniform name and description</td><td><code>js/menu.js</code> <code>YINFO</code> → <code>main_menu.gd::UNIFORMS</code></td></tr>
-        <tr><td>Character select</td><td>Two cards: Mike (boy) and Amy (girl)</td><td><code>js/menu.js</code> → <code>main_menu.gd::_card()</code></td></tr>
+        <tr><td>Intro</td><td>Black letterbox card: ANITS crest, Little Hearts mark, studio line and developer credit</td><td><code>js/cinematic.js</code> → <code>show_intro()</code></td></tr>
+        <tr><td>Year select</td><td>Slider 2023–2025, large year numeral, uniform name and description</td><td><code>js/menu.js</code> <code>YINFO</code> → <code>UNIFORMS</code></td></tr>
+        <tr><td>Character select</td><td>Two cards: Mike (boy) and Amy (girl), each with a live 3D preview</td><td><code>js/menu.js</code> → <code>_card()</code></td></tr>
         <tr><td>Name</td><td>Single-line entry, maximum 14 characters</td><td><code>js/menu.js</code> <code>maxlength="14"</code></td></tr>
-        <tr><td>Main menu</td><td>ANITS logotype, "PLAYING AS …", START GAME, feature strapline</td><td><code>js/menu.js</code> → <code>main_menu.gd</code></td></tr>
-        <tr><td>Level select</td><td>5 × 2 grid of Day 1–10 cards with NEW / DONE badges and padlocks</td><td><code>js/menu.js</code> level grid → <code>main_menu.gd::show_levels()</code></td></tr>
+        <tr><td>Welcome</td><td>Heart mark, “WELCOME &lt;name&gt;”, “TO ANITS COLLEGE”</td><td><code>js/menu.js</code> → <code>_build_welcome_screen()</code></td></tr>
+        <tr><td>Main menu</td><td>ANITS logotype, “PLAYING AS …”, START GAME, feature strapline</td><td><code>js/menu.js</code> → <code>_build_main_screen()</code></td></tr>
+        <tr><td>Settings</td><td>Voice volume, look sensitivity, change player, done</td><td><code>js/menu.js</code> modal → <code>_build_settings_screen()</code></td></tr>
+        <tr><td>Level select</td><td>5 × 2 grid of Day 1–10 cards with NEW / DONE badges and padlocks</td><td><code>js/menu.js</code> grid → <code>show_levels()</code></td></tr>
+        <tr><td>Loading</td><td>Campus photo, crest, rotating quote, progress bar, click/tap gate</td><td><code>js/menu.js</code> <code>#s-load</code> → <code>_build_loading_screen()</code></td></tr>
       </tbody>
     </table>
 
-    <h3>Uniforms</h3>
-    <table>
-      <thead><tr><th style="width:16%">Year</th><th style="width:26%">Name</th><th style="width:30%">Description</th><th>Shirt / trousers</th></tr></thead>
-      <tbody>
-        <tr><td>2023</td><td>Rose Uniform</td><td>Light pink shirt · black pants</td><td><code>#f0a6c4</code> / <code>#16161b</code></td></tr>
-        <tr><td>2024</td><td>Classic Uniform</td><td>Cream shirt · brown pants</td><td><code>#e8dfc4</code> / <code>#3b2a1f</code></td></tr>
-        <tr><td>2025</td><td>New Uniform</td><td>Sky blue shirt · navy pants</td><td><code>#87ceeb</code> / <code>#101a4a</code></td></tr>
-      </tbody>
-    </table>
+    <p>
+      The year slider is not cosmetic. <strong>2023</strong> Rose,
+      <strong>2024</strong> Classic and <strong>2025</strong> New swap the
+      player's actual body texture, recolour the girl's clothing panels and add
+      or remove her chunni. The change applies both to the live character-select
+      previews and to the player who spawns on campus; the implementation is on
+      page&nbsp;20.
+    </p>
 
     <div class="pair">
       <figure>
@@ -1486,13 +1532,94 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     </div>
 
     <div class="note">
-      <span class="note-l">What the front end still omits</span>
-      The intro credits card, the welcome card and the settings modal are not
-      reproduced; settings remain on the pause menu. The level grid is
-      implemented — see the next page.
+      <span class="note-l">Startup sequence</span>
+      The intro card, welcome card, settings modal and loading screen are
+      documented with screenshots on page&nbsp;21. The intro follows
+      <code>js/cinematic.js</code>: the full 11&nbsp;s card on first launch, a
+      4&nbsp;s replay afterwards, tap or SKIP after 0.7&nbsp;s, and no music.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 19 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 19 of 34</span></div>
+</section>
+
+<!-- ============================ PAGE 20 — UNIFORMS ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">06 · UI, HUD &amp; main menu</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">06 · UI, HUD &amp; main menu</span>Three joining years, three uniforms</h1>
+
+    <p class="lead">
+      Year select changes the character that walks into ANITS, not just the
+      label on the card. The three joining years use the web build's own three
+      body sheets, its three girl-panel colour maps and its two chunni colours.
+    </p>
+
+    <div class="uniforms">
+      <div class="uniform-year">
+        <div class="uniform-imgs">
+          <img src="../screenshots/godot/uniform_2023_boy_crop.png" alt="2023 uniform on the boy model: rose shirt and black trousers">
+          <img src="../screenshots/godot/uniform_2023_girl_crop.png" alt="2023 uniform on the girl model: rose shirt, rose-tinted panels and black trousers">
+        </div>
+        <div class="uniform-cap"><b>2023 · Rose.</b> Rose shirt, black trousers, rose-tinted girl panels and a charcoal chunni.</div>
+      </div>
+      <div class="uniform-year">
+        <div class="uniform-imgs">
+          <img src="../screenshots/godot/uniform_2024_boy_crop.png" alt="2024 uniform on the boy model: cream shirt and brown trousers">
+          <img src="../screenshots/godot/uniform_2024_girl_crop.png" alt="2024 uniform on the girl model: cream shirt, cream panels and brown leggings">
+        </div>
+        <div class="uniform-cap"><b>2024 · Classic.</b> The original cream shirt and brown trousers; the girl's authored cream panels and no chunni.</div>
+      </div>
+      <div class="uniform-year">
+        <div class="uniform-imgs">
+          <img src="../screenshots/godot/uniform_2025_boy_crop.png" alt="2025 uniform on the boy model: sky-blue shirt and navy trousers">
+          <img src="../screenshots/godot/uniform_2025_girl_crop.png" alt="2025 uniform on the girl model: sky-blue shirt, blue panels and navy trousers">
+        </div>
+        <div class="uniform-cap"><b>2025 · New.</b> Sky-blue shirt, navy trousers, blue-tinted girl panels and a navy chunni.</div>
+      </div>
+    </div>
+    <p class="cap-note"><b>Figure 6.4.</b> The six player uniforms, rendered from the Godot build with <code>tools/render_uniforms.gd</code>. Each pair is the same camera, light rig and pose; only the joining year changes.</p>
+
+    <table>
+      <caption>The three uniforms - data and implementation</caption>
+      <thead><tr><th style="width:8%">Year</th><th style="width:24%">Body sheet</th><th style="width:36%">Girl clothing panels (COLOR_0)</th><th style="width:16%">Chunni</th><th>Look</th></tr></thead>
+      <tbody>
+        <tr><td><b>2023</b></td><td><code>uni2023_boy.jpg</code><br><code>uni2023_amy.jpg</code></td><td>Cream <code>(.86,.80,.68)</code> &rarr; rose <code>(.60,.32,.42)</code>; brown <code>(.30,.21,.15)</code> &rarr; <code>(.48,.24,.33)</code>; tan <code>(.54,.42,.29)</code> &rarr; black <code>(.03,.03,.04)</code></td><td>Charcoal<br><code>#16161b</code></td><td>Rose / black</td></tr>
+        <tr><td><b>2024</b></td><td><code>b_walk_Boy01_diffuse.jpg</code><br><code>cadet_amy_amy_diffuse.jpg</code></td><td>The authored arrays, untouched. The girl's original cream, brown and tan panels are restored.</td><td>None</td><td>Cream / brown</td></tr>
+        <tr><td><b>2025</b></td><td><code>uni2025_boy.jpg</code><br><code>uni2025_amy.jpg</code></td><td>Cream &rarr; sky <code>(.22,.45,.68)</code>; brown &rarr; <code>(.19,.35,.55)</code>; tan &rarr; navy <code>(.04,.07,.20)</code></td><td>Navy<br><code>#0b1544</code></td><td>Sky / navy</td></tr>
+      </tbody>
+    </table>
+
+    <h3>How the swap works</h3>
+    <p>
+      <code>CharacterVisual.apply_uniform(year)</code> is the single entry point.
+      It changes the <code>albedo_texture</code> and <code>emission_texture</code>
+      of the body material only. The materials are per-instance duplicates made
+      by <code>_tweak_surface()</code>, so a uniform change on the player never
+      touches an NPC. The girl's <code>Acc_MAT</code> surface carries her
+      clothing colours in <code>COLOR_0</code>; the three source/target pairs
+      above are copied from <code>js/uniform.js</code>. Godot 4.7 has no
+      <code>surface_set_arrays()</code>, so a duplicate <code>ArrayMesh</code> is
+      rebuilt with <code>add_surface_from_arrays()</code> and cached per year.
+    </p>
+    <p>
+      For 2023 and 2025 the girl also gets the web build's chunni: a
+      90-segment ribbon generated around the spine, neck, arm and hip rest
+      positions and parented to <code>mixamorig_Spine2</code> through a
+      <code>BoneAttachment3D</code>, so it follows the walk, talk and salute
+      clips. It is hidden in 2024. The girl GLB's leftover orange authored
+      albedo is discarded (the web build sets every player material to white),
+      which is what makes the rose and sky panels read correctly instead of
+      being multiplied into orange.
+    </p>
+
+    <div class="note">
+      <span class="note-l">No gameplay effect</span>
+      The uniform is visual only. It is read from <code>GameState.uniform_year</code>
+      when the player spawns and re-applied when the year slider or a year chip
+      changes; mission state, NPC behaviour and collision are untouched.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 20 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 19 — LEVEL SELECT ============================ -->
@@ -1534,10 +1661,69 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and the quote and LEVELS badge sit where the web build puts them.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 20 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 21 of 34</span></div>
 </section>
 
-<!-- ============================ PAGE 20 — TOUCH ============================ -->
+<!-- ============================ PAGE 21 — STARTUP ============================ -->
+<section class="page">
+  <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">06 · UI, HUD &amp; main menu</span></div>
+  <div class="body">
+    <h1 class="sec"><span class="sec-no">06 · UI, HUD &amp; main menu</span>The startup sequence</h1>
+
+    <p class="lead">
+      Three screens carry the build from launch to the campus: the Little Hearts
+      intro card, the loading screen and the settings modal. They are ports of
+      <code>js/cinematic.js</code> and the <code>#s-load</code> block in
+      <code>js/menu.js</code>, using the original campus photograph and the
+      original timings.
+    </p>
+
+    <table>
+      <caption>Startup screens — <code>src/ui/main_menu.gd</code></caption>
+      <thead><tr><th style="width:15%">Screen</th><th style="width:50%">Behaviour</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>Intro card</td><td>Black screen with letterbox bars; ANITS crest, Little Hearts mark, “A LITTLE HEART PRODUCTION” and the developer credit. Full 11&nbsp;s on first launch, 4&nbsp;s replay afterwards; tap or SKIP after 0.7&nbsp;s; silent.</td><td><code>js/cinematic.js</code> → <code>show_intro()</code></td></tr>
+        <tr><td>Loading</td><td>Campus photograph, crest, a quote drawn from <code>LOADING_QUOTES</code>, a blue bar that fills to 90&nbsp;% during handover and 100&nbsp;% when the campus is ready, then “CLICK/TAP ANYWHERE TO START”.</td><td><code>js/menu.js</code> <code>#s-load</code> → <code>_build_loading_screen()</code></td></tr>
+        <tr><td>Settings</td><td>Voice volume 0–100&nbsp;% and look sensitivity 30–250&nbsp;% in 5&nbsp;% steps. Both persist to <code>user://settings.cfg</code>; the look slider updates the camera live and applies to mouse, trackpad and touch drag.</td><td><code>js/menu.js</code> modal → <code>_build_settings_screen()</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="quad">
+      <figure>
+        <span class="tag godot">Intro · studio</span>
+        <img src="../screenshots/godot/intro_studio.png" alt="Little Hearts intro card with the studio mark and A Little Heart Production line">
+        <figcaption><b>Figure 6.5.</b> The studio beat: the Little Hearts mark and “A LITTLE HEART PRODUCTION” over the letterboxed black card.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Intro · credit</span>
+        <img src="../screenshots/godot/intro_credit.png" alt="Intro credit card reading Developed by akhilboss">
+        <figcaption><b>Figure 6.6.</b> The developer credit fades in after the studio mark. The card is silent, matching the original and the “voices only” brief.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Loading</span>
+        <img src="../screenshots/godot/menu_loading.png" alt="Loading screen with the campus photograph, ANITS crest, a quote and the blue progress bar">
+        <figcaption><b>Figure 6.7.</b> The loading screen reproduces <code>#s-load</code>: campus photo, crest, quote, progress bar and the click/tap gate.</figcaption>
+      </figure>
+      <figure>
+        <span class="tag godot">Settings</span>
+        <img src="../screenshots/godot/menu_settings.png" alt="Settings modal with voice volume and look sensitivity sliders">
+        <figcaption><b>Figure 6.8.</b> The settings modal. Look sensitivity is new in this polish pass and is read live by <code>player.gd::_look()</code> on every mouse or touch look.</figcaption>
+      </figure>
+    </div>
+
+    <div class="note">
+      <span class="note-l">First launch, then short replay</span>
+      <code>user://intro.cfg</code> stores the <code>seen</code> flag. The first
+      launch plays the full card; every later launch plays the short version.
+      <code>-- --intro-reset</code> clears the flag for a full capture, and
+      <code>-- --intro-shot</code> photographs the card at 2.4&nbsp;s,
+      5.6&nbsp;s and 8.6&nbsp;s.
+    </div>
+  </div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 22 of 34</span></div>
+</section>
+
+<!-- ============================ PAGE 22 — TOUCH ============================ -->
 <section class="page">
   <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">07 · Touch controls</span></div>
   <div class="body">
@@ -1547,26 +1733,30 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       The touch layer is a second <code>CanvasLayer</code> at layer&nbsp;21, on top
       of the HUD. It is created only when the device reports touch support, when a
       touchscreen is available, or when the game is launched with
-      <code>-- --touch-preview</code> for the desktop layout pass.
+      <code>-- --touch-preview</code> for the desktop layout pass. The screen is
+      deliberately sparse: one small stick, a look-drag surface, and action
+      buttons that appear only when an action is actually possible.
     </p>
 
     <table>
       <caption>Touch control geometry — <code>src/ui/touch_controls.gd</code></caption>
-      <thead><tr><th style="width:24%">Control</th><th style="width:20%">Geometry</th><th>Behaviour</th></tr></thead>
+      <thead><tr><th style="width:22%">Control</th><th style="width:24%">Geometry</th><th>Behaviour</th></tr></thead>
       <tbody>
-        <tr><td>Virtual stick</td><td>68&nbsp;px radius, 34&nbsp;px margin, bottom-left</td><td>Dead zone 0.14; the value is rescaled linearly outside it and clamped to the unit disc. Drives the same move vector as WASD, so the player controller is identical on both paths.</td></tr>
-        <tr><td>Look drag</td><td>Anywhere outside the stick and the buttons</td><td>Emits a relative delta, scaled by 1.35 in <code>player.add_touch_look()</code> to compensate for the smaller screen. Drag distance under 14&nbsp;px is treated as a tap.</td></tr>
-        <tr><td><em>E</em> button</td><td>96&nbsp;px diameter, bottom-right</td><td>Calls the same <code>_interact()</code> resolver as the keyboard — so the 3.8&nbsp;m NPC radius and 3.4&nbsp;m machine radius apply unchanged.</td></tr>
-        <tr><td><em>G</em> button</td><td>78&nbsp;px diameter, above the E button</td><td>Triggers the salute.</td></tr>
-        <tr><td><em>RUN</em> button</td><td>86&nbsp;px diameter, left of E</td><td>Hold to run; press to latch a run toggle.</td></tr>
-        <tr><td>Tap</td><td>Look area, under 14&nbsp;px travel</td><td>Skips the current dialogue line.</td></tr>
+        <tr><td>Virtual stick</td><td>84&nbsp;px base radius, 22&nbsp;px margin, bottom-left</td><td>Navy translucent base, four filled chevrons and a cream knob; dead zone 0.14, rescaled outside it and clamped to the unit disc. Drives the same move vector as WASD.</td></tr>
+        <tr><td>Auto-run</td><td>Outer ring, no extra button</td><td>Pushing the stick to ≥0.92 deflection starts a run; easing back to ≤0.80 releases it. The ring and chevrons turn gold while running.</td></tr>
+        <tr><td><em>RUN</em> button</td><td>86&nbsp;px diameter, bottom-right, with a <em>RUN</em> caption pill</td><td>Latches run on or off independently of stick deflection; the sprinter pictogram and the gold ring show the latched state. It stays visible at all times.</td></tr>
+        <tr><td><em>E</em> button</td><td>86&nbsp;px diameter, right of RUN, with an <em>INTERACT</em> caption pill</td><td>Always visible; turns gold and the caption turns gold when an NPC is within 3.8&nbsp;m or a machine/service point within 3.4&nbsp;m. Calls the same <code>_interact()</code> resolver as the keyboard.</td></tr>
+        <tr><td><em>G</em> button</td><td>68&nbsp;px diameter, above RUN, hidden by default</td><td>Appears only when the Colonel or a salute step is in range; triggers the salute.</td></tr>
+        <tr><td><em>NEXT</em> button</td><td>86&nbsp;px diameter, replaces E in the same slot</td><td>Visible only while a dialogue is open; advances the current line.</td></tr>
+        <tr><td>Look drag</td><td>Anywhere outside the stick and the buttons</td><td>Emits a relative delta multiplied by <code>Settings.look_sensitivity</code> (0.3–2.5, default 1.0). The slider updates this live.</td></tr>
+        <tr><td>Tap</td><td>Look area, under 16&nbsp;px travel</td><td>Finishes the typewriter if a line is still typing, otherwise advances the line.</td></tr>
       </tbody>
     </table>
 
     <figure>
       <span class="tag godot">Godot 4 port · phone layout</span>
-      <img src="../screenshots/godot/tour_touch/04_cse.png" alt="Touch layout with virtual joystick and action buttons">
-      <figcaption><b>Figure 7.1.</b> The touch layout with the on-screen stick and buttons, captured with <code>-- --touch-preview</code> at a 1280 × 720 landscape viewport. In touch mode the HUD hides the keyboard legend, moves the minimap to the top-right corner clear of the thumb arcs and scales every panel to the physical screen density.</figcaption>
+      <img src="../screenshots/godot/flow_spawn.png" alt="Phone layout at spawn: mission and wallet pills, N-badged minimap, translucent joystick, RUN and E buttons with captions">
+      <figcaption><b>Figure 7.1.</b> The phone layout at spawn, captured through the menu → loading → campus handover at 1920 × 1055. The joystick is small enough to leave the world visible; RUN and INTERACT stay on screen as labelled buttons, G appears only when a salute is possible, and NEXT replaces E during dialogue. The HUD hides the keyboard legend and keeps the minimap in the top-right corner, clear of both thumb arcs.</figcaption>
     </figure>
 
     <div class="note warn">
@@ -1575,7 +1765,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and the mobile renderer path, not on a physical handset. See §11.3 and §12.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 21 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 23 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 20 — ADMIN OFFICE ============================ -->
@@ -1623,7 +1813,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       either side.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 22 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 24 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 21 — CHARACTERS ============================ -->
@@ -1681,9 +1871,10 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     </p>
     <p>
       The campus runs 64 animated skeletons, so each NPC culls itself by camera
-      distance: the skeleton is deactivated beyond 95&nbsp;m and its name label
-      is hidden beyond 62&nbsp;m. NPCs carry no collision shape — the player walks
-      through them, exactly as in the web build.
+      distance: the skeleton is deactivated beyond 95&nbsp;m. Floating name tags
+      are removed entirely — names appear only in dialogue, matching the brief.
+      NPCs carry no collision shape — the player walks through them, exactly as
+      in the web build.
     </p>
 
     <h3>Walk cycle</h3>
@@ -1701,7 +1892,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and leans the body 0.12&nbsp;rad into the direction of travel.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 23 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 25 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 22 — VOICE ============================ -->
@@ -1770,7 +1961,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       which is what happens if the player talks to an NPC out of mission order.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 24 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 26 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 23 — RENDERING PC ============================ -->
@@ -1782,9 +1973,9 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     <p class="lead">
       The target is <strong>60&nbsp;fps</strong>, capped in code by
       <code>Engine.max_fps = 60</code>. This section describes how the frame is
-      budgeted and which levers exist. It deliberately contains
-      <strong>no measured frame-rate figures</strong> — the benchmark slots are
-      marked and left empty.
+      budgeted, which levers exist, and what the Windows build actually measured
+      on the integrated Radeon laptop used for development. Android slots are
+      marked and left empty because no handset was available.
     </p>
 
     <h3>Sky, sun and atmosphere</h3>
@@ -1813,8 +2004,8 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
         <tr><td>Cars</td><td>Three batches, three rows of 30 / 31 / 30</td><td>91 cars in 3 draw calls</td></tr>
         <tr><td>Small-prop colliders</td><td>One shared <code>StaticBody3D</code> holding many box shapes</td><td>Dozens of physics bodies instead of hundreds</td></tr>
         <tr><td>Small props</td><td><code>cast_shadow = OFF</code> on bushes, kerbs, kerb caps, ground</td><td>Fewer shadow draws</td></tr>
-        <tr><td>NPC skeletons</td><td>Deactivated beyond 95&nbsp;m, labels beyond 62&nbsp;m</td><td>64 characters, a fraction animated at any time</td></tr>
-        <tr><td>Minimap</td><td>Baked once into an <code>ImageTexture</code>; only the player dot redraws</td><td>No per-frame image rebuild</td></tr>
+        <tr><td>NPC skeletons</td><td>Deactivated beyond 95&nbsp;m; no floating name tags</td><td>64 characters, a fraction animated at any time</td></tr>
+        <tr><td>Minimap</td><td>Baked once into a <code>SubViewport</code> image with roads, zones, building footprints and labels; only the player arrow and objective dot redraw</td><td>No per-frame image rebuild</td></tr>
       </tbody>
     </table>
 
@@ -1828,15 +2019,20 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     </p>
 
     <table>
-      <caption>Frame-time budget — targets, not measurements</caption>
+      <caption>Frame-time budget and the measured desktop result</caption>
       <thead><tr><th style="width:40%">Item</th><th class="num">Budget</th><th>Status</th></tr></thead>
       <tbody>
         <tr><td>CPU — scripts, NPC updates, physics</td><td class="num">≤ 6 ms</td><td>Target</td></tr>
         <tr><td>GPU — draw submission and shading</td><td class="num">≤ 8 ms</td><td>Target</td></tr>
         <tr><td>Total frame</td><td class="num">≤ 16.6 ms</td><td>Target (60 fps)</td></tr>
-        <tr><td>Measured, desktop 1080p</td><td class="num"><!-- BENCH: --></td><td><em>To be measured</em></td></tr>
+        <tr><td>Measured, desktop 1080p, spawn view</td><td class="num">24.8 ms</td><td><strong>40.3&nbsp;fps</strong> at 0.60 scale on the heat-soaked laptop; A/B against the pre-HUD build measured 39.7&nbsp;fps, so the new HUD is frame-neutral</td></tr>
       </tbody>
     </table>
+    <p class="tbl-note">
+      Hardware: AMD Radeon integrated graphics, Godot 4.7.2 Forward+, 1920 × 1080
+      output. The run starts at 0.88 scale and 43.5&nbsp;fps, takes the adaptive
+      steps and settles at 0.60. A discrete GPU never leaves 0.88.
+    </p>
     <div class="note">
       <span class="note-l">Order of attack if the frame rate drops</span>
       1. Lower <code>scaling_3d_scale</code> — the biggest, least visible win.
@@ -1845,7 +2041,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       4. Disable the glow pass.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 25 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 27 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 24 — RENDERING MOBILE ============================ -->
@@ -1891,11 +2087,15 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
 
     <p>
       The same adaptive ladder runs on desktop. On the integrated Radeon laptop
-      used for the Windows build, the spawn view starts at 0.88 and 43.5&nbsp;fps,
-      takes the three steps and settles at 0.60 with <strong>59.4&nbsp;fps</strong>
-      (132 draw calls, 1.43&nbsp;M primitives, 8&nbsp;s sample). A discrete GPU
-      never leaves 0.88. The phone profile measured 52.6&nbsp;fps at 0.78 on the
-      same laptop, which is why the phone ladder keeps the extra steps.
+      used for the Windows build, a heat-soaked session settled at 0.60 with
+      <strong>40.3&nbsp;fps</strong> (24.8&nbsp;ms) in the spawn view. An A/B run
+      against the pre-HUD build measured 39.7&nbsp;fps, which is within noise:
+      the new mission, wallet and minimap widgets cost nothing measurable. An
+      earlier, cool-machine session recorded 59.4&nbsp;fps at the same scale;
+      that figure is not reproducible once the laptop is heat-soaked, so this
+      report treats ~40&nbsp;fps as the conservative desktop result. The phone
+      profile measured 52.6&nbsp;fps at 0.78 in that earlier session, which is
+      why the phone ladder keeps the extra steps.
     </p>
 
     <table>
@@ -1918,7 +2118,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       exercised (§11) and pass, but they are not a performance measurement.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 26 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 28 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 25 — TESTING ============================ -->
@@ -1938,35 +2138,36 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
   --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
   --script res://tests/run_tests.gd</pre>
     <p>
-      The suite is <strong>61 checks</strong> across five groups. The recorded
-      result is <strong>61 checks, 0 failures</strong> — the suite was
-      re-baselined after the perimeter road was added (four new checks assert
-      that the ring road exists on all four sides of the compound).
+      The suite is <strong>66 checks</strong> across five groups. The recorded
+      result is <strong>66 checks, 0 failures</strong> — the suite was
+      re-baselined after the perimeter road and the ECE / EEE / CSE / Chemical
+      re-grid (four ring-road checks and five panel-grid checks).
     </p>
     <table>
       <caption>Suite composition</caption>
       <thead><tr><th style="width:30%">Group</th><th class="num">Checks</th><th>What it asserts</th></tr></thead>
       <tbody>
         <tr><td>Coordinate system</td><td class="num">6</td><td>Plan (122, 462) → world (−65.1, 148.4) and back; campus size 217.0 × 261.8 m; <code>MAP_SCALE = 0.7</code></td></tr>
-        <tr><td>Campus data</td><td class="num">27</td><td>17 buildings, 12 street rectangles (8 campus roads + 4 perimeter strips, each verified on its own side), 5 zones, 6 walls, 2 gates, 14 lamps, 7 benches, 4 vending machines, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts; the CSE rectangle, height and tint; the Admin Block's rendered height; the five player tuning values; the spawn matches the player data</td></tr>
+        <tr><td>Campus data</td><td class="num">32</td><td>17 buildings, 12 street rectangles (8 campus roads + 4 perimeter strips, each verified on its own side), 5 zones, 6 walls, 2 gates, 14 lamps, 7 benches, 4 vending machines, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts; the four panel-block rectangles, CSE height and tint, the shared ECE/EEE column, equal panel rows; the Admin Block's rendered height; the five player tuning values; the spawn matches the player data</td></tr>
         <tr><td>NPC census</td><td class="num">12</td><td>64 NPCs split into 6 / 18 / 9 / 3 / 10 / 8 / 1 / 9; the guard's and the colonel's plan positions; that the colonel carries his step-6 dialogue</td></tr>
         <tr><td>Economy</td><td class="num">13</td><td>10 drinks, 4 dishes, 3 items; the Red Bull, Happy Faces and Buldak prices; Buldak's energy and its "spicy" flag; wallet 200, bank 2000, fee 250, energy 40/100</td></tr>
         <tr><td>Seeded generator</td><td class="num">3</td><td>The same seed reproduces the same stream, the first value is reproducible, and values stay in [0, 1)</td></tr>
-        <tr class="tot"><td>Total</td><td class="num">61</td><td>Recorded result: 0 failures</td></tr>
+        <tr class="tot"><td>Total</td><td class="num">66</td><td>Recorded result: 0 failures</td></tr>
       </tbody>
     </table>
     <div class="note">
-      <span class="note-l">Re-baselined with the perimeter road</span>
+      <span class="note-l">Re-baselined with the perimeter road and the panel grid</span>
       The suite originally asserted <code>roads == 8</code>, the count of the
       web build's campus streets. The active <code>src/data/campus_data.json</code>
       now carries <strong>12</strong> street rectangles — the eight campus roads
       plus the four perimeter strips that ring the compound — so the
-      expectation was updated and four new checks now assert that the ring
-      road exists on the north, west, east and south side. Result:
-      <strong>61 checks, 0 failures</strong>.
+      expectation was updated and four checks assert that the ring road exists
+      on the north, west, east and south side. Five further checks assert the
+      re-gridded panel-block rectangles, the shared ECE/EEE column and equal
+      row depths. Result: <strong>66 checks, 0 failures</strong>.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 27 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 29 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 26 — TESTING II ============================ -->
@@ -2013,7 +2214,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <thead><tr><th style="width:26%">Check</th><th style="width:34%">How</th><th>What it covers</th></tr></thead>
       <tbody>
         <tr><td>Mobile renderer path</td><td>Build with the mobile feature tags set so <code>_mobile_gpu</code> is true</td><td>0.78 resolution scale, MSAA off, 2 shadow splits at 92 m, cumulus disabled, fog end 520 m, glow off</td></tr>
-        <tr><td>Touch preview</td><td>Launch with <code>-- --touch-preview</code></td><td>The phone HUD layout, the on-screen stick, the E / G / RUN buttons, the prompt without key art, the minimap relocation</td></tr>
+        <tr><td>Touch preview</td><td>Launch with <code>-- --touch-preview</code></td><td>The phone HUD layout, the small on-screen stick, context-only E / G / NEXT buttons, the prompt without key art, the minimap relocation</td></tr>
       </tbody>
     </table>
     <div class="note warn">
@@ -2034,7 +2235,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       are used as the side-by-side pairs in §3.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 28 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 30 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 27 — LIMITATIONS ============================ -->
@@ -2049,30 +2250,30 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <tbody>
         <tr><td class="num">1</td><td>Days&nbsp;3–10 are not ported</td><td>Only Day&nbsp;1 and the Day&nbsp;2 chain are playable; the five minigames (quiz, shootout, command drill, mash, dance) do not exist</td><td>Stub returns "Day N content is not ported yet."</td></tr>
         <tr><td class="num">2</td><td>No physical-device validation</td><td>Touch latency, thermal behaviour and OEM GPU differences are unverified</td><td>Substituted by the mobile-renderer and touch-preview passes (§11.3)</td></tr>
-        <tr><td class="num">3</td><td>No in-game minimap of the perimeter road before it was added</td><td>The web build's campus has no ring road; the port added one so the compound reads as a real campus</td><td>Resolved — 12 street rectangles, 61 checks passing</td></tr>
-        <tr><td class="num">4</td><td>No shop, bank, inventory or pause panels</td><td>The vending machines, the bank ATM, the inventory bag and the settings modal cannot be opened; the underlying data and rules are present</td><td>Data layer complete, UI layer missing</td></tr>
+        <tr><td class="num">3</td><td>Perimeter ring road added by the port</td><td>The web build's campus has no ring road; the port added one so the compound reads as a real campus</td><td>Resolved — 12 street rectangles, 66 checks passing</td></tr>
+        <tr><td class="num">4</td><td>No shop, bank or inventory panels</td><td>The vending machines, the bank ATM and the inventory bag cannot be opened; the underlying data and rules are present. The settings modal is implemented.</td><td>Data layer complete, shop/bank/inventory UI missing</td></tr>
         <tr><td class="num">5</td><td>No day-complete overlay</td><td>The web build's "Day 1 Complete!" panel — which also awards the ID card — is not reproduced</td><td><code>GameState.give_item()</code> exists and is ready</td></tr>
-        <tr><td class="num">6</td><td>Intro and welcome cards are not reproduced</td><td>No intro credits card and no welcome card; the settings modal lives on the pause menu instead</td><td>Year, character, name, main menu, level select and loading are done</td></tr>
+        <tr><td class="num">6</td><td>No pause menu</td><td>The pause overlay is not reproduced; <code>Esc</code> only skips a dialogue line</td><td>Intro, welcome, settings, year, character, name, main menu, level select and loading are done</td></tr>
         <tr><td class="num">7</td><td>Props are CC0 substitutes</td><td>Trees, bushes, grass, rocks and the road texture come from the Quaternius, Road Generator and SimpleGrassTextured packs, not from the original</td><td>Intentional — see Appendix B</td></tr>
         <tr><td class="num">8</td><td>Facial animation is disabled</td><td>The Mixamo facial morph meshes render as white shapes in Godot, so eyes, brows and mouth are hidden</td><td>Deliberate; the body animations are intact</td></tr>
-        <tr><td class="num">9</td><td>No Android frame-rate data</td><td>Desktop is measured; no phone or iPhone was benchmarked</td><td>Desktop settles at 0.60 / 59.4&nbsp;fps (§10); the Android slots remain empty</td></tr>
+        <tr><td class="num">8</td><td>No Android frame-rate data</td><td>Desktop is measured; no phone or iPhone was benchmarked</td><td>Desktop settles at 0.60 / 40.3&nbsp;fps (§10); the Android slots remain empty</td></tr>
         <tr><td class="num">10</td><td>Both export presets are committed and built</td><td>Web build deployed to Pages; signed arm64 APK attached to release <code>v1.0</code></td><td>Described in §13</td></tr>
       </tbody>
     </table>
 
     <h2>Future work, in order</h2>
     <ol>
-      <li><strong>Extend the headless suite</strong> beyond its 61 checks to cover the mission state machine, the economy predicates and the save format.</li>
+      <li><strong>Extend the headless suite</strong> beyond its 66 checks to cover the mission state machine, the economy predicates and the save format.</li>
       <li><strong>Port Days&nbsp;3–10</strong> using the existing step schema, and implement the five minigames against the <code>mini</code> step type already reserved in <code>Mission</code>.</li>
-      <li><strong>Build the interactive panels</strong> — vending-machine shop, bank ATM, inventory bag, pause/settings modal — on top of the economy data that is already loaded.</li>
+      <li><strong>Build the interactive panels</strong> — vending-machine shop, bank ATM and inventory bag — on top of the economy data that is already loaded.</li>
       <li><strong>Validate on real hardware</strong>: an Android handset and an iPhone, capturing the phone screenshot that this report still carries as a placeholder.</li>
       <li><strong>Benchmark a real Android handset</strong> and fill the remaining slots in §10; the desktop numbers are already recorded there.</li>
       <li><strong>Add the day-complete overlay</strong> and wire the item awards through <code>GameState.give_item()</code> and <code>SaveSystem</code>.</li>
-      <li><strong>Complete the front end</strong> with the intro and welcome cards; level select and loading are done.</li>
+      <li><strong>Add the pause menu</strong>, the last missing front-end overlay, and keep the settings modal reachable from it as well as from the main menu.</li>
       <li><strong>Decide on music</strong>: the original has none, so any addition is a design decision requiring its own licence.</li>
     </ol>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 29 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 31 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 28 — BUILD ============================ -->
@@ -2116,7 +2317,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
     <table>
       <thead><tr><th style="width:30%">Setting</th><th>Value</th></tr></thead>
       <tbody>
-        <tr><td>Export files</td><td><code>index.html</code>, <code>index.js</code>, <code>index.wasm</code> (39.5&nbsp;MB), <code>index.pck</code> (90&nbsp;MB)</td></tr>
+        <tr><td>Export files</td><td><code>index.html</code>, <code>index.js</code>, <code>index.wasm</code> (39.5&nbsp;MB), <code>index.pck</code> (94.4&nbsp;MB)</td></tr>
         <tr><td>Runtime</td><td>Godot 4.7.2, OpenGL ES 3.0 / WebGL 2.0, single-threaded</td></tr>
         <tr><td>Hosting</td><td><code>gh-pages</code> branch root; <code>main</code> keeps source only</td></tr>
         <tr><td>Live URL</td><td><code>https://akhilboss118-an.github.io/anits-college/</code></td></tr>
@@ -2124,23 +2325,24 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
     </table>
 
     <p>
-      Pages serves the PCK and WASM compressed (about 85&nbsp;MB and 10&nbsp;MB on
-      the wire) and sets <code>application/wasm</code> itself. The branch is
-      force-pushed from a temporary repository because the available token has
-      <code>repo</code> scope only, so an Actions workflow cannot be committed;
-      the full recipe is in <code>docs/DEPLOYMENT.md</code>.
+      Pages serves the PCK and WASM compressed (about 85.3&nbsp;MB and
+      10.2&nbsp;MB on the wire) and sets <code>application/wasm</code> itself.
+      The branch is force-pushed from a temporary repository because the
+      available token has <code>repo</code> scope only, so an Actions workflow
+      cannot be committed; the full recipe is in
+      <code>docs/DEPLOYMENT.md</code>.
     </p>
 
     <h3>13.3 — Running from source</h3>
     <p>
-      <code>verify.ps1</code> runs the import, the 61-check suite, a 300-frame
+      <code>verify.ps1</code> runs the import, the 66-check suite, a 300-frame
       smoke run and the scripted tour in one command; the benchmark is separate
       (§10). The live build was also booted in a headless Chromium at 1280×720
       and reached the year-select screen, which confirms the deployed PCK and
       WASM load together.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 30 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 32 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 29 — APPENDIX A ============================ -->
@@ -2167,12 +2369,13 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
     <table>
       <thead><tr><th style="width:18%">Input</th><th style="width:28%">Action</th><th>Detail</th></tr></thead>
       <tbody>
-        <tr><td>Left stick</td><td>Move</td><td>68 px radius, 0.14 dead zone; feeds the same move vector as WASD</td></tr>
-        <tr><td>Drag (right area)</td><td>Look</td><td>Relative delta × 1.35</td></tr>
-        <tr><td>Tap</td><td>Skip a dialogue line</td><td>Under 14 px of travel</td></tr>
-        <tr><td><em>E</em> button</td><td>Talk / use</td><td>Same resolver and the same radii as the keyboard</td></tr>
-        <tr><td><em>G</em> button</td><td>Salute</td><td>—</td></tr>
-        <tr><td><em>RUN</em> button</td><td>Run</td><td>Hold, or press to latch</td></tr>
+        <tr><td>Left stick</td><td>Move</td><td>76 px radius, 0.14 dead zone; feeds the same move vector as WASD</td></tr>
+        <tr><td>Outer ring</td><td>Run</td><td>Deflection ≥ 0.92 starts a run, ≤ 0.80 releases; the ring turns gold</td></tr>
+        <tr><td>Drag (right area)</td><td>Look</td><td>Relative delta × <code>Settings.look_sensitivity</code> (0.3–2.5, default 1.0)</td></tr>
+        <tr><td>Tap</td><td>Skip a dialogue line</td><td>Under 16 px of travel</td></tr>
+        <tr><td><em>E</em> button</td><td>Talk / use</td><td>Visible only when an NPC or machine is in range; same resolver and radii as the keyboard</td></tr>
+        <tr><td><em>G</em> button</td><td>Salute</td><td>Visible only when the Colonel or a salute step is in range</td></tr>
+        <tr><td><em>NEXT</em> button</td><td>Advance dialogue</td><td>Visible only while a dialogue is open</td></tr>
       </tbody>
     </table>
 
@@ -2199,7 +2402,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 31 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 33 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 30 — APPENDIX B/C ============================ -->
@@ -2242,15 +2445,15 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td><code>src/world/character_visual.gd</code></td><td>Loads the characters and drives their animations</td></tr>
         <tr><td><code>src/ui/hud.gd</code></td><td>Mission, wallet, energy, dialogue, minimap, prompts</td></tr>
         <tr><td><code>src/ui/main_menu.gd</code></td><td>Year, character, name and main-menu screens</td></tr>
-        <tr><td><code>src/ui/touch_controls.gd</code></td><td>Virtual stick, look drag, E / G / RUN buttons</td></tr>
+        <tr><td><code>src/ui/touch_controls.gd</code></td><td>Small virtual stick, look drag, context-only E / G / NEXT buttons</td></tr>
         <tr><td><code>src/util/campus.gd</code>, <code>src/util/lcg.gd</code></td><td>Plan-pixel conversion; the 16807 generator</td></tr>
         <tr><td><code>src/data/*.json</code></td><td>Campus plan, the 64 NPCs, the economy tables</td></tr>
-        <tr><td><code>tests/run_tests.gd</code></td><td>The 61-check headless data suite</td></tr>
+        <tr><td><code>tests/run_tests.gd</code></td><td>The 66-check headless data suite</td></tr>
         <tr><td><code>docs/</code></td><td>Analysis, architecture, asset ledger and this report</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 32 of 32</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 34 of 34</span></div>
 </section>
 
 </body>

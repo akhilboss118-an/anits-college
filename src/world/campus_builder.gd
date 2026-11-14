@@ -25,6 +25,7 @@ const KEY_SPECIALS := "specials"
 
 var campus: Dictionary = {}
 var gate_leaves: Array = []          ## hinged leaves of the main gate
+var _gate_shape: CollisionShape3D    ## invisible barrier while the gate is locked
 var building_meshes: Dictionary = {} ## name -> MeshInstance3D
 var label_nodes: Array = []
 var _prop_body: StaticBody3D = null
@@ -535,16 +536,21 @@ func _build_main_gate(g: Dictionary) -> void:
 		leaf.position = Vector3(px - s * 0.8, 0.0, centre.z)
 		add_child(leaf)
 		var leaf_w := r.size.x * 0.5 - 0.4
-		var rails := box(leaf, Vector3(leaf_w, 0.16, 0.16), Vector3(s * leaf_w * 0.5, 2.65, 0.0), metal, "LeafTop")
+		var rails := box(leaf, Vector3(leaf_w, 0.16, 0.16), Vector3(-s * leaf_w * 0.5, 2.65, 0.0), metal, "LeafTop")
 		rails.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		box(leaf, Vector3(leaf_w, 0.16, 0.16), Vector3(s * leaf_w * 0.5, 0.45, 0.0), metal, "LeafBottom")
+		box(leaf, Vector3(leaf_w, 0.16, 0.16), Vector3(-s * leaf_w * 0.5, 0.45, 0.0), metal, "LeafBottom")
 		var bars := 15
 		for i in bars:
-			var bx := (float(i) + 0.5) / float(bars) * leaf_w * s
+			var bx := (float(i) + 0.5) / float(bars) * leaf_w * -s
 			var bar := box(leaf, Vector3(0.09, 2.3, 0.09), Vector3(bx, 1.55, 0.0), metal, "LeafBar")
 			bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		gate_leaves.append({"node": leaf, "side": s})
 	box(self, Vector3(r.size.x, 0.62, 0.8), Vector3(centre.x, pillar_h - 0.31, centre.z), stone, "GateLintel")
+	# Invisible barrier across the opening while the gate is locked; the
+	# collision shape is disabled the moment the guard unlocks the gate.
+	var blocker := add_collider(self, Vector3(r.size.x - 3.0, 3.0, 0.5),
+			Vector3(centre.x, 0.0, centre.z), "GateBlocker")
+	_gate_shape = blocker.get_child(0) as CollisionShape3D
 	var sign := box(self, Vector3(9.0, 1.5, 0.35), Vector3(centre.x, pillar_h - 0.31, centre.z + 0.5), gold, "GateSign")
 	sign.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var label := Label3D.new()
@@ -593,6 +599,8 @@ func _build_back_gate(g: Dictionary) -> void:
 
 func set_gate_open(value: bool) -> void:
 	_gate_open_target = value
+	if _gate_shape:
+		_gate_shape.set_deferred("disabled", value)
 
 
 func _process(delta: float) -> void:
@@ -944,7 +952,10 @@ func _build_admin_block(b: Dictionary) -> void:
 		var s := float(end_side)
 		box(self, Vector3(0.5, height, corridor_w + 0.8),
 			Vector3(centre.x + s * (wr.size.x * 0.5 - 0.25), height * 0.5, centre.y), wall, "AdminDoorFrame")
-	_add_building_label(str(b.get("name", "")), wr, height, "NS")
+	# The web build's "Admissions Office" is inside this block, so the facade
+	# sign names both functions (the JSON name stays "ADMIN BLOCK" because the
+	# office door and the NPC anchors look it up by that key).
+	_add_building_label("ADMIN & ADMISSIONS", wr, height, "NS")
 
 
 func _add_building_label(text: String, wr: Rect2, height: float, face := "S") -> void:

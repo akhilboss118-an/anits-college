@@ -6,22 +6,9 @@
 ## The campus still treats an NPC as a point (no collision), exactly like the
 ## original web build.
 
-## Name tag sizing. The web build scales the label sprite with the distance to
-## the camera (js/game.js: w = clamp(d * k, min, max)), so a tag stays
-## readable far away but shrinks again once the clamp kicks in. The same idea
-## is used here: the text grows with the distance up to a limit.
-const LABEL_FONT_SIZE := 22
-const LABEL_HEIGHT_RATE := 0.022   ## metres of text per metre of distance
-const LABEL_MIN_HEIGHT := 0.08
-const LABEL_MAX_HEIGHT := 0.30
-const LABEL_HEIGHT_STEP := 0.02    ## quantisation: the text mesh is rebuilt rarely
-const LABEL_NEAR_DIST := 1.4       ## closer than this the tag fades away
-const LABEL_FADE := 0.9            ## fade distance behind LABEL_NEAR_DIST
-const LABEL_FAR_DIST := 62.0        ## tag culling range (metres)
-## The web build hides the name tags of the cadets at 5 m and of the students
-## at 14 m, so a parade ground does not turn into a wall of text.
-const LABEL_FAR_DIST_CADET := 6.0
-const LABEL_FAR_DIST_STUDENT := 16.0
+## NPCs are anonymous on screen: the web build's floating name tags are
+## intentionally not reproduced, so the campus reads as a crowd and the
+## dialogue panel is the only place a name appears.
 
 ## Distance culling of the model itself (the web build uses 90 - 100 m).
 const VISUAL_FAR_DIST := 95.0
@@ -42,9 +29,6 @@ var walk_speed: float = 1.2
 var base_facing: float = 0.0
 
 var _visual: CharacterVisual
-var _label: Label3D
-var _label_height: float = LABEL_MIN_HEIGHT
-var _label_alpha: float = -1.0
 var _camera: Camera3D = null
 var _camera_timer: float = 0.0
 
@@ -121,22 +105,6 @@ func _build_visual(data: Dictionary) -> void:
 		if beret != "":
 			_visual.set_beret_colour(Color.html(beret))
 
-	_label = Label3D.new()
-	_label.text = display_name
-	_label.font_size = LABEL_FONT_SIZE
-	_label.pixel_size = LABEL_MIN_HEIGHT / float(LABEL_FONT_SIZE)
-	_label.position = Vector3(0, height + 0.55, 0)
-	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_label.outline_size = 6
-	_label.outline_modulate = Color(0.08, 0.1, 0.14)
-	_label.modulate = Color(1.0, 1.0, 1.0, 0.0)
-	# the tag is depth tested, so a wall or the player hides it
-	_label.no_depth_test = false
-	_label.fixed_size = false
-	add_child(_label)
-	_label_height = LABEL_MIN_HEIGHT
-	_label_alpha = -1.0
-
 	# NPCs are not solid in the original game (you can walk through them),
 	# so they carry no collision shape and never block the camera boom.
 
@@ -152,7 +120,6 @@ func _process(delta: float) -> void:
 	var d := global_position.distance_to(cam.global_position)
 	# distance culling: the campus has 64 animated skeletons
 	_visual.set_active(d < VISUAL_FAR_DIST)
-	_update_label(d)
 
 
 ## The camera hardly ever changes, so it is only looked up twice a second.
@@ -163,32 +130,6 @@ func _camera_3d(delta: float) -> Camera3D:
 		if is_inside_tree():
 			_camera = get_viewport().get_camera_3d()
 	return _camera
-
-
-## Keeps the name tag legible: it grows with the distance (like the web
-## build's label sprite) but never past LABEL_MAX_HEIGHT, and it fades out
-## when the NPC is right in front of the camera.
-func _update_label(distance: float) -> void:
-	if _label == null:
-		return
-	var far := LABEL_FAR_DIST
-	if group_name == "cadet":
-		far = LABEL_FAR_DIST_CADET
-	elif group_name != "guard" and group_name != "clerk" and group_name != "colonel":
-		far = LABEL_FAR_DIST_STUDENT
-	var in_range := distance < far
-	var alpha := clampf((distance - LABEL_NEAR_DIST) / LABEL_FADE, 0.0, 1.0)
-	if in_range:
-		# the text mesh is only rebuilt when the size really changes
-		var h := snappedf(clampf(distance * LABEL_HEIGHT_RATE, LABEL_MIN_HEIGHT,
-			LABEL_MAX_HEIGHT), LABEL_HEIGHT_STEP)
-		if not is_equal_approx(h, _label_height):
-			_label_height = h
-			_label.pixel_size = h / float(LABEL_FONT_SIZE)
-	if not is_equal_approx(alpha, _label_alpha):
-		_label_alpha = alpha
-		_label.modulate = Color(1.0, 1.0, 1.0, alpha)
-	_label.visible = in_range and alpha > 0.01
 
 
 func _walk_route(delta: float) -> void:

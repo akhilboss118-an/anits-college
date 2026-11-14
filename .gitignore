@@ -33,3 +33,11 @@ ANITS-WEB GAME/
 Thumbs.db
 *.log
 *.TMP
+
+# Agent tooling (skills library, not part of the game)
+.agents/
+skills-lock.json
+
+# One-off debug captures (regenerate with tools/render_*_debug.gd)
+docs/screenshots/godot/chunni_debug.png
+docs/screenshots/godot/girl_debug_*.png

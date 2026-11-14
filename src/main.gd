@@ -25,12 +25,14 @@ var touch_controls: CanvasLayer
 var npcs: Array = []
 var mission_marker: Node3D
 var marker_target: Node3D = null
-var marker_pulse: MeshInstance3D = null
+var marker_pulse: Label3D = null
 var in_office: bool = false
 var _marker_time: float = 0.0
 var _check_mode: bool = false
 var _beauty_mode: bool = false
 var _menu_shot_mode: bool = false
+var _intro_shot_mode: bool = false
+var _flow_shot_mode: bool = false
 var _touch_mode: bool = false
 var _mobile_gpu: bool = false
 var _check_report: Array = []
@@ -46,6 +48,8 @@ func _ready() -> void:
 	_check_mode = OS.get_cmdline_user_args().has("--check")
 	_beauty_mode = OS.get_cmdline_user_args().has("--beauty")
 	_menu_shot_mode = OS.get_cmdline_user_args().has("--menu-shot")
+	_intro_shot_mode = OS.get_cmdline_user_args().has("--intro-shot")
+	_flow_shot_mode = OS.get_cmdline_user_args().has("--flow-shot")
 	# Desktop screenshots stay clean; `--touch-preview` forces the phone layout.
 	_touch_mode = Settings.is_touch_mode() if Settings else false
 	if (_check_mode or _beauty_mode) and not OS.get_cmdline_user_args().has("--touch-preview"):
@@ -62,6 +66,10 @@ func _ready() -> void:
 		_run_beauty()
 	elif _menu_shot_mode:
 		_run_menu_shots()
+	elif _intro_shot_mode:
+		_run_intro_shots()
+	elif _flow_shot_mode:
+		_run_flow_shot()
 
 
 func _apply_mobile_quality() -> void:
@@ -169,6 +177,10 @@ func _on_start(profile: Dictionary) -> void:
 	Dialogue.dialogue_ended.connect(_on_dialogue_ended)
 	EventBus.notification.connect(_on_notification)
 	_on_step_changed(0, Mission.steps.size(), str(Mission.current().get("text", "")))
+	# The menu kept its loading screen up while the campus was built; fade it
+	# out now that the first gameplay frame is ready.
+	if menu and menu.has_method("dismiss_loading"):
+		menu.dismiss_loading()
 
 
 func _build_campus() -> void:
@@ -219,24 +231,22 @@ func _build_campus() -> void:
 	rim.material_override = rm
 	rim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mission_marker.add_child(rim)
-	# a small floating diamond so the marker reads from a distance
-	var diamond := MeshInstance3D.new()
-	diamond.name = "MarkerDiamond"
-	var dm_mesh := BoxMesh.new()
-	dm_mesh.size = Vector3(0.3, 0.3, 0.3)
-	diamond.mesh = dm_mesh
-	diamond.rotation_degrees = Vector3(0, 45, 45)
-	diamond.position.y = 1.75
-	var dmat := StandardMaterial3D.new()
-	dmat.albedo_color = Color(1.0, 0.82, 0.22)
-	dmat.emission_enabled = true
-	dmat.emission = Color(1.0, 0.78, 0.18)
-	dmat.emission_energy_multiplier = 1.4
-	dmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	diamond.material_override = dmat
-	diamond.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mission_marker.add_child(diamond)
-	marker_pulse = diamond
+	# a floating gold "!" so the objective reads from anywhere on the campus
+	var exclaim := Label3D.new()
+	exclaim.name = "MarkerExclaim"
+	exclaim.text = "!"
+	exclaim.font_size = 96
+	exclaim.outline_size = 18
+	exclaim.pixel_size = 0.0075
+	exclaim.modulate = Color(1.0, 0.83, 0.24)
+	exclaim.outline_modulate = Color(0.36, 0.22, 0.02, 0.95)
+	exclaim.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	exclaim.no_depth_test = true
+	exclaim.render_priority = 20
+	exclaim.position.y = 2.55
+	exclaim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mission_marker.add_child(exclaim)
+	marker_pulse = exclaim
 
 
 func _build_player() -> void:
@@ -268,6 +278,9 @@ func _build_hud() -> void:
 	hud.set_script(HUD_SCRIPT)
 	hud.set("touch_mode_override", 1 if _touch_mode else 0)
 	add_child(hud)
+	hud.pause_requested.connect(_toggle_pause)
+	hud.resume_requested.connect(_resume_game)
+	hud.menu_requested.connect(_to_main_menu)
 	hud.update_wallet(GameState.wallet, GameState.bank)
 	hud.update_energy(GameState.energy)
 	if _touch_mode:
@@ -303,7 +316,15 @@ func _on_touch_run(running: bool) -> void:
 
 func _on_touch_tap() -> void:
 	if Dialogue.active:
-		Dialogue.skip()
+		_skip_dialogue()
+
+
+func _skip_dialogue() -> void:
+	## Typewriter-aware: the first press finishes revealing the line, the
+	## next one advances to the following line.
+	if hud and hud.skip_line():
+		return
+	Dialogue.skip()
 
 
 func _on_step_changed(index: int, total: int, text: String) -> void:
@@ -432,7 +453,7 @@ func _on_dialogue_started(speaker: String) -> void:
 
 func _on_line(speaker: String, text: String, telugu := "") -> void:
 	if hud:
-		hud.show_dialogue(speaker, text)
+		hud.show_dialogue(speaker, text, str(Dialogue.speaker_key))
 		var use_telugu := Settings.is_telugu() if Settings else false
 		hud.show_subtitle(telugu if (use_telugu and telugu != "") else text)
 
@@ -471,8 +492,7 @@ func _process(delta: float) -> void:
 		var marker_scale := 0.58 if in_office else 1.0
 		mission_marker.scale = Vector3(pulse * marker_scale, marker_scale, pulse * marker_scale)
 		if marker_pulse:
-			marker_pulse.rotation.y += delta * 1.8
-			marker_pulse.position.y = 1.75 + sin(_marker_time * 2.0) * 0.12
+			marker_pulse.position.y = 2.55 + sin(_marker_time * 2.0) * 0.14
 	_adaptive_quality(delta)
 
 ## The frame rate is watched on every platform: if the device cannot hold 55 fps
@@ -531,6 +551,15 @@ func _update_prompt() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_ESCAPE:
+			if get_tree().paused:
+				_resume_game()
+			elif Dialogue.active:
+				_skip_dialogue()
+			else:
+				_pause_game()
+			return
 	if player == null:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -539,16 +568,51 @@ func _unhandled_input(event: InputEvent) -> void:
 				_interact()
 			KEY_G:
 				_salute()
-			KEY_ESCAPE:
-				if Dialogue.active:
-					Dialogue.skip()
-		if event.keycode == KEY_E and Dialogue.active:
-			Dialogue.skip()
+
+
+func _toggle_pause() -> void:
+	if get_tree().paused:
+		_resume_game()
+	else:
+		_pause_game()
+
+
+func _pause_game() -> void:
+	if get_tree().paused:
+		return
+	get_tree().paused = true
+	if player:
+		player.input_enabled = false
+	if hud:
+		hud.set_paused_visible(true)
+	if touch_controls:
+		touch_controls.visible = false
+
+
+func _resume_game() -> void:
+	if not get_tree().paused:
+		return
+	get_tree().paused = false
+	if player:
+		player.input_enabled = true
+	if hud:
+		hud.set_paused_visible(false)
+	if touch_controls:
+		touch_controls.visible = true
+
+
+func _to_main_menu() -> void:
+	get_tree().paused = false
+	if hud:
+		hud.set_paused_visible(false)
+	if touch_controls:
+		touch_controls.visible = true
+	get_tree().reload_current_scene()
 
 
 func _interact() -> void:
 	if Dialogue.active:
-		Dialogue.skip()
+		_skip_dialogue()
 		return
 	if player == null:
 		return
@@ -842,7 +906,50 @@ func _run_menu_shots() -> void:
 		menu.show_levels()
 		await get_tree().create_timer(0.9).timeout
 		await _shot("%s/menu_levels.png" % out_dir)
+	if menu and menu.has_method("show_settings"):
+		menu.show_settings()
+		await get_tree().create_timer(0.5).timeout
+		await _shot("%s/menu_settings.png" % out_dir)
+	if menu and menu.has_method("_show_loading"):
+		menu._show_loading(2)
+		await get_tree().create_timer(0.35).timeout
+		await _shot("%s/menu_loading.png" % out_dir)
 	print("=== MENU SHOTS DONE ===")
+	get_tree().quit(0)
+
+
+func _run_flow_shot() -> void:
+	## Exercises the real menu -> loading -> campus handover.
+	var out_dir := "res://docs/screenshots/godot"
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	await get_tree().create_timer(0.4).timeout
+	if menu and menu.has_method("_start"):
+		menu._start(1)
+	await get_tree().create_timer(2.0).timeout
+	if menu:
+		menu.loading_go.emit()
+	await get_tree().create_timer(4.0).timeout
+	await _shot("%s/flow_spawn.png" % out_dir)
+	# Prove the pause overlay works: pause, capture, resume.
+	if hud:
+		hud.pause_requested.emit()
+	await get_tree().create_timer(0.4).timeout
+	await _shot("%s/flow_paused.png" % out_dir)
+	print("=== FLOW SHOT DONE ===")
+	get_tree().quit(0)
+
+
+func _run_intro_shots() -> void:
+	## Captures the Little Hearts production card for the report.
+	var out_dir := "res://docs/screenshots/godot"
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	await get_tree().create_timer(2.4).timeout
+	await _shot("%s/intro_logo.png" % out_dir)
+	await get_tree().create_timer(3.2).timeout
+	await _shot("%s/intro_studio.png" % out_dir)
+	await get_tree().create_timer(3.0).timeout
+	await _shot("%s/intro_credit.png" % out_dir)
+	print("=== INTRO SHOTS DONE ===")
 	get_tree().quit(0)
 
 

@@ -18,6 +18,7 @@ extends CanvasLayer
 ##   visible                                      -> inherited CanvasLayer flag
 
 signal start_requested(profile: Dictionary)
+signal loading_go
 
 var year: int = 2024
 var character: String = "boy"
@@ -41,6 +42,27 @@ const CARD_H := 690.0
 ## The web build's own menu photo (copied out of ANITS-WEB GAME/assets/ui).
 const BG_PHOTO := "res://assets/ui/bg_clean.jpg"
 const LEVEL_THUMB := "res://assets/ui/levels/lv_%02d.jpg"
+
+## Startup experience, reconstructed from js/cinematic.js and js/menu.js.
+const LOGO := "res://assets/ui/anits_logo.png"
+const STUDIO_LOGO := "res://assets/ui/little_hearts_logo.png"
+const INTRO_CFG := "user://intro.cfg"
+
+## js/menu.js:4 - the quotes shown under the loading bar.
+const LOADING_QUOTES := [
+	"Some places teach you lessons, ANITS teaches you life.",
+	"Every campus has a story. Yours starts here.",
+	"Friends make the canteen chai taste better.",
+	"First bench or last bench, the best memories are made together.",
+	"Attendance is temporary, memories are permanent.",
+	"A salute to discipline, a smile to friendship.",
+	"Study hard, play harder, stay curious.",
+	"The best classroom is the one with your friends in it.",
+	"Dream big. The campus is big enough for it.",
+	"One chai, one samosa, and a thousand stories.",
+	"Today a fresher, tomorrow a legend of ANITS.",
+	"Pragnanam Brahma: knowledge is supreme.",
+]
 
 ## The ten levels of js/levels.js (window.__LVINFO), in order.
 const LEVELS := [
@@ -69,6 +91,23 @@ var _screen_welcome: Control
 var _screen_main: Control
 var _screen_levels: Control
 var _screen_settings: Control
+var _screen_intro: Control
+var _screen_loading: Control
+var _intro_logo: TextureRect
+var _intro_mark: TextureRect
+var _intro_studio: Label
+var _intro_dev: Label
+var _intro_skip: Button
+var _intro_top: ColorRect
+var _intro_bottom: ColorRect
+var _intro_tweens: Array[Tween] = []
+var _intro_started_ms: int = 0
+var _intro_done: bool = false
+var _loading_bar: ProgressBar
+var _loading_status: Label
+var _loading_quote: Label
+var _loading_tween: Tween
+var _starting: bool = false
 var _year_value: Label
 var _year_name: Label
 var _year_desc: Label
@@ -86,9 +125,12 @@ var _cards: Dictionary = {}
 var _preview_boy: SubViewport
 var _preview_girl: SubViewport
 var _preview_pivots: Array[Node3D] = []
+var _preview_visuals: Dictionary = {}
 var _settings_panel: Control
 var _vol_slider: HSlider
 var _vol_label: Label
+var _look_slider: HSlider
+var _look_label: Label
 var _welcome_tween: Tween
 var _choose_tween: Tween
 var _current: String = "year"
@@ -290,7 +332,15 @@ func _ready() -> void:
 	_touch = Settings.is_touch_mode() if Settings else false
 	_ui = 1.22 if _touch else 1.0
 	_build()
-	show_year()
+	# Verification and screenshot runs go straight to the menu; a normal launch
+	# plays the Little Hearts production card first.
+	var args := OS.get_cmdline_user_args()
+	var skip_intro := args.has("--skip-intro") or args.has("--check") \
+		or args.has("--beauty") or args.has("--menu-shot") or args.has("--flow-shot")
+	if skip_intro:
+		show_year()
+	else:
+		show_intro()
 
 
 func _process(delta: float) -> void:
@@ -345,6 +395,8 @@ func _build() -> void:
 	_build_levels_screen()
 	_build_settings_screen()
 	_build_footer()
+	_build_intro_screen()
+	_build_loading_screen()
 	_build_ambient()
 
 
@@ -1010,9 +1062,9 @@ func _build_settings_screen() -> void:
 
 	var box := PanelContainer.new()
 	box.add_theme_stylebox_override("panel", _sb(Color.html("#0a1f42"), Color(0.31, 0.72, 1.0, 0.9), 2, 18))
-	box.custom_minimum_size = Vector2(560, 380)
-	box.position = Vector2(520, 350)
-	box.size = Vector2(560, 380)
+	box.custom_minimum_size = Vector2(560, 490)
+	box.position = Vector2(520, 300)
+	box.size = Vector2(560, 490)
 	_screen_settings.add_child(box)
 
 	var col := VBoxContainer.new()
@@ -1052,6 +1104,34 @@ func _build_settings_screen() -> void:
 	_vol_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(_vol_label)
 
+	# Look sensitivity: works for mouse, trackpad and touch drag alike.
+	# 30-250 % maps to Settings.look_sensitivity 0.3-2.5.
+	var look_caption := Label.new()
+	look_caption.text = _spaced("LOOK SENSITIVITY")
+	look_caption.add_theme_font_size_override("font_size", 15)
+	look_caption.add_theme_color_override("font_color", MUTED)
+	col.add_child(look_caption)
+
+	_look_slider = HSlider.new()
+	_look_slider.min_value = 30
+	_look_slider.max_value = 250
+	_look_slider.step = 5
+	_look_slider.value = 100
+	if Settings:
+		_look_slider.value = int(round(Settings.look_sensitivity * 100.0))
+	_look_slider.custom_minimum_size = Vector2(0, 40)
+	_style_slider(_look_slider)
+	_look_slider.value_changed.connect(_on_look_changed)
+	_look_slider.drag_ended.connect(func(_c: bool) -> void: _apply_look())
+	col.add_child(_look_slider)
+
+	_look_label = Label.new()
+	_look_label.text = "%d%%" % int(round(_look_slider.value))
+	_look_label.add_theme_font_size_override("font_size", 16)
+	_look_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	_look_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(_look_label)
+
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 16)
@@ -1070,6 +1150,238 @@ func _build_settings_screen() -> void:
 	row.add_child(done)
 
 	_focus_chain([change, done])
+
+
+func _build_intro_screen() -> void:
+	## The web build's cinematic card (js/cinematic.js): black screen, letterbox
+	## bars, the ANITS crest, the Little Hearts mark, the studio line and the
+	## developer credit.  No music, matching the "models and voices only" brief.
+	_screen_intro = Control.new()
+	_screen_intro.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_screen_intro.mouse_filter = Control.MOUSE_FILTER_STOP
+	_screen_intro.visible = false
+	_screen_intro.gui_input.connect(_on_intro_gui_input)
+	_root.add_child(_screen_intro)
+
+	var black := ColorRect.new()
+	black.color = Color(0.0196, 0.0196, 0.0235)
+	black.set_anchors_preset(Control.PRESET_FULL_RECT)
+	black.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_intro.add_child(black)
+
+	var glow := _radial_glow(1200.0, Color(0.16, 0.47, 1.0, 0.11))
+	glow.anchor_left = 0.5
+	glow.anchor_right = 0.5
+	glow.anchor_top = 0.5
+	glow.anchor_bottom = 0.5
+	glow.offset_left = -600.0
+	glow.offset_right = 600.0
+	glow.offset_top = -600.0
+	glow.offset_bottom = 600.0
+	_screen_intro.add_child(glow)
+
+	_intro_top = ColorRect.new()
+	_intro_top.color = Color.BLACK
+	_intro_top.anchor_right = 1.0
+	_intro_top.offset_bottom = 0.0
+	_intro_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_intro.add_child(_intro_top)
+
+	_intro_bottom = ColorRect.new()
+	_intro_bottom.color = Color.BLACK
+	_intro_bottom.anchor_top = 1.0
+	_intro_bottom.anchor_right = 1.0
+	_intro_bottom.anchor_bottom = 1.0
+	_intro_bottom.offset_top = 0.0
+	_intro_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_intro.add_child(_intro_bottom)
+
+	_intro_logo = TextureRect.new()
+	_intro_logo.texture = load(LOGO) as Texture2D
+	_intro_logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_intro_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_intro_logo.anchor_left = 0.5
+	_intro_logo.anchor_right = 0.5
+	_intro_logo.anchor_top = 0.5
+	_intro_logo.anchor_bottom = 0.5
+	_intro_logo.offset_left = -220.0
+	_intro_logo.offset_right = 220.0
+	_intro_logo.offset_top = -220.0
+	_intro_logo.offset_bottom = 220.0
+	_intro_logo.modulate.a = 0.0
+	_intro_logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_intro.add_child(_intro_logo)
+
+	_intro_mark = TextureRect.new()
+	_intro_mark.texture = load(STUDIO_LOGO) as Texture2D
+	_intro_mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_intro_mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_intro_mark.anchor_left = 0.5
+	_intro_mark.anchor_right = 0.5
+	_intro_mark.anchor_top = 0.5
+	_intro_mark.anchor_bottom = 0.5
+	_intro_mark.offset_left = -120.0
+	_intro_mark.offset_right = 120.0
+	_intro_mark.offset_top = -230.0
+	_intro_mark.offset_bottom = -15.0
+	_intro_mark.modulate.a = 0.0
+	_intro_mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_intro.add_child(_intro_mark)
+
+	_intro_studio = Label.new()
+	_intro_studio.text = "A LITTLE HEART PRODUCTION"
+	_intro_studio.add_theme_font_size_override("font_size", 30)
+	_intro_studio.add_theme_color_override("font_color", Color(0.957, 0.925, 0.910))
+	_intro_studio.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_intro_studio.anchor_left = 0.0
+	_intro_studio.anchor_right = 1.0
+	_intro_studio.anchor_top = 0.5
+	_intro_studio.anchor_bottom = 0.5
+	_intro_studio.offset_top = 10.0
+	_intro_studio.offset_bottom = 56.0
+	_intro_studio.modulate.a = 0.0
+	_intro_studio.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_intro.add_child(_intro_studio)
+
+	_intro_dev = Label.new()
+	_intro_dev.text = "Developed by akhilboss"
+	_intro_dev.add_theme_font_size_override("font_size", 19)
+	_intro_dev.add_theme_color_override("font_color", Color(0.957, 0.925, 0.910, 0.66))
+	_intro_dev.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_intro_dev.anchor_left = 0.0
+	_intro_dev.anchor_right = 1.0
+	_intro_dev.anchor_top = 0.5
+	_intro_dev.anchor_bottom = 0.5
+	_intro_dev.offset_top = 66.0
+	_intro_dev.offset_bottom = 100.0
+	_intro_dev.modulate.a = 0.0
+	_intro_dev.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_intro.add_child(_intro_dev)
+
+	_intro_skip = _button("SKIP", 16)
+	_intro_skip.custom_minimum_size = Vector2(132, 50)
+	_intro_skip.size = Vector2(132, 50)
+	_intro_skip.anchor_left = 1.0
+	_intro_skip.anchor_right = 1.0
+	_intro_skip.anchor_top = 1.0
+	_intro_skip.anchor_bottom = 1.0
+	_intro_skip.offset_left = -160.0
+	_intro_skip.offset_right = -28.0
+	_intro_skip.offset_top = -78.0
+	_intro_skip.offset_bottom = -28.0
+	_intro_skip.visible = false
+	_intro_skip.pressed.connect(_skip_intro)
+	_screen_intro.add_child(_intro_skip)
+
+
+func _build_loading_screen() -> void:
+	## js/menu.js `#s-load`: campus photo, crest, a quote, the blue progress bar
+	## and "LOADING...  DAY n · LEVEL".
+	_screen_loading = Control.new()
+	_screen_loading.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_screen_loading.mouse_filter = Control.MOUSE_FILTER_STOP
+	_screen_loading.visible = false
+	_screen_loading.gui_input.connect(_on_loading_gui_input)
+	_root.add_child(_screen_loading)
+
+	var bg := TextureRect.new()
+	if ResourceLoader.exists(BG_PHOTO):
+		bg.texture = load(BG_PHOTO) as Texture2D
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(bg)
+
+	var shade := ColorRect.new()
+	shade.color = Color(0.008, 0.047, 0.133, 0.62)
+	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(shade)
+
+	var logo := TextureRect.new()
+	logo.texture = load(LOGO) as Texture2D
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.anchor_left = 0.5
+	logo.anchor_right = 0.5
+	logo.anchor_top = 0.0
+	logo.anchor_bottom = 0.0
+	logo.offset_left = -110.0
+	logo.offset_right = 110.0
+	logo.offset_top = 28.0
+	logo.offset_bottom = 248.0
+	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(logo)
+
+	var caption := Label.new()
+	caption.text = "COLLEGE SIMULATION"
+	caption.add_theme_font_size_override("font_size", 20)
+	caption.add_theme_color_override("font_color", Color(0.80, 0.90, 1.0, 0.82))
+	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caption.anchor_left = 0.0
+	caption.anchor_right = 1.0
+	caption.anchor_top = 0.0
+	caption.anchor_bottom = 0.0
+	caption.offset_top = 252.0
+	caption.offset_bottom = 284.0
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(caption)
+
+	_loading_quote = Label.new()
+	_loading_quote.text = ""
+	_loading_quote.add_theme_font_size_override("font_size", 26)
+	_loading_quote.add_theme_color_override("font_color", Color(0.93, 0.97, 1.0))
+	_loading_quote.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	_loading_quote.add_theme_constant_override("outline_size", 5)
+	_loading_quote.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_loading_quote.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_loading_quote.anchor_left = 0.5
+	_loading_quote.anchor_right = 0.5
+	_loading_quote.anchor_top = 1.0
+	_loading_quote.anchor_bottom = 1.0
+	_loading_quote.offset_left = -360.0
+	_loading_quote.offset_right = 360.0
+	_loading_quote.offset_top = -250.0
+	_loading_quote.offset_bottom = -150.0
+	_loading_quote.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(_loading_quote)
+
+	_loading_bar = ProgressBar.new()
+	_loading_bar.min_value = 0
+	_loading_bar.max_value = 100
+	_loading_bar.value = 0
+	_loading_bar.show_percentage = false
+	_loading_bar.anchor_left = 0.5
+	_loading_bar.anchor_right = 0.5
+	_loading_bar.anchor_top = 1.0
+	_loading_bar.anchor_bottom = 1.0
+	_loading_bar.offset_left = -360.0
+	_loading_bar.offset_right = 360.0
+	_loading_bar.offset_top = -126.0
+	_loading_bar.offset_bottom = -106.0
+	_loading_bar.add_theme_stylebox_override("background",
+			_sb(Color(0.012, 0.055, 0.149, 0.72), Color(0.31, 0.69, 1.0, 0.95), 2, 9))
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.20, 0.62, 1.0)
+	fill.set_corner_radius_all(8)
+	_loading_bar.add_theme_stylebox_override("fill", fill)
+	_loading_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(_loading_bar)
+
+	_loading_status = Label.new()
+	_loading_status.text = "LOADING..."
+	_loading_status.add_theme_font_size_override("font_size", 15)
+	_loading_status.add_theme_color_override("font_color", Color(0.82, 0.92, 1.0, 0.85))
+	_loading_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_loading_status.anchor_left = 0.0
+	_loading_status.anchor_right = 1.0
+	_loading_status.anchor_top = 1.0
+	_loading_status.anchor_bottom = 1.0
+	_loading_status.offset_top = -94.0
+	_loading_status.offset_bottom = -56.0
+	_loading_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_screen_loading.add_child(_loading_status)
 
 
 func _build_footer() -> void:
@@ -1502,6 +1814,8 @@ func _build_preview(model_id: String, model_height: float) -> SubViewport:
 	var visual := CharacterVisual.create(model_id, model_height)
 	if visual:
 		pivot.add_child(visual)
+		visual.apply_uniform(year)
+		_preview_visuals[model_id] = visual
 		_play_preview(visual)
 
 	var cam := Camera3D.new()
@@ -1539,6 +1853,10 @@ func _show_only(screen: Control) -> void:
 	for s in [_screen_year, _screen_char, _screen_name, _screen_welcome,
 			_screen_main, _screen_levels, _screen_settings]:
 		(s as Control).visible = s == screen
+	if _screen_intro and screen != _screen_intro:
+		_screen_intro.visible = false
+	if _screen_loading and screen != _screen_loading:
+		_screen_loading.visible = false
 	_update_preview_mode(screen == _screen_char)
 
 
@@ -1554,6 +1872,143 @@ func _fade_in(node: CanvasItem) -> void:
 	node.modulate.a = 0.0
 	var tw := create_tween()
 	tw.tween_property(node, "modulate:a", 1.0, 0.22)
+
+
+func show_intro() -> void:
+	## First launch plays the full 11 s card; later launches replay the short
+	## 4 s version, exactly like `replay: 'short'` in js/cinematic.js.
+	_current = "intro"
+	_intro_done = false
+	_intro_started_ms = Time.get_ticks_msec()
+	for tw in _intro_tweens:
+		if tw and tw.is_valid():
+			tw.kill()
+	_intro_tweens.clear()
+	_show_only(_screen_intro)
+	_screen_intro.visible = true
+	_screen_intro.modulate.a = 1.0
+	_intro_logo.modulate.a = 0.0
+	_intro_mark.modulate.a = 0.0
+	_intro_studio.modulate.a = 0.0
+	_intro_dev.modulate.a = 0.0
+	_intro_skip.visible = false
+	_intro_top.offset_bottom = 0.0
+	_intro_bottom.offset_top = 0.0
+
+	if OS.get_cmdline_user_args().has("--intro-reset"):
+		_intro_seen_reset()
+	var short := _intro_seen()
+	var logo_at := 0.15 if short else 1.0
+	var mark_at := 1.5 if short else 4.1
+	var studio_at := 1.8 if short else 5.4
+	var dev_at := 2.3 if short else 7.0
+	var out_at := 3.4 if short else 9.8
+	var out_dur := 0.7 if short else 1.2
+
+	# Letterbox bars slide in from the top and bottom.
+	var bars := create_tween()
+	bars.tween_property(_intro_top, "offset_bottom", 120.0, 0.5 if short else 1.4)
+	bars.parallel().tween_property(_intro_bottom, "offset_top", -120.0, 0.5 if short else 1.4)
+	_intro_tweens.append(bars)
+
+	_intro_track(_intro_logo, logo_at, 0.5 if short else 0.9,
+			0.8 if short else 2.4, 0.35 if short else 0.6)
+	_intro_track(_intro_mark, mark_at, 0.45 if short else 0.8,
+			0.35 if short else 1.2, 0.3 if short else 0.5)
+	_intro_track(_intro_studio, studio_at, 0.4 if short else 0.7,
+			maxf(0.1, out_at - studio_at - 0.4), 0.3)
+	_intro_track(_intro_dev, dev_at, 0.4 if short else 0.7,
+			maxf(0.1, out_at - dev_at - 0.4), 0.3)
+
+	var skip_tw := create_tween()
+	skip_tw.tween_interval(0.6 if short else 1.0)
+	skip_tw.tween_callback(func() -> void: _intro_skip.visible = true)
+	_intro_tweens.append(skip_tw)
+
+	var end_tw := create_tween()
+	end_tw.tween_interval(out_at)
+	end_tw.tween_property(_screen_intro, "modulate:a", 0.0, out_dur)
+	end_tw.tween_callback(_intro_complete)
+	_intro_tweens.append(end_tw)
+
+
+func _intro_track(node: CanvasItem, at: float, fade_in: float,
+		hold: float, fade_out: float) -> void:
+	var tw := create_tween()
+	tw.tween_interval(at)
+	tw.tween_property(node, "modulate:a", 1.0, fade_in)
+	tw.tween_interval(hold)
+	tw.tween_property(node, "modulate:a", 0.0, fade_out)
+	_intro_tweens.append(tw)
+
+
+func _on_loading_gui_input(event: InputEvent) -> void:
+	var pressed := false
+	if event is InputEventMouseButton:
+		pressed = (event as InputEventMouseButton).pressed
+	elif event is InputEventScreenTouch:
+		pressed = (event as InputEventScreenTouch).pressed
+	if pressed and _loading_bar.value >= 100.0:
+		loading_go.emit()
+
+
+func _on_intro_gui_input(event: InputEvent) -> void:
+	var pressed := false
+	if event is InputEventMouseButton:
+		pressed = (event as InputEventMouseButton).pressed
+	elif event is InputEventScreenTouch:
+		pressed = (event as InputEventScreenTouch).pressed
+	if not pressed:
+		return
+	# js/cinematic.js: a tap skips only after 700 ms of playback.
+	if Time.get_ticks_msec() - _intro_started_ms > 700:
+		_skip_intro()
+
+
+func _skip_intro() -> void:
+	if _intro_done:
+		return
+	_intro_done = true
+	for tw in _intro_tweens:
+		if tw and tw.is_valid():
+			tw.kill()
+	_intro_tweens.clear()
+	var tw := create_tween()
+	tw.tween_property(_screen_intro, "modulate:a", 0.0, 0.25)
+	tw.tween_callback(_intro_to_menu)
+
+
+func _intro_complete() -> void:
+	if _intro_done:
+		return
+	_intro_done = true
+	_intro_to_menu()
+
+
+func _intro_to_menu() -> void:
+	_intro_seen_save()
+	_screen_intro.visible = false
+	show_year()
+
+
+func _intro_seen() -> bool:
+	var cfg := ConfigFile.new()
+	if cfg.load(INTRO_CFG) != OK:
+		return false
+	return bool(cfg.get_value("intro", "seen", false))
+
+
+func _intro_seen_save() -> void:
+	var cfg := ConfigFile.new()
+	cfg.load(INTRO_CFG)
+	cfg.set_value("intro", "seen", true)
+	cfg.save(INTRO_CFG)
+
+
+func _intro_seen_reset() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("intro", "seen", false)
+	cfg.save(INTRO_CFG)
 
 
 func show_year() -> void:
@@ -1627,6 +2082,7 @@ func show_settings() -> void:
 
 func hide_settings() -> void:
 	_apply_volume()
+	_apply_look()
 	show_main()
 
 
@@ -1664,6 +2120,10 @@ func _on_year_changed(value: float) -> void:
 		_style_chip(chip, int(chip.text) == year)
 	if _year_badge:
 		_year_badge.text = "<  YEAR %d" % year
+	for model_id in _preview_visuals:
+		var visual := _preview_visuals[model_id] as CharacterVisual
+		if is_instance_valid(visual):
+			visual.apply_uniform(year)
 
 
 func _swatch_style(colour: Color) -> StyleBoxFlat:
@@ -1732,21 +2192,82 @@ func _apply_volume() -> void:
 		Settings.set_voice_volume(clampf(_vol_slider.value / 100.0, 0.0, 1.0))
 
 
+func _on_look_changed(value: float) -> void:
+	if _look_label:
+		_look_label.text = "%d%%" % int(round(value))
+	# Live update so the camera responds while the slider is being dragged.
+	if Settings:
+		Settings.look_sensitivity = clampf(value / 100.0, 0.3, 2.5)
+
+
+func _apply_look() -> void:
+	if _look_slider == null:
+		return
+	if Settings:
+		Settings.set_look_sensitivity(_look_slider.value / 100.0)
+
+
 func _start(day: int = 1) -> void:
+	if _starting:
+		return
+	_starting = true
+	get_viewport().gui_release_focus()
+	_show_loading(day)
+	# Fill to 90 % while the menu hands over, then jump to 100 % when the
+	# campus is ready (main.gd calls dismiss_loading()).
+	var tw := create_tween()
+	tw.tween_property(_loading_bar, "value", 90.0, 1.4)
+	await tw.finished
+	_loading_bar.value = 100.0
+	# Same gate as js/menu.js: the bar fills to 100 %, then waits for a tap.
+	_loading_status.text = "TAP ANYWHERE TO START" if _touch else "CLICK ANYWHERE TO START"
+	await loading_go
 	start_requested.emit({"name": player_name, "char": character, "year": year,
 		"day": clampi(day, 1, 10)})
-	if _preview_boy:
-		_preview_boy.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	if _preview_girl:
-		_preview_girl.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	get_viewport().gui_release_focus()
-	_root.visible = false
+
+
+func _show_loading(day: int) -> void:
+	_current = "loading"
+	_show_only(_screen_loading)
+	_screen_loading.visible = true
+	_screen_loading.modulate.a = 1.0
+	_loading_bar.value = 0.0
+	var title := "DAY %d" % clampi(day, 1, LEVELS.size())
+	if day >= 1 and day <= LEVELS.size():
+		title = "DAY %d · %s" % [day, str(LEVELS[day - 1]).to_upper()]
+	_loading_status.text = "LOADING...  " + title
+	var index := randi() % LOADING_QUOTES.size()
+	_loading_quote.text = "“%s”" % LOADING_QUOTES[index]
+
+
+## Called by src/main.gd once the campus is built and the first frame is ready.
+func dismiss_loading() -> void:
+	if not _starting:
+		if _screen_loading:
+			_screen_loading.visible = false
+		return
+	if _loading_tween and _loading_tween.is_valid():
+		_loading_tween.kill()
+	_loading_tween = create_tween()
+	_loading_tween.tween_property(_screen_loading, "modulate:a", 0.0, 0.35)
+	_loading_tween.tween_callback(func() -> void:
+		_screen_loading.visible = false
+		_root.visible = false
+		_starting = false)
 
 
 # ---------------------------------------------------------------- input
 
 func _input(event: InputEvent) -> void:
 	if _root == null or not _root.visible:
+		return
+	if _current == "intro" and event.is_action_pressed("ui_cancel"):
+		_skip_intro()
+		get_viewport().set_input_as_handled()
+		return
+	if _current == "loading":
+		if event.is_action_pressed("ui_accept") and _loading_bar.value >= 100.0:
+			loading_go.emit()
 		return
 	if event.is_action_pressed("ui_cancel"):
 		_back()

@@ -1,7 +1,7 @@
 ﻿/* ==========================================================================
    ANITS Godot 4 Port — Technical Report stylesheet
    Self-contained: no external fonts, no CDN, no network resources.
-   Print target: A4 portrait, 30 designed pages, explicit page boxes.
+   Print target: A4 portrait, 33 designed pages, explicit page boxes.
    ========================================================================== */
 
 :root{
@@ -231,6 +231,46 @@ figcaption b{ color:var(--navy); }
   margin-bottom:1mm;
 }
 .pair figure{ margin-bottom:2mm; }
+.uniforms{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:4mm;
+  margin:0 0 2.4mm;
+}
+.uniform-year{
+  border:0.5pt solid var(--rule);
+  background:#f7f9fc;
+  padding:2mm;
+  border-radius:2px;
+}
+.uniform-imgs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.4mm;
+  align-items:end;
+}
+.uniform-imgs img{
+  display:block;
+  width:100%;
+  height:auto;
+  border:0.5pt solid var(--rule);
+  background:#0b1118;
+}
+.uniform-cap{
+  font-size:7.4pt;
+  line-height:1.35;
+  color:var(--muted);
+  margin-top:1.6mm;
+}
+.uniform-cap b{ color:var(--navy); }
+.quad{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:3.2mm 4mm;
+  margin-bottom:1mm;
+}
+.quad figure{ margin-bottom:1.4mm; }
+.quad figcaption{ font-size:7.2pt; line-height:1.3; }
 figure.compact img{
   max-height:58mm;
   width:auto;
