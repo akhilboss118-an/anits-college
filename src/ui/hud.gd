@@ -95,21 +95,63 @@ var _map_extent: Rect2 = Rect2(0, 0, 100, 100)
 var _map_tex: Vector2 = Vector2(BASE_MINIMAP, BASE_MINIMAP)
 var _key_icons: Array[TextureRect] = []
 var _key_labels: Array[Label] = []
+var _pips: StepPips = null
+var _toast_panel: PanelContainer = null
+var _toast_tween: Tween = null
+var _toast_hiding: bool = false
+var _pause_card: PanelContainer = null
+var _pause_buttons: Array[Button] = []
+var _entrance_played: bool = false
+var _last_wallet: int = -1
+var _energy_tween: Tween = null
+var _energy_bucket: int = -1
+var _line_tween: Tween = null
+var _mission_calls: int = 0
 
 
 class MinimapMarker:
 	extends Control
 	## Player arrow + objective dot drawn on top of the minimap texture.
-	## The arrow is rotated every frame into the player's heading.
+	## The arrow is rotated every frame into the player's heading.  A pulsing
+	## objective ring, a dotted bearing line and four compass ticks make the
+	## little map easier to read at a glance.
 
 	var point := Vector2.ZERO
 	var has_player := false
 	var heading: float = -PI * 0.5
 	var mission_point := Vector2.ZERO
 	var has_mission := false
+	var _t: float = 0.0
+
+	func _process(delta: float) -> void:
+		if not visible:
+			return
+		_t += delta
+		if has_mission or has_player:
+			queue_redraw()
 
 	func _draw() -> void:
+		var c := size * 0.5
+		# Compass ticks inside the border; the north tick is longer and gold.
+		var tick := Color(0.72, 0.86, 1.0, 0.55)
+		draw_line(Vector2(c.x, 4.0), Vector2(c.x, 11.0), Color(1.0, 0.85, 0.4, 0.9), 2.0, true)
+		draw_line(Vector2(c.x, size.y - 4.0), Vector2(c.x, size.y - 9.0), tick, 1.6, true)
+		draw_line(Vector2(4.0, c.y), Vector2(9.0, c.y), tick, 1.6, true)
+		draw_line(Vector2(size.x - 4.0, c.y), Vector2(size.x - 9.0, c.y), tick, 1.6, true)
+		if has_mission and has_player:
+			# A dotted bearing line from the player to the objective.
+			var delta := mission_point - point
+			var dist := delta.length()
+			if dist > 26.0:
+				var dir := delta / dist
+				var steps := mini(7, int(dist / 16.0))
+				for i in steps:
+					var t := (float(i) + 0.6) / float(steps)
+					draw_circle(point + delta * t, 1.7, Color(1.0, 0.86, 0.42, 0.40))
 		if has_mission:
+			var pulse := 0.5 + 0.5 * sin(_t * 2.8)
+			draw_arc(mission_point, 6.0 + pulse * 4.2, 0.0, TAU, 24,
+					Color(0.48, 1.0, 0.55, 0.45 * (1.0 - pulse)), 1.6, true)
 			draw_circle(mission_point, 5.4, Color(0.03, 0.10, 0.05, 0.9))
 			draw_circle(mission_point, 3.4, Color(0.45, 1.0, 0.52, 0.98))
 		if not has_player:
@@ -234,6 +276,50 @@ class ChevronIcon:
 			Vector2(0.32 * size.x, 0.78 * size.y)])
 		draw_polyline(p, Color(0.55, 0.76, 1.0, 0.95), maxf(2.0, u * 0.085), true)
 
+
+class SparkIcon:
+	extends Control
+	## Small gold four-point sparkle used by the toast pill.
+
+	func _draw() -> void:
+		var u := minf(size.x, size.y) / 24.0
+		var c := size * 0.5
+		var pts := PackedVector2Array()
+		for i in 8:
+			var ang := -PI * 0.5 + float(i) * TAU / 8.0
+			var r := (9.5 if i % 2 == 0 else 3.4) * u
+			pts.append(c + Vector2(cos(ang), sin(ang)) * r)
+		draw_colored_polygon(pts, Color(1.0, 0.85, 0.34, 0.98))
+		draw_circle(c, 2.2 * u, Color(1.0, 0.97, 0.80, 1.0))
+
+
+class StepPips:
+	extends Control
+	## The eight mission steps as a row of dots: gold for completed steps,
+	## a glowing ring for the current one, dim for the rest.  Gives the player
+	## an instant read on how far into the day they are without another label.
+
+	var total: int = 8
+	var index: int = 0
+
+	func _draw() -> void:
+		var n := maxi(total, 1)
+		var d := maxf(4.0, size.y * 0.52)
+		var gap := d * 0.9
+		var row_w := float(n) * d + float(n - 1) * gap
+		var x := (size.x - row_w) * 0.5
+		var y := size.y * 0.5
+		for i in n:
+			var c := Vector2(x + float(i) * (d + gap) + d * 0.5, y)
+			if i < index:
+				draw_circle(c, d * 0.46, Color(1.0, 0.78, 0.26, 0.95))
+			elif i == index:
+				draw_circle(c, d * 0.66, Color(1.0, 0.90, 0.52, 0.24))
+				draw_circle(c, d * 0.46, Color(1.0, 0.92, 0.62, 1.0))
+			else:
+				draw_circle(c, d * 0.34, Color(0.82, 0.88, 1.0, 0.24))
+
+
 class PauseGlyph:
 	extends Control
 	## Two white bars - the pause affordance.
@@ -341,6 +427,7 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(_relayout)
 	_root.resized.connect(_relayout)
 	_relayout()
+	_play_entrance()
 
 
 # ------------------------------------------------------- shared device maths
@@ -443,6 +530,10 @@ func _build() -> void:
 	mission_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mission_label.add_theme_color_override("font_color", Color(0.76, 0.83, 0.95, 0.96))
 	text_col.add_child(mission_label)
+	_pips = StepPips.new()
+	_pips.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pips.custom_minimum_size = Vector2(0, 10)
+	text_col.add_child(_pips)
 	var chevron := ChevronIcon.new()
 	chevron.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chevron.custom_minimum_size = Vector2(30, 46)
@@ -513,25 +604,38 @@ func _build() -> void:
 	_pause_button.pivot_offset = Vector2(23, 23)
 	_pause_button.pressed.connect(_on_pause_pressed)
 	_root.add_child(_pause_button)
+	_add_button_juice(_pause_button)
 	var pause_glyph := PauseGlyph.new()
 	pause_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pause_glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pause_button.add_child(pause_glyph)
 
 	# --- toast (top centre, below the banner band) ---
+	_toast_panel = PanelContainer.new()
+	_toast_panel.anchor_left = 0.5
+	_toast_panel.anchor_right = 0.5
+	_toast_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_toast_panel.visible = false
+	_root.add_child(_toast_panel)
+	var toast_row := HBoxContainer.new()
+	toast_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	toast_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toast_row.add_theme_constant_override("separation", 8)
+	_toast_panel.add_child(toast_row)
+	var spark := SparkIcon.new()
+	spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spark.custom_minimum_size = Vector2(20, 20)
+	spark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	toast_row.add_child(spark)
 	toast_label = Label.new()
-	toast_label.anchor_left = 0.5
-	toast_label.anchor_right = 0.5
-	toast_label.offset_left = -320
-	toast_label.offset_right = 320
-	toast_label.offset_top = 104
-	toast_label.offset_bottom = 144
+	toast_label.text = ""
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast_label.add_theme_color_override("font_color", Color(0.6, 1.0, 0.7))
-	toast_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
-	toast_label.add_theme_constant_override("outline_size", 4)
-	toast_label.modulate.a = 0.0
-	_root.add_child(toast_label)
+	toast_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	toast_label.add_theme_color_override("font_color", Color(0.94, 1.0, 0.95))
+	toast_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	toast_label.add_theme_constant_override("outline_size", 3)
+	toast_row.add_child(toast_label)
 
 	# --- bottom stack: prompt, subtitle, dialogue ---
 	_bottom = VBoxContainer.new()
@@ -655,6 +759,7 @@ void fragment() {
 	_next_button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	_next_button.pressed.connect(_on_next_dialogue)
 	dialogue_panel.add_child(_next_button)
+	_add_button_juice(_next_button)
 
 	# --- minimap (rounded, with an N badge) ---
 	minimap = TextureRect.new()
@@ -788,6 +893,7 @@ void fragment() {
 	card_style.shadow_offset = Vector2(0, 8)
 	pause_card.add_theme_stylebox_override("panel", card_style)
 	pause_center.add_child(pause_card)
+	_pause_card = pause_card
 	var pause_box := VBoxContainer.new()
 	pause_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pause_box.add_theme_constant_override("separation", 10)
@@ -819,9 +925,11 @@ void fragment() {
 	var resume_button := _make_pause_button("RESUME")
 	resume_button.pressed.connect(_on_resume_pressed)
 	pause_box.add_child(resume_button)
+	_pause_buttons.append(resume_button)
 	var menu_button := _make_pause_button("MAIN MENU")
 	menu_button.pressed.connect(_on_menu_pressed)
 	pause_box.add_child(menu_button)
+	_pause_buttons.append(menu_button)
 
 
 # ------------------------------------------------------------------- layout
@@ -852,6 +960,9 @@ func _relayout() -> void:
 	_font_size(_paused_sub, 13)
 	_font_size(_north_label, 13)
 	_mission_row.add_theme_constant_override("separation", int(round(12.0 * s)))
+	if _pips:
+		_pips.custom_minimum_size = Vector2(0, maxf(8.0, 10.0 * s))
+		_pips.queue_redraw()
 
 	# --- mission banner (top left pill) ---
 	var wallet_w := minf(240.0 * s, view.x * 0.32)
@@ -865,6 +976,7 @@ func _relayout() -> void:
 	_mission_panel.offset_top = banner_y
 	_mission_panel.offset_bottom = banner_y
 	_mission_panel.custom_minimum_size = Vector2(banner_w, 0)
+	_mission_panel.pivot_offset = Vector2.ZERO
 	_mission_panel.add_theme_stylebox_override("panel",
 			_panel_style(Color(0.055, 0.095, 0.185, 0.92), Color(0.30, 0.56, 0.95, 0.85), s, 340))
 	mission_label.custom_minimum_size = Vector2(maxf(60.0 * s, banner_w - 100.0 * s), 0)
@@ -895,13 +1007,16 @@ func _relayout() -> void:
 
 	# --- toast (top centre, under the banner band) ---
 	var toast_half := minf(320.0 * s, view.x * 0.45)
-	toast_label.offset_left = -toast_half
-	toast_label.offset_right = toast_half
+	_toast_panel.offset_left = -toast_half
+	_toast_panel.offset_right = toast_half
 	var band := maxf(_mission_panel.get_combined_minimum_size().y,
 			_wallet_panel.get_combined_minimum_size().y)
 	var toast_top := _safe.y + 12.0 * s + band + 10.0 * s
-	toast_label.offset_top = toast_top
-	toast_label.offset_bottom = toast_top + 46.0 * s
+	_toast_panel.offset_top = toast_top
+	_toast_panel.offset_bottom = toast_top + 44.0 * s
+	_toast_panel.add_theme_stylebox_override("panel",
+			_panel_style(Color(0.035, 0.075, 0.15, 0.92), Color(1.0, 0.84, 0.32, 0.55), s, 999))
+	_toast_panel.pivot_offset = Vector2(toast_half, 22.0 * s)
 
 	# --- bottom stack: prompt, subtitle, dialogue ---
 	var bottom_inset := 20.0 * s + (TOUCH_ZONE * s if _touch else 0.0)
@@ -976,6 +1091,12 @@ func _relayout() -> void:
 	for key_label in _key_labels:
 		key_label.add_theme_font_size_override("font_size", int(round(15.0 * s)))
 
+	if _pause_card:
+		_pause_card.pivot_offset = _pause_card.size * 0.5
+	for button in _pause_buttons:
+		button.pivot_offset = button.size * 0.5
+	minimap.pivot_offset = minimap.size * 0.5
+
 	_update_mission_marker()
 
 
@@ -1008,6 +1129,9 @@ func _bar_style(colour: Color) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = colour
 	sb.set_corner_radius_all(6)
+	# A soft matching halo makes the fill read as a lit energy cell.
+	sb.shadow_color = Color(colour.r, colour.g, colour.b, 0.35)
+	sb.shadow_size = 3
 	return sb
 
 func _pause_style(bg: Color, border: Color, s: float) -> StyleBoxFlat:
@@ -1035,6 +1159,7 @@ func _make_pause_button(text: String) -> Button:
 	button.add_theme_stylebox_override("hover", _pause_menu_style(Color(0.13, 0.23, 0.40, 1.0), Color(0.45, 0.72, 1.0, 1.0)))
 	button.add_theme_stylebox_override("pressed", _pause_menu_style(Color(0.20, 0.35, 0.58, 1.0), Color(1.0, 0.86, 0.34, 1.0)))
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	_add_button_juice(button)
 	return button
 
 func _pause_menu_style(bg: Color, border: Color) -> StyleBoxFlat:
@@ -1049,6 +1174,67 @@ func _pause_menu_style(bg: Color, border: Color) -> StyleBoxFlat:
 	sb.content_margin_bottom = 12.0
 	return sb
 
+func _add_button_juice(button: Button) -> void:
+	## Hover lift and press squash, shared by the pause pill, the pause card
+	## buttons and the dialogue NEXT button.  Scale only, so the layout never
+	## shifts and touch taps still land on the same rect.
+	button.mouse_entered.connect(_button_scale.bind(button, 1.045, 0.10))
+	button.mouse_exited.connect(_button_scale.bind(button, 1.0, 0.14))
+	button.button_down.connect(_button_scale.bind(button, 0.94, 0.07))
+	button.button_up.connect(_button_scale.bind(button, 1.0, 0.12))
+
+
+func _button_scale(button: Button, target: float, seconds: float) -> void:
+	if button == null or not is_instance_valid(button):
+		return
+	if button.pivot_offset == Vector2.ZERO:
+		button.pivot_offset = button.size * 0.5
+	var tw := button.create_tween()
+	tw.tween_property(button, "scale", Vector2(target, target), seconds)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func _play_entrance() -> void:
+	## HUD slides/pops in once the campus is ready.  Everything is scale and
+	## alpha only, so it never fights `_relayout()` on a resize.
+	if _entrance_played or not is_inside_tree():
+		return
+	_entrance_played = true
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	_mission_panel.pivot_offset = Vector2.ZERO
+	_wallet_panel.pivot_offset = Vector2(_wallet_panel.size.x, 0.0)
+	minimap.pivot_offset = minimap.size * 0.5
+	_pause_button.pivot_offset = _pause_button.size * 0.5
+	_mission_panel.modulate.a = 0.0
+	_mission_panel.scale = Vector2(0.95, 0.95)
+	_wallet_panel.modulate.a = 0.0
+	_wallet_panel.scale = Vector2(0.95, 0.95)
+	minimap.modulate.a = 0.0
+	minimap.scale = Vector2(0.90, 0.90)
+	_pause_button.modulate.a = 0.0
+	_pause_button.scale = Vector2(0.60, 0.60)
+	if controls_bar:
+		controls_bar.modulate.a = 0.0
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(_mission_panel, "modulate:a", 1.0, 0.42).set_delay(0.04)
+	tw.tween_property(_mission_panel, "scale", Vector2.ONE, 0.50)\
+		.set_delay(0.04).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_wallet_panel, "modulate:a", 1.0, 0.42).set_delay(0.12)
+	tw.tween_property(_wallet_panel, "scale", Vector2.ONE, 0.50)\
+		.set_delay(0.12).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_pause_button, "modulate:a", 1.0, 0.30).set_delay(0.20)
+	tw.tween_property(_pause_button, "scale", Vector2.ONE, 0.42)\
+		.set_delay(0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(minimap, "modulate:a", 1.0, 0.45).set_delay(0.24)
+	tw.tween_property(minimap, "scale", Vector2.ONE, 0.52)\
+		.set_delay(0.24).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	if controls_bar:
+		tw.tween_property(controls_bar, "modulate:a", 1.0, 0.40).set_delay(0.34)
+
+
 func _on_pause_pressed() -> void:
 	pause_requested.emit()
 
@@ -1061,7 +1247,21 @@ func _on_menu_pressed() -> void:
 func set_paused_visible(on: bool) -> void:
 	if pause_overlay == null:
 		return
-	pause_overlay.visible = on
+	if not on:
+		pause_overlay.visible = false
+		return
+	pause_overlay.visible = true
+	pause_overlay.modulate.a = 0.0
+	if _pause_card:
+		_pause_card.pivot_offset = _pause_card.size * 0.5
+		_pause_card.scale = Vector2(0.92, 0.92)
+	var tw := create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.set_parallel(true)
+	tw.tween_property(pause_overlay, "modulate:a", 1.0, 0.16)
+	if _pause_card:
+		tw.tween_property(_pause_card, "scale", Vector2.ONE, 0.28)\
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func _key_texture(key_name: String) -> TextureRect:
@@ -1272,11 +1472,34 @@ func _player_node() -> Node:
 # ------------------------------------------------------------------ updates
 
 func set_mission(index: int, total: int, text: String) -> void:
+	var changed := _pips != null and (_pips.index != index or _pips.total != total)
 	mission_title.text = "MISSION %d / %d" % [index + 1, total]
 	_objective_base = text
 	_distance_text = ""
 	mission_label.text = text
+	if _pips:
+		_pips.total = total
+		_pips.index = index
+		_pips.queue_redraw()
 	_refresh_objective()
+	# Skip the very first assignment: the HUD entrance animation owns it.
+	if changed and _entrance_played and _mission_calls > 0:
+		_pulse_mission()
+	_mission_calls += 1
+
+
+func _pulse_mission() -> void:
+	if _mission_panel == null:
+		return
+	_mission_panel.pivot_offset = Vector2.ZERO
+	var tw := create_tween()
+	tw.tween_property(_mission_panel, "scale", Vector2(1.025, 1.025), 0.10)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_mission_panel, "scale", Vector2.ONE, 0.26)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	mission_label.modulate = Color(1.0, 0.90, 0.62)
+	var tw2 := create_tween()
+	tw2.tween_property(mission_label, "modulate", Color.WHITE, 0.55)
 
 
 func _refresh_objective() -> void:
@@ -1364,13 +1587,24 @@ func show_dialogue(speaker: String, text: String, key: String = "") -> void:
 	_type_running = true
 	_next_hint.visible = false
 	_portrait.texture = _portrait_texture(key)
+	# Fade each new line in, so the text change reads as a beat rather than a
+	# hard cut.
+	if _line_tween and _line_tween.is_valid():
+		_line_tween.kill()
+	dialogue_text.modulate.a = 0.30
+	_line_tween = create_tween()
+	_line_tween.tween_property(dialogue_text, "modulate:a", 1.0, 0.18)
 	# Pop the portrait and fade the panel in.
 	if not was_visible:
 		dialogue_panel.modulate.a = 0.0
+		dialogue_panel.pivot_offset = dialogue_panel.size * 0.5
+		dialogue_panel.scale = Vector2(0.97, 0.97)
 		_portrait.scale = Vector2(0.72, 0.72)
 		var tw := create_tween()
 		tw.set_parallel(true)
 		tw.tween_property(dialogue_panel, "modulate:a", 1.0, 0.16)
+		tw.tween_property(dialogue_panel, "scale", Vector2.ONE, 0.24)\
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		tw.tween_property(_portrait, "scale", Vector2.ONE, 0.24)\
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		if not _touch:
@@ -1411,18 +1645,74 @@ func show_subtitle(text: String) -> void:
 
 
 func update_wallet(wallet: int, bank: int) -> void:
+	var first := _last_wallet < 0
+	var changed := wallet != _last_wallet
+	_last_wallet = wallet
 	wallet_label.text = str(wallet)
+	if first or not changed or not is_inside_tree():
+		return
+	# A quick gold pop whenever the balance moves.
+	wallet_label.pivot_offset = wallet_label.size * 0.5
+	var tw := create_tween()
+	tw.tween_property(wallet_label, "scale", Vector2(1.18, 1.18), 0.08)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(wallet_label, "scale", Vector2.ONE, 0.22)\
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 func update_energy(value: float) -> void:
-	energy_bar.value = value
-	energy_label.text = str(int(round(value)))
+	var target := clampf(value, 0.0, 100.0)
+	energy_label.text = str(int(round(target)))
+	var bucket := 0 if target < 25.0 else (1 if target < 55.0 else 2)
+	if _energy_bucket < 0:
+		energy_bar.value = target
+	if bucket != _energy_bucket:
+		var colours := [Color(0.95, 0.35, 0.28, 0.96),
+			Color(1.0, 0.72, 0.22, 0.96), Color(0.34, 0.84, 0.44, 0.96)]
+		energy_bar.add_theme_stylebox_override("fill", _bar_style(colours[bucket]))
+	_energy_bucket = bucket
+	if _energy_tween and _energy_tween.is_valid():
+		_energy_tween.kill()
+	_energy_tween = create_tween()
+	_energy_tween.tween_property(energy_bar, "value", target, 0.28)\
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func toast(text: String, seconds: float = 2.5) -> void:
 	toast_label.text = text
-	toast_label.modulate.a = 1.0
+	if _toast_panel == null:
+		return
+	if text.strip_edges() == "":
+		_toast_panel.visible = false
+		return
 	_toast_time = seconds
+	_toast_hiding = false
+	if _toast_tween and _toast_tween.is_valid():
+		_toast_tween.kill()
+	_toast_panel.visible = true
+	_toast_panel.modulate.a = 1.0
+	_toast_panel.pivot_offset = _toast_panel.size * 0.5
+	_toast_panel.scale = Vector2(0.96, 0.96)
+	var tw := create_tween()
+	tw.tween_property(_toast_panel, "scale", Vector2.ONE, 0.24)\
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_toast_tween = tw
+
+
+func _hide_toast() -> void:
+	if _toast_panel == null or not _toast_panel.visible or _toast_hiding:
+		return
+	_toast_hiding = true
+	var tw := create_tween()
+	tw.tween_property(_toast_panel, "modulate:a", 0.0, 0.32)
+	tw.tween_callback(_finish_hide_toast)
+	_toast_tween = tw
+
+
+func _finish_hide_toast() -> void:
+	if _toast_panel:
+		_toast_panel.visible = false
+	_toast_hiding = false
 
 
 func _process(delta: float) -> void:
@@ -1431,7 +1721,7 @@ func _process(delta: float) -> void:
 	if _toast_time > 0.0:
 		_toast_time -= delta
 		if _toast_time <= 0.0:
-			toast_label.modulate.a = 0.0
+			_hide_toast()
 	if _type_running:
 		_type_shown = minf(_type_shown + delta * TYPE_CPS, float(_type_full.length()))
 		var count := int(floor(_type_shown))

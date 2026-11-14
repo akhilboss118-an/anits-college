@@ -33,7 +33,7 @@ Step "smoke run (300 frames)" {
 
 if (-not $SkipTour) {
 	Step "scripted tour (--check)" {
-		& $Godot --path $Project --resolution 1600x900 --quit-after 5000 -- --check 2>&1 | Out-Host
+		& $Godot --path $Project --resolution 1600x900 --quit-after 12000 -- --check 2>&1 | Out-Host
 	}
 }
 

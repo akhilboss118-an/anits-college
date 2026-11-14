@@ -40,6 +40,11 @@ var _sun: DirectionalLight3D = null
 var _shadow_frame: int = 0
 var _low_fps_time: float = 0.0
 var _quality_step: int = 0
+var _renderer: String = "forward_plus"
+var _post_layer: CanvasLayer = null
+var _vignette: ColorRect = null
+var _ssao: bool = false
+var _env: Environment = null
 
 
 func _ready() -> void:
@@ -56,6 +61,7 @@ func _ready() -> void:
 		_touch_mode = false
 	_apply_mobile_quality()
 	_build_environment()
+	_build_post_process()
 	menu = CanvasLayer.new()
 	menu.set_script(MENU_SCRIPT)
 	add_child(menu)
@@ -76,11 +82,23 @@ func _apply_mobile_quality() -> void:
 	## 60 fps target: render 3D below native and skip AA, on phones and on
 	## integrated laptop GPUs alike. Phones start lower and can step down further
 	## through `_adaptive_quality()`.
+	##
+	## The web export runs on the GL Compatibility renderer, where FXAA and SSAO
+	## do not exist.  There the edges are cleaned with 2x MSAA instead, and the
+	## cinematic look comes from the colour grade and the vignette pass, which
+	## work on every renderer.
+	_renderer = RenderingServer.get_current_rendering_method()
 	var viewport := get_viewport()
 	viewport.msaa_3d = Viewport.MSAA_DISABLED
 	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
 	viewport.scaling_3d_scale = 0.78 if _mobile_gpu else 0.88
+	if _renderer == "forward_plus":
+		# Desktop / the signed APK on a Vulkan-capable phone.
+		viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+	elif not _mobile_gpu:
+		# Web (GL Compatibility): cheap hardware anti-aliasing.
+		viewport.msaa_3d = Viewport.MSAA_2X
 	Engine.max_fps = 60
 
 
@@ -94,71 +112,137 @@ func _build_environment() -> void:
 
 	sky3d.game_time_enabled = false
 	sky3d.editor_time_enabled = false
-	sky3d.current_time = 9.35
+	sky3d.current_time = 9.1
 	sky3d.sky_contribution = 0.42
 	sky3d.ambient_energy = 0.48
-	sky3d.sun_energy = 1.18
-	sky3d.skydome_energy = 0.78
-	sky3d.cloud_intensity = 0.72
+	sky3d.sun_energy = 1.20
+	sky3d.skydome_energy = 0.82
+	sky3d.cloud_intensity = 0.80
 	sky3d.wind_speed = 4.6
 	sky3d.wind_direction = deg_to_rad(118.0)
 	sky3d.fog_enabled = true
 
 	var dome := sky3d.sky
 	if dome:
-		dome.atm_sun_intensity = 16.0
-		dome.atm_darkness = 0.42
-		dome.atm_thickness = 0.62
-		dome.atm_mie = 0.035
-		dome.atm_day_tint = Color(0.62, 0.82, 1.0)
-		dome.ground_color = Color(0.20, 0.34, 0.14)
-		dome.cirrus_coverage = 0.36
-		dome.cirrus_intensity = 1.2
-		dome.cumulus_coverage = 0.36
+		dome.atm_sun_intensity = 18.0
+		dome.atm_darkness = 0.38
+		dome.atm_thickness = 0.55
+		dome.atm_mie = 0.028
+		dome.atm_day_tint = Color(0.58, 0.80, 1.0)
+		dome.ground_color = Color(0.19, 0.33, 0.13)
+		dome.cirrus_coverage = 0.42
+		dome.cirrus_intensity = 1.25
+		dome.cumulus_coverage = 0.42
 		dome.cumulus_thickness = 0.02
-		dome.fog_density = 0.00035
-		dome.fog_start = 150.0
-		dome.fog_end = 760.0
+		dome.fog_density = 0.00024
+		dome.fog_start = 190.0
+		dome.fog_end = 900.0
 		dome.fog_falloff = 2.1
-		dome.sun_light_color = Color.html("#fff1d6")
-		dome.sun_horizon_light_color = Color.html("#ffb877")
+		dome.sun_light_color = Color.html("#fff0d0")
+		dome.sun_horizon_light_color = Color.html("#ffb26e")
 
 	var e := sky3d.environment
 	if e:
+		_env = e
 		e.background_mode = Environment.BG_SKY
 		e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-		e.ambient_light_sky_contribution = 0.48
+		e.ambient_light_sky_contribution = 0.42
 		e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 		e.tonemap_mode = Environment.TONE_MAPPER_ACES
 		e.tonemap_exposure = 0.88
 		e.tonemap_white = 1.6
+		# A warmer, punchier image: a touch more contrast and colour, with
+		# bloom that only picks up genuinely bright highlights (glass, metal,
+		# the sun on the road) instead of washing the whole frame out.
+		e.adjustment_enabled = true
+		e.adjustment_brightness = 1.0
+		e.adjustment_contrast = 1.05
+		e.adjustment_saturation = 1.03
 		e.glow_enabled = true
-		e.glow_intensity = 0.14
-		e.glow_bloom = 0.03
-		e.glow_hdr_threshold = 1.25
+		e.glow_intensity = 0.26
+		e.glow_bloom = 0.05
+		e.glow_hdr_threshold = 1.05
+		e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 		# Sky3D draws its own screen-space atmospheric fog.
 		e.fog_enabled = false
+		# Contact shading around buildings, trees and characters. Forward+ only
+		# (desktop / Vulkan); skipped on the Mobile and Compatibility renderers.
+		if _renderer == "forward_plus" and not _mobile_gpu:
+			e.ssao_enabled = true
+			e.ssao_radius = 1.5
+			e.ssao_intensity = 1.55
+			e.ssao_power = 1.35
+			e.ssao_detail = 0.55
+			e.ssao_horizon = 0.06
+			e.ssao_sharpness = 0.96
+			e.ssao_light_affect = 0.18
+			_ssao = true
 
 	var sun := sky3d.sun
 	if sun:
 		sun.shadow_enabled = true
 		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-		sun.directional_shadow_max_distance = 112.0
+		sun.directional_shadow_max_distance = 128.0
 		sun.shadow_bias = 0.0008
-		sun.shadow_blur = 0.9
+		sun.shadow_blur = 1.05
 		_sun = sun
 
 	if _mobile_gpu:
 		if dome:
 			dome.cumulus_coverage = 0.0
 			dome.cirrus_coverage = 0.28
-			dome.fog_end = 520.0
+			dome.fog_end = 560.0
 		if e:
 			e.glow_enabled = false
+			e.adjustment_contrast = 1.03
+			e.adjustment_saturation = 1.02
 		if sun:
 			sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 			sun.directional_shadow_max_distance = 92.0
-			sun.shadow_blur = 0.8
+			sun.shadow_blur = 0.9
+
+func _build_post_process() -> void:
+	## One cheap full-screen pass over the 3D image: a soft cinematic vignette
+	## and a gentle bottom-edge gradient that lifts the HUD and dialogue off the
+	## scene.  It is a plain canvas_item shader with no screen texture, so it
+	## works identically on Forward+, Mobile and the web GL Compatibility
+	## renderer.  The HUD (layer 10) and touch controls (layer 20) stay above it.
+	_post_layer = CanvasLayer.new()
+	_post_layer.name = "PostProcess"
+	_post_layer.layer = 2
+	add_child(_post_layer)
+	_vignette = ColorRect.new()
+	_vignette.name = "Vignette"
+	_vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := ShaderMaterial.new()
+	var sh := Shader.new()
+	sh.code = """
+shader_type canvas_item;
+
+uniform float edge_strength = 0.34;
+uniform float bottom_strength = 0.20;
+uniform vec3 tint : source_color = vec3(0.012, 0.026, 0.055);
+
+void fragment() {
+	vec2 uv = UV;
+	vec2 p = uv * 2.0 - 1.0;
+	// Slightly wider than tall, so the corners darken without eating the
+	// centre of the frame.
+	float d = length(p * vec2(0.86, 1.0));
+	float edge = smoothstep(0.52, 1.38, d);
+	float bottom = smoothstep(0.52, 1.02, uv.y);
+	float top = smoothstep(0.10, 0.0, uv.y) * 0.35;
+	float a = clamp(edge * edge_strength + bottom * bottom_strength + top * 0.10, 0.0, 0.62);
+	COLOR = vec4(tint, a);
+}
+"""
+	mat.shader = sh
+	if _mobile_gpu:
+		mat.set_shader_parameter("edge_strength", 0.24)
+		mat.set_shader_parameter("bottom_strength", 0.15)
+	_vignette.material = mat
+	_post_layer.add_child(_vignette)
 
 func _on_start(profile: Dictionary) -> void:
 	GameState.profile = profile
@@ -283,6 +367,10 @@ func _build_hud() -> void:
 	hud.menu_requested.connect(_to_main_menu)
 	hud.update_wallet(GameState.wallet, GameState.bank)
 	hud.update_energy(GameState.energy)
+	# Keep the wallet and energy pills live: purchases and drinks change the
+	# values while the campus is running, and the HUD must follow them.
+	EventBus.wallet_changed.connect(hud.update_wallet)
+	EventBus.energy_changed.connect(hud.update_energy)
 	if _touch_mode:
 		_build_touch_controls()
 
@@ -499,6 +587,10 @@ func _process(delta: float) -> void:
 ## the 3D resolution and then the sun shadows are reduced automatically, so the
 ## game keeps a smooth 60 fps target on mid-range laptops and phones alike.
 func _adaptive_quality(delta: float) -> void:
+	# Screenshot tours should capture the intended quality, not the transient
+	# frame time of a PNG readback, so the ladder is paused in those modes.
+	if _check_mode or _beauty_mode or _menu_shot_mode or _intro_shot_mode or _flow_shot_mode:
+		return
 	var fps := Engine.get_frames_per_second()
 	if fps <= 0:
 		return
@@ -517,16 +609,21 @@ func _degrade_quality() -> void:
 	match _quality_step:
 		1:
 			viewport.scaling_3d_scale = 0.68 if _mobile_gpu else 0.78
-			if _sun:
-				_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-				_sun.directional_shadow_max_distance = 62.0
-				_sun.shadow_blur = 0.6
+			# Drop the most expensive post effect first, then shadows.
+			if _env and _ssao:
+				_env.ssao_enabled = false
+				_ssao = false
+			viewport.msaa_3d = Viewport.MSAA_DISABLED
 		2:
 			viewport.scaling_3d_scale = 0.58 if _mobile_gpu else 0.68
 			if _sun:
-				_sun.shadow_enabled = false
+				_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+				_sun.directional_shadow_max_distance = 72.0
+				_sun.shadow_blur = 0.7
 		3:
 			viewport.scaling_3d_scale = 0.50 if _mobile_gpu else 0.60
+			if _sun:
+				_sun.shadow_enabled = false
 			print("  [quality] stepped down to level 3 (fps safety)")
 
 

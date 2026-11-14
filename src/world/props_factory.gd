@@ -420,11 +420,11 @@ render_mode diffuse_burley, specular_disabled;
 
 varying vec3 world_pos;
 
-uniform vec3 grass_dark : source_color = vec3(0.12, 0.29, 0.06);
-uniform vec3 grass_light : source_color = vec3(0.31, 0.57, 0.14);
-uniform vec3 grass_dry : source_color = vec3(0.47, 0.48, 0.17);
-uniform vec3 grass_haze : source_color = vec3(0.41, 0.52, 0.34);
-uniform float stripe_amount = 0.05;
+uniform vec3 grass_dark : source_color = vec3(0.17, 0.27, 0.10);
+uniform vec3 grass_light : source_color = vec3(0.34, 0.46, 0.20);
+uniform vec3 grass_dry : source_color = vec3(0.46, 0.43, 0.24);
+uniform vec3 grass_haze : source_color = vec3(0.38, 0.45, 0.34);
+uniform float stripe_amount = 0.11;
 
 float hash21(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -463,9 +463,10 @@ void fragment() {
 	vec3 col = mix(grass_dark, grass_light, smoothstep(0.22, 0.80, n_mid * 0.62 + n_wide * 0.38));
 	// Sun-bleached / dry patches.
 	float dry = smoothstep(0.64, 0.92, n_wide * 0.65 + n_mid * 0.35);
-	col = mix(col, grass_dry, dry * 0.55);
+	col = mix(col, grass_dry, dry * 0.45);
 	// Fine mottling so the lawn never reads as flat paint.
-	col *= 0.93 + n_fine * 0.14;
+	col *= 0.88 + n_fine * 0.24;
+	col *= 0.97 + vnoise(p * 2.7) * 0.06 * detail;
 
 	// Gentle mowing stripes (diagonal, very low contrast).
 	float stripe = sin(p.x * 0.16 + p.y * 0.05) * 0.5 + 0.5;
@@ -483,7 +484,7 @@ void fragment() {
 	// Aerial perspective: desaturate and lift the far tone.
 	float haze = smoothstep(60.0, 320.0, dist);
 	float lum = dot(col, vec3(0.299, 0.587, 0.114));
-	col = mix(col, mix(vec3(lum), grass_haze, 0.55), haze * 0.55);
+	col = mix(col, mix(vec3(lum), grass_haze, 0.55), haze * 0.40);
 
 	ALBEDO = col;
 	ROUGHNESS = 1.0;
@@ -618,8 +619,8 @@ shader_type spatial;
 render_mode diffuse_burley, cull_disabled;
 
 uniform sampler2D road_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
-uniform vec3 tint : source_color = vec3(0.72, 0.74, 0.76);
-uniform vec3 dirt_tint : source_color = vec3(0.40, 0.34, 0.26);
+uniform vec3 tint : source_color = vec3(0.98, 0.99, 1.0);
+uniform vec3 dirt_tint : source_color = vec3(0.52, 0.45, 0.35);
 
 varying vec3 world_pos;
 
@@ -663,7 +664,7 @@ void fragment() {
 
 	// --- patchy asphalt, in world space so it never tiles with the road ---
 	float m = vnoise(world_pos.xz * 0.45) * 0.6 + vnoise(world_pos.xz * 1.7) * 0.4;
-	col *= 0.90 + m * 0.18;
+	col *= 0.94 + m * 0.16;
 
 	// --- dust and grit along both kerbs ---
 	float edge = 1.0 - smoothstep(0.0, 0.09, min(UV.x, 1.0 - UV.x));
@@ -804,7 +805,7 @@ void fragment() {
 """
 	var m := ShaderMaterial.new()
 	m.shader = sh
-	var tex := tiling_texture(128, Color.html("#d9c491"), 0.10, 37, "sand")
+	var tex := tiling_texture(128, Color.html("#cdb784"), 0.10, 37, "sand")
 	if tex:
 		m.set_shader_parameter("sand_tex", tex)
 	_materials["sand"] = m

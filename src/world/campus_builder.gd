@@ -909,12 +909,12 @@ func _apply_palette_skin(node: Node, colour: Color) -> void:
 	var material := StandardMaterial3D.new()
 	material.albedo_texture = tex
 	material.albedo_color = Color.WHITE
-	material.roughness = 0.88
+	material.roughness = 0.85
 	material.metallic = 0.0
 	material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
 	material.emission_enabled = true
 	material.emission_texture = tex
-	material.emission = Color(0.20, 0.20, 0.20)
+	material.emission = Color(0.10, 0.10, 0.10)
 	_apply_palette_recursive(node, material)
 
 
