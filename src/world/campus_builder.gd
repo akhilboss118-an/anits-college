@@ -30,6 +30,13 @@ var building_meshes: Dictionary = {} ## name -> MeshInstance3D
 var label_nodes: Array = []
 var _prop_body: StaticBody3D = null
 var _grass_chunks: Array = []       ## [{node, center}] hidden by distance
+var _grass_radius: float = 85.0
+## Building and shop signs are individual Label3D draw calls; past this distance
+## they are only a few pixels tall, so they are hidden.
+const LABEL_FAR_DIST := 120.0
+## Mobile / GL-Compatibility density pass: fewer props, cheaper tree species,
+## no tree shadows.  Set by main.gd before build().
+var low_poly: bool = false
 
 
 func build(data: Dictionary) -> void:
@@ -41,6 +48,7 @@ func build(data: Dictionary) -> void:
 	_build_walls()
 	_build_gates()
 	_build_buildings()
+	_build_rooftops()
 	_build_specials()
 	_build_props()
 	_build_lamps()
@@ -48,6 +56,7 @@ func build(data: Dictionary) -> void:
 	_build_vending_machines()
 	_build_notice_boards()
 	_build_water_coolers()
+	_collect_labels()
 
 
 func _clear() -> void:
@@ -429,33 +438,146 @@ func _build_track_oval(r: Rect2) -> void:
 
 
 func _build_court(r: Rect2) -> void:
-	## 28 x 15 m court painted inside the ground zone.
-	var ground := PropsFactory.court_material()
-	box(self, Vector3(r.size.x, 0.1, r.size.y), Vector3(r.position.x + r.size.x * 0.5, 0.05, r.position.y + r.size.y * 0.5), ground, "CourtGround")
-	var lines := mat(Color.html("#f3e2c8"))
+	## A full basketball arena: asphalt apron, the 28 x 15 m painted court in a
+	## single texture, two hoops with nets, bleachers, four floodlights and a
+	## scoreboard.  The painted markings live in the texture, so the old line
+	## boxes (and their z-fighting) are gone.
 	var centre := r.position + r.size * 0.5
 	var court_w := 28.0
 	var court_d := 15.0
-	var paint := 0.12
-	box(self, Vector3(court_w, 0.02, paint), Vector3(centre.x, 0.12, centre.y - court_d * 0.5), lines, "CourtLine")
-	box(self, Vector3(court_w, 0.02, paint), Vector3(centre.x, 0.12, centre.y + court_d * 0.5), lines, "CourtLine")
-	box(self, Vector3(paint, 0.02, court_d), Vector3(centre.x - court_w * 0.5, 0.12, centre.y), lines, "CourtLine")
-	box(self, Vector3(paint, 0.02, court_d), Vector3(centre.x + court_w * 0.5, 0.12, centre.y), lines, "CourtLine")
-	box(self, Vector3(paint, 0.02, court_d), Vector3(centre.x, 0.12, centre.y), lines, "CourtCentreLine")
+
+	# Apron and painted floor, layered a few centimetres apart.
+	var apron := box(self, Vector3(r.size.x, 0.09, r.size.y),
+		Vector3(centre.x, 0.045, centre.y), PropsFactory.asphalt_material(), "CourtApron")
+	apron.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var walk := box(self, Vector3(36.0, 0.06, 23.0),
+		Vector3(centre.x, 0.09, centre.y), PropsFactory.paving_material(), "CourtWalkway")
+	walk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# A PlaneMesh has plain 0..1 UVs; BoxMesh maps each face to one cell of a
+	# 3x2 atlas, which would show only the centre third of the painted court.
+	var floor_mesh := PlaneMesh.new()
+	floor_mesh.size = Vector2(30.0, 17.0)
+	var floor := MeshInstance3D.new()
+	floor.name = "CourtPainted"
+	floor.mesh = floor_mesh
+	floor.material_override = PropsFactory.court_texture_material()
+	floor.position = Vector3(centre.x, 0.12, centre.y)
+	floor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(floor)
+
+	# ---- hoops: pole, arm, backboard, rim and net -------------------------
+	var steel := mat(Color.html("#2b3442"), 0.7)
+	var white := mat(Color.html("#f3f4f0"), 0.55)
+	var orange := mat(Color.html("#e05a2c"), 0.5)
+	var board_mat := mat(Color.html("#eef2f5"), 0.35)
+	var net_mat := PropsFactory.hoop_net_material()
+	var net_mesh := PropsFactory.hoop_net_mesh()
+	var rim_mesh := TorusMesh.new()
+	rim_mesh.inner_radius = 0.18
+	rim_mesh.outer_radius = 0.235
+	rim_mesh.rings = 18
+	rim_mesh.ring_segments = 6
 	for side in [-1.0, 1.0]:
 		var s := float(side)
-		var hx := centre.x + s * (court_w * 0.5 + 1.2)
-		box(self, Vector3(0.25, 3.05, 0.25), Vector3(hx, 1.6, centre.y), mat(Color.html("#33363c")), "HoopPost")
-		box(self, Vector3(0.12, 1.1, 1.84), Vector3(hx - s * 0.1, 3.2, centre.y), mat(Color.html("#f0f0f0")), "HoopBoard")
+		var board_x := centre.x + s * (court_w * 0.5 + 1.2)
+		var rim_x := board_x - s * 0.45
+		# Post sits 1.5 m behind the baseline, outside the playing area.
+		var post_x := centre.x + s * (court_w * 0.5 + 2.7)
+		var post := box(self, Vector3(0.24, 3.9, 0.24), Vector3(post_x, 1.95, centre.y), steel, "HoopPost")
+		post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		box(self, Vector3(absf(post_x - board_x) + 0.3, 0.14, 0.14),
+			Vector3((post_x + board_x) * 0.5, 3.68, centre.y), steel, "HoopArm")
+		var board := box(self, Vector3(0.12, 1.08, 1.84),
+			Vector3(board_x, 3.36, centre.y), board_mat, "HoopBoard")
+		board.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		# Painted target square on the court-facing side.
+		box(self, Vector3(0.02, 0.46, 0.62),
+			Vector3(board_x - s * 0.07, 3.23, centre.y), orange, "HoopTarget")
 		var ring := MeshInstance3D.new()
-		var torus := TorusMesh.new()
-		torus.inner_radius = 0.20
-		torus.outer_radius = 0.24
-		ring.mesh = torus
-		ring.material_override = mat(Color.html("#e05030"))
-		ring.position = Vector3(hx, 3.05, centre.y)
-		ring.rotation_degrees = Vector3(90, 0, 0)
+		ring.mesh = rim_mesh
+		ring.material_override = orange
+		ring.position = Vector3(rim_x, 3.05, centre.y)
+		ring.rotation_degrees = Vector3(90.0, 0.0, 0.0)
 		add_child(ring)
+		var net := MeshInstance3D.new()
+		net.mesh = net_mesh
+		net.material_override = net_mat
+		net.position = Vector3(rim_x, 3.05, centre.y)
+		net.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(net)
+		add_collider(self, Vector3(0.3, 3.9, 0.3), Vector3(post_x, 0.0, centre.y), "HoopPostCol")
+
+	# ---- bleachers on the north sideline (facing the south approach) -------
+	var steps: Array = []
+	var seats: Array = []
+	var step_colors: Array = []
+	var seat_colors: Array = []
+	var seat_palette := [Color.html("#d9a441"), Color.html("#2f5d9e"), Color.html("#c05040")]
+	for i in 3:
+		var h := 0.55 * float(i + 1)
+		var z := centre.y - court_d * 0.5 - 3.1 - float(i) * 1.25
+		steps.append(Transform3D(Basis().scaled(Vector3(20.0, h, 1.35)),
+			Vector3(centre.x, h * 0.5, z)))
+		step_colors.append(Color.html("#9aa0a6").darkened(float(i) * 0.06))
+		seats.append(Transform3D(Basis().scaled(Vector3(20.0, 0.12, 1.05)),
+			Vector3(centre.x, h + 0.06, z + 0.1)))
+		seat_colors.append(seat_palette[i])
+	steps.append(Transform3D(Basis().scaled(Vector3(20.0, 2.3, 0.35)),
+		Vector3(centre.x, 1.15, centre.y - court_d * 0.5 - 6.95)))
+	step_colors.append(Color.html("#7d838a"))
+	var step_mesh := BoxMesh.new()
+	step_mesh.size = Vector3.ONE
+	var vc_mat := mat(Color.WHITE)
+	vc_mat.vertex_color_use_as_albedo = true
+	_add_multimesh("CourtBleachers", step_mesh, steps, vc_mat, step_colors, false)
+	_add_multimesh("CourtSeats", step_mesh, seats, vc_mat, seat_colors, false)
+	add_collider(self, Vector3(20.0, 2.3, 4.4),
+		Vector3(centre.x, 0.0, centre.y - court_d * 0.5 - 4.95), "BleacherCol")
+
+	# ---- four floodlight towers ------------------------------------------
+	var pole_mesh := BoxMesh.new()
+	pole_mesh.size = Vector3(0.18, 7.6, 0.18)
+	var lamp_mesh := BoxMesh.new()
+	lamp_mesh.size = Vector3(1.35, 0.42, 0.28)
+	var poles: Array = []
+	var lamps: Array = []
+	var lamp_glow := mat(Color.html("#fff4cf"), 0.4)
+	lamp_glow.emission_enabled = true
+	lamp_glow.emission = Color.html("#fff0c2")
+	lamp_glow.emission_energy_multiplier = 1.4
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			var px := centre.x + float(sx) * 18.5
+			var pz := centre.y + float(sz) * 13.8
+			poles.append(Transform3D(Basis(), Vector3(px, 3.8, pz)))
+			lamps.append(Transform3D(Basis(), Vector3(px - float(sx) * 0.75, 7.35, pz)))
+	_add_multimesh("CourtFloodPoles", pole_mesh, poles, steel, [], false)
+	_add_multimesh("CourtFloodLamps", lamp_mesh, lamps, lamp_glow, [], false)
+
+	# ---- scoreboard behind the north bleachers ---------------------------
+	var board_z := centre.y - court_d * 0.5 - 9.0
+	var panel := box(self, Vector3(4.4, 1.65, 0.22),
+		Vector3(centre.x, 4.35, board_z), mat(Color.html("#121821"), 0.6), "Scoreboard")
+	panel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	box(self, Vector3(4.0, 1.4, 0.06), Vector3(centre.x, 4.35, board_z + 0.14),
+		mat(Color.html("#0a1018"), 0.4), "ScoreboardScreen")
+	for side in [-1.0, 1.0]:
+		var post := box(self, Vector3(0.2, 3.6, 0.2),
+			Vector3(centre.x + float(side) * 1.55, 1.8, board_z), steel, "ScoreboardPost")
+		post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		add_collider(self, Vector3(0.3, 3.6, 0.3),
+			Vector3(centre.x + float(side) * 1.55, 0.0, board_z), "ScoreboardCol")
+	var label := Label3D.new()
+	label.text = "ANITS\nBASKETBALL"
+	label.font_size = 72
+	label.pixel_size = 0.0058
+	label.line_spacing = -8.0
+	label.modulate = Color.html("#ffd54a")
+	label.outline_size = 0
+	label.shaded = false
+	label.position = Vector3(centre.x, 4.35, board_z + 0.2)
+	label.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(label)
 
 
 # ------------------------------------------------------------------ walls
@@ -614,9 +736,15 @@ func _process(delta: float) -> void:
 	# distance-cull the grass chunks (32 MultiMeshes)
 	var cam := get_viewport().get_camera_3d()
 	if cam:
+		var cam_pos := cam.global_position
+		var label_far_sq := LABEL_FAR_DIST * LABEL_FAR_DIST
 		for chunk in _grass_chunks:
 			var c: Dictionary = chunk
-			(c["node"] as Node3D).visible = (c["center"] as Vector3).distance_to(cam.global_position) < 85.0
+			(c["node"] as Node3D).visible = (c["center"] as Vector3).distance_to(cam_pos) < _grass_radius
+		for label in label_nodes:
+			var l := label as Label3D
+			if l:
+				l.visible = l.global_position.distance_squared_to(cam_pos) < label_far_sq
 
 
 # ------------------------------------------------------------------ buildings
@@ -670,6 +798,73 @@ func _build_buildings() -> void:
 		add_collider(self, Vector3(wr.size.x, height, wr.size.y), Vector3(centre.x, 0.0, centre.z), "BuildingCol")
 
 
+## Rooftop life for the five big blocks: water tanks, AC units, solar panels
+## and antennas.  Every prop type is one MultiMesh, so the whole pass costs
+## four draw calls instead of dozens of individual meshes.
+func _build_rooftops() -> void:
+	var rng := LCG.new(77)
+	var tanks: Array = []
+	var acs: Array = []
+	var panels: Array = []
+	var antennas: Array = []
+	for b in campus.get(KEY_BUILDINGS, []):
+		var model := str(b.get("model", ""))
+		if model != "panel_block":
+			continue
+		var wr := _rect_world(b.get("rect", [0, 0, 1, 1]))
+		var height := float(b.get("height", 8.0))
+		var centre := Vector3(wr.position.x + wr.size.x * 0.5, 0.0, wr.position.y + wr.size.y * 0.5)
+		var top := height
+		var brez := OriginalModels.bounds_for("brez")
+		if brez.size.z > 0.001:
+			var z := minf(height * 2.1, wr.size.y - 0.8) / brez.size.z
+			top = brez.size.y * z
+		var anchors: Array = [centre]
+		for a in anchors:
+			var anchor: Vector3 = a
+			# Water tank on every roof.
+			tanks.append(Transform3D(Basis(), Vector3(anchor.x, top + 0.78, anchor.z)))
+			# Two AC units toward the back edge.
+			for i in 2:
+				acs.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU),
+					Vector3(anchor.x - 2.6 + float(i) * 5.2,
+						top + 0.4, anchor.z + wr.size.y * 0.24)))
+			# Solar array: six tilted panels in two rows of three.
+			for i in 6:
+				var px := anchor.x - 4.4 + float(i % 3) * 4.4
+				var pz := anchor.z - wr.size.y * 0.16 + float(i / 3) * 2.4
+				panels.append(Transform3D(Basis(Vector3.RIGHT, -0.26),
+					Vector3(px, top + 0.32, pz)))
+			# Antenna on every other block.
+			if rng.randf() < 0.6:
+				antennas.append(Transform3D(Basis(), Vector3(anchor.x + 4.8, top + 1.3, anchor.z + 1.8)))
+	var tank_mesh := CylinderMesh.new()
+	tank_mesh.top_radius = 0.82
+	tank_mesh.bottom_radius = 0.95
+	tank_mesh.height = 1.5
+	tank_mesh.radial_segments = 10
+	tank_mesh.rings = 1
+	_add_multimesh("RooftopTanks", tank_mesh, tanks,
+		mat(Color.html("#c9ced3"), 0.7), [], false)
+	var ac_mesh := BoxMesh.new()
+	ac_mesh.size = Vector3(1.5, 0.8, 1.05)
+	_add_multimesh("RooftopAC", ac_mesh, acs,
+		mat(Color.html("#9aa3ab"), 0.8), [], false)
+	var panel_mesh := BoxMesh.new()
+	panel_mesh.size = Vector3(2.4, 0.08, 1.5)
+	var panel_mat := mat(Color.html("#173a5e"), 0.35)
+	panel_mat.metallic = 0.35
+	_add_multimesh("RooftopSolar", panel_mesh, panels, panel_mat, [], false)
+	var antenna_mesh := CylinderMesh.new()
+	antenna_mesh.top_radius = 0.035
+	antenna_mesh.bottom_radius = 0.055
+	antenna_mesh.height = 2.6
+	antenna_mesh.radial_segments = 5
+	antenna_mesh.rings = 1
+	_add_multimesh("RooftopAntennas", antenna_mesh, antennas,
+		mat(Color.html("#5a636c"), 0.6), [], false)
+
+
 ## Maps a building kind to the original model id.
 func _model_for(kind: String) -> String:
 	match kind:
@@ -704,6 +899,10 @@ func _build_single_model(b: Dictionary, wr: Rect2, colour: Color, height: float,
 		return
 	node.name = str(b.get("name", "Building"))
 	building_meshes[b.get("name", "")] = node
+	# The imported Admin / Workshop / Bank / Cafe / Auditorium models are made
+	# of hundreds of flat-colour meshes.  Merge them to one draw call each.
+	if model_id in ["admin", "workshop", "cafe", "bank", "stairaud"]:
+		OriginalModels.merge_flat_model(node)
 	_add_building_label(str(b.get("name", "")), wr, height, face)
 	var box2 := OriginalModels.bounds_for(model_id)
 	var scale := OriginalModels.scale_for(model_id, target)
@@ -755,6 +954,27 @@ func _build_lowpoly_row(b: Dictionary, wr: Rect2, colour: Color, height: float, 
 	var inset := 0.6 * Campus.MAP_SCALE
 	var c := Vector3((box2.position.x + box2.size.x * 0.5) * s, 0.0,
 		(box2.position.z + box2.size.z * 0.5) * s)
+
+	# Collect the unit's two mesh parts once, then draw every unit in the row
+	# with a MultiMesh: two draw calls per row instead of two per unit.
+	var template := packed.instantiate()
+	var parts: Array = []
+	_collect_model_parts(template, Transform3D.IDENTITY, parts)
+	template.free()
+	var skin := _palette_skin_material(colour)
+	var groups: Array = []
+	for part in parts:
+		var part_mat: Material = skin
+		if part_mat == null:
+			part_mat = part["material"]
+		groups.append({
+			"mesh": part["mesh"],
+			"material": part_mat,
+			"xform": part["xform"],
+			"transforms": [],
+		})
+	var unit_offset := Vector3(-c.x, -box2.position.y * ys / s, -c.z)
+	var unit_scale := Vector3(s, ys, s)
 	for i in n:
 		var along := gap * (i + 1) + unit_w * (i + 0.5)
 		var pos := centre
@@ -765,19 +985,37 @@ func _build_lowpoly_row(b: Dictionary, wr: Rect2, colour: Color, height: float, 
 			pos.z = wr.position.y + along
 			pos.x = (wr.end.x - inset - dep * 0.5) if face == "E" else (wr.position.x + inset + dep * 0.5)
 		# wrapper -> rotated unit -> model, exactly like the web build
-		var wrapper := Node3D.new()
-		wrapper.name = "LowPolyUnit"
-		wrapper.position = pos
-		wrapper.rotation.y = yaw
-		add_child(wrapper)
-		var inst := packed.instantiate()
-		wrapper.add_child(inst)
-		inst.scale = Vector3(s, ys, s)
-		inst.position = Vector3(-c.x, -box2.position.y * ys / s, -c.z)
-		_apply_palette_skin(inst, colour)
+		var unit_xf := Transform3D(Basis(Vector3.UP, yaw), pos) \
+			* Transform3D(Basis.from_scale(unit_scale), unit_offset)
+		for g in groups:
+			(g["transforms"] as Array).append(unit_xf * (g["xform"] as Transform3D))
 		var col_size := Vector3(unit_w, height, dep) if along_x else Vector3(dep, height, unit_w)
 		add_collider(self, col_size, Vector3(pos.x, 0.0, pos.z), "BuildingCol")
+	var row_name := str(b.get("name", "LowPolyRow")).replace(" ", "_").replace("(", "").replace(")", "")
+	for i in groups.size():
+		var g: Dictionary = groups[i]
+		var mmi := PropsFactory.batch("LowPolyRow_%s_%d" % [row_name, i], g["mesh"],
+			g["transforms"], g["material"], [], true)
+		if mmi:
+			add_child(mmi)
 	_add_building_label(str(b.get("name", "")), wr, height, face)
+
+
+## Flattens a model's mesh parts into world-local transforms so a row can be
+## drawn as MultiMeshes.
+func _collect_model_parts(node: Node, xf: Transform3D, out: Array) -> void:
+	var local := xf
+	if node is Node3D:
+		local = xf * (node as Node3D).transform
+	var mi := node as MeshInstance3D
+	if mi and mi.mesh:
+		out.append({
+			"mesh": mi.mesh,
+			"xform": local,
+			"material": mi.get_active_material(0),
+		})
+	for child in node.get_children():
+		_collect_model_parts(child, local, out)
 
 
 ## The classroom-panel block (CSE / ECE / EEE / Chemical) with its recoloured walls.
@@ -905,9 +1143,17 @@ static func _palette_texture(colour: Color) -> Texture2D:
 
 
 func _apply_palette_skin(node: Node, colour: Color) -> void:
+	var material := _palette_skin_material(colour)
+	if material == null:
+		return
+	_apply_palette_recursive(node, material)
+
+
+## The recoloured palette material shared by every mesh of a low-poly unit.
+func _palette_skin_material(colour: Color) -> StandardMaterial3D:
 	var tex := _palette_texture(colour)
 	if tex == null:
-		return
+		return null
 	var material := StandardMaterial3D.new()
 	material.albedo_texture = tex
 	material.albedo_color = Color.WHITE
@@ -917,7 +1163,7 @@ func _apply_palette_skin(node: Node, colour: Color) -> void:
 	material.emission_enabled = true
 	material.emission_texture = tex
 	material.emission = Color(0.10, 0.10, 0.10)
-	_apply_palette_recursive(node, material)
+	return material
 
 
 func _apply_palette_recursive(node: Node, material: StandardMaterial3D) -> void:
@@ -960,8 +1206,22 @@ func _build_admin_block(b: Dictionary) -> void:
 	_add_building_label("ADMIN & ADMISSIONS", wr, height, "NS")
 
 
-func _add_building_label(text: String, wr: Rect2, height: float, _face := "S") -> void:
-	## High-visibility rooftop billboard label centered above the building.
+## Collects every Label3D in the campus once, so _process can distance-cull the
+## text draw calls (building names, shop signs, scoreboards) in one pass.
+func _collect_labels() -> void:
+	label_nodes.clear()
+	_collect_label_nodes(self)
+
+
+func _collect_label_nodes(node: Node) -> void:
+	if node is Label3D:
+		label_nodes.append(node)
+		return
+	for child in node.get_children():
+		_collect_label_nodes(child)
+
+
+func _add_building_label(text: String, wr: Rect2, height: float, _face := "S") -> void:	## High-visibility rooftop billboard label centered above the building.
 	if text.strip_edges() == "":
 		return
 	var centre := Vector3(wr.position.x + wr.size.x * 0.5, 0.0, wr.position.y + wr.size.y * 0.5)
@@ -1110,11 +1370,17 @@ func _build_specials() -> void:
 func _build_props() -> void:
 	var props: Dictionary = campus.get(KEY_PROPS, {})
 	var rng := LCG.new(int(props.get("seed", 5)))
-	_build_trees(int(props.get("trees", 150)), float(props.get("tree_pine_ratio", 0.26)), rng)
-	_build_bushes(int(props.get("bushes", 130)), rng)
-	_build_grass(int(props.get("grass_instances", 4200)), int(props.get("grass_chunks", 32)), rng)
-	_build_ground_cover(rng)
-	_build_cars(int(props.get("cars", 91)), rng)
+	var density: Dictionary = props.get("mobile_density", {}) if low_poly else {}
+	var trees := int(round(float(props.get("trees", 150)) * float(density.get("trees", 1.0))))
+	var bushes := int(round(float(props.get("bushes", 130)) * float(density.get("bushes", 1.0))))
+	var grass := int(round(float(props.get("grass_instances", 4200)) * float(density.get("grass", 1.0))))
+	var cars := int(round(float(props.get("cars", 91)) * float(density.get("cars", 1.0))))
+	_grass_radius = float(props.get("grass_radius", 85.0)) * float(density.get("grass_radius", 1.0))
+	_build_trees(trees, float(props.get("tree_pine_ratio", 0.26)), rng)
+	_build_bushes(bushes, rng)
+	_build_grass(grass, int(props.get("grass_chunks", 32)), rng)
+	_build_ground_cover(rng, float(density.get("ground_cover", 1.0)))
+	_build_cars(cars, rng)
 
 
 func _scatter_ok(px: float, py: float, margin: float, allow_lawn := false) -> bool:
@@ -1198,7 +1464,8 @@ func _flush_groups(groups: Dictionary, prefix: String, cast_shadow: bool) -> voi
 
 
 func _pick_species(kind: String, rng: LCG) -> String:
-	var list: Array = PropsFactory.SPECIES.get(kind, ["CommonTree_1"])
+	var table: Dictionary = PropsFactory.LOW_POLY_SPECIES if low_poly else PropsFactory.SPECIES
+	var list: Array = table.get(kind, PropsFactory.SPECIES.get(kind, ["CommonTree_1"]))
 	return str(list[rng.randi_range(0, list.size() - 1)])
 
 
@@ -1308,7 +1575,7 @@ func _build_trees(total: int, pine_ratio: float, rng: LCG) -> void:
 			rng.randf() * TAU, _leaf_tint(kind, rng))
 		occupied.append(Vector2(px, py))
 		placed += 1
-	_flush_groups(groups, "Tree", true)
+	_flush_groups(groups, "Tree", not low_poly)
 
 
 func _build_bushes(count: int, rng: LCG) -> void:
@@ -1336,7 +1603,10 @@ func _build_bushes(count: int, rng: LCG) -> void:
 	_flush_groups(groups, "Bush", false)
 
 
-## 4200 animated grass tufts in 32 distance-culled chunks.
+## Low-poly grass: 3 crossed alpha cards (6 triangles each) in 32
+## distance-culled chunks.  The cards use the SimpleGrassTextured tuft art, so
+## they read as fuller grass than the old 155-622 triangle glTF tufts at a
+## fraction of the geometry.
 func _build_grass(total: int, chunks: int, rng: LCG) -> void:
 	chunks = maxi(chunks, 1)
 	var cols := 8
@@ -1349,10 +1619,10 @@ func _build_grass(total: int, chunks: int, rng: LCG) -> void:
 	var cw := (x1 - x0) / float(cols)
 	var ch := (y1 - y0) / float(rows)
 	var per := maxi(1, int(round(float(total) / float(cols * rows))))
-	var species_list: Array = PropsFactory.SPECIES["grass"]
+	var card_mesh := PropsFactory.grass_card_mesh()
+	var card_mat := PropsFactory.grass_card_material()
 	for cy in rows:
 		for cx in cols:
-			var species: String = species_list[(cx + cy * cols) % species_list.size()]
 			var transforms: Array = []
 			var colors: Array = []
 			var attempts := 0
@@ -1362,34 +1632,34 @@ func _build_grass(total: int, chunks: int, rng: LCG) -> void:
 				var py := y0 + (float(cy) + rng.randf()) * ch
 				if not _scatter_ok(px, py, 0.4, true):
 					continue
-				var h := rng.randf_range(0.45, 0.82) if species.contains("Tall") \
-					else rng.randf_range(0.30, 0.62)
-				var scale := h / maxf(PropsFactory.model_height(species), 0.1)
+				var h := rng.randf_range(0.38, 0.74)
+				var scale := h
 				var yaw := rng.randf() * TAU
 				var world := _plan_pos(px, py)
-				transforms.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(scale, scale, scale)), world))
-				colors.append(Color(0.84, 1.0, 0.80).lerp(Color(1.0, 1.0, 0.86), rng.randf()))
+				transforms.append(Transform3D(
+					Basis(Vector3.UP, yaw).scaled(Vector3(scale * 1.18, scale, scale * 1.18)),
+					world))
+				colors.append(Color(0.82, 1.0, 0.78).lerp(Color(1.0, 1.0, 0.84), rng.randf()))
 			var mmi := PropsFactory.batch("Grass_%02d_%02d" % [cx, cy],
-				PropsFactory.part_mesh(species, 0), transforms,
-				PropsFactory.part_material(species, 0), colors, false)
+				card_mesh, transforms, card_mat, colors, false)
 			if mmi:
 				add_child(mmi)
 				var centre := _plan_pos(x0 + (float(cx) + 0.5) * cw, y0 + (float(cy) + 0.5) * ch)
 				_grass_chunks.append({"node": mmi, "center": centre})
 
 
-func _build_ground_cover(rng: LCG) -> void:
-	_scatter_simple("Clover_1", 320, rng, 0.6, 0.07, 0.15, [], false, 0.7)
-	_scatter_simple("Clover_2", 220, rng, 0.6, 0.07, 0.15, [], false, 0.6)
+func _build_ground_cover(rng: LCG, density := 1.0) -> void:
+	_scatter_simple("Clover_1", int(round(320.0 * density)), rng, 0.6, 0.07, 0.15, [], false, 0.7)
+	_scatter_simple("Clover_2", int(round(220.0 * density)), rng, 0.6, 0.07, 0.15, [], false, 0.6)
 	var flower_tints := [Color(1.0, 0.92, 0.9), Color(1.0, 0.98, 0.85), Color(0.92, 0.94, 1.0)]
-	_scatter_simple("Flower_3_Group", 70, rng, 1.2, 0.35, 0.65, flower_tints, false, 2.0)
-	_scatter_simple("Flower_4_Group", 60, rng, 1.2, 0.35, 0.65, flower_tints, false, 2.0)
-	_scatter_simple("Fern_1", 55, rng, 1.2, 0.35, 0.70, [], false, 1.8)
-	_scatter_simple("Rock_Medium_1", 12, rng, 2.4, 0.55, 1.30, [], true, 4.5)
-	_scatter_simple("Rock_Medium_2", 10, rng, 2.4, 0.50, 1.10, [], true, 4.5)
-	_scatter_simple("Rock_Medium_3", 8, rng, 2.4, 0.45, 0.95, [], true, 4.5)
-	_scatter_simple("Pebble_Round_1", 26, rng, 1.4, 0.15, 0.35, [], false, 1.2)
-	_scatter_simple("Pebble_Square_1", 20, rng, 1.4, 0.15, 0.35, [], false, 1.2)
+	_scatter_simple("Flower_3_Group", int(round(70.0 * density)), rng, 1.2, 0.35, 0.65, flower_tints, false, 2.0)
+	_scatter_simple("Flower_4_Group", int(round(60.0 * density)), rng, 1.2, 0.35, 0.65, flower_tints, false, 2.0)
+	_scatter_simple("Fern_1", int(round(55.0 * density)), rng, 1.2, 0.35, 0.70, [], false, 1.8)
+	_scatter_simple("Rock_Medium_1", int(round(12.0 * density)), rng, 2.4, 0.55, 1.30, [], true, 4.5)
+	_scatter_simple("Rock_Medium_2", int(round(10.0 * density)), rng, 2.4, 0.50, 1.10, [], true, 4.5)
+	_scatter_simple("Rock_Medium_3", int(round(8.0 * density)), rng, 2.4, 0.45, 0.95, [], true, 4.5)
+	_scatter_simple("Pebble_Round_1", int(round(26.0 * density)), rng, 1.4, 0.15, 0.35, [], false, 1.2)
+	_scatter_simple("Pebble_Square_1", int(round(20.0 * density)), rng, 1.4, 0.15, 0.35, [], false, 1.2)
 
 
 func _scatter_simple(model_id: String, count: int, rng: LCG, margin: float,

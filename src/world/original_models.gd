@@ -142,3 +142,104 @@ static func place(model_id: String, parent: Node, centre: Vector3, target_size: 
 	if box.size.y > 0.001:
 		inst.position.y = target_y - box.position.y * scale
 	return inst
+
+
+## Merges a static model whose surfaces are all flat, opaque colours into one
+## vertex-coloured mesh.  The original Admin model is 218 separate meshes and
+## the Workshop 138; this turns each into a single draw call without changing
+## the silhouette or the palette.  Textured / transparent models are left alone.
+static func merge_flat_model(root: Node3D) -> bool:
+	if root is MeshInstance3D:
+		return false
+	var meshes: Array = []
+	_collect_meshes(root, meshes)
+	var surfaces := 0
+	for raw in meshes:
+		var mesh: Mesh = (raw as MeshInstance3D).mesh
+		if mesh:
+			surfaces += mesh.get_surface_count()
+	if surfaces <= 1:
+		return false
+	# Validate first: a texture, transparency or a shader material means this
+	# model must keep its original materials and draw calls.
+	for raw in meshes:
+		var mi := raw as MeshInstance3D
+		for s in mi.mesh.get_surface_count():
+			var mat: Material = mi.get_active_material(s)
+			if mat == null:
+				continue
+			if not (mat is StandardMaterial3D):
+				return false
+			var sm := mat as StandardMaterial3D
+			if sm.albedo_texture != null:
+				return false
+			if sm.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+				return false
+	var verts := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var indices := PackedInt32Array()
+	var inv := root.global_transform.affine_inverse()
+	for raw in meshes:
+		var mi := raw as MeshInstance3D
+		var xf := inv * mi.global_transform
+		var normal_basis := xf.basis.inverse().transposed()
+		for s in mi.mesh.get_surface_count():
+			var arrays: Array = mi.mesh.surface_get_arrays(s)
+			var sv: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var sn: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+			var si: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			var mat: Material = mi.get_active_material(s)
+			var col := Color.WHITE
+			if mat is StandardMaterial3D:
+				col = (mat as StandardMaterial3D).albedo_color
+			var base := verts.size()
+			for i in sv.size():
+				verts.append(xf * sv[i])
+				if i < sn.size():
+					normals.append((normal_basis * sn[i]).normalized())
+				else:
+					normals.append(Vector3.UP)
+				colors.append(col)
+			if si.size() > 0:
+				for idx in si:
+					indices.append(base + idx)
+			else:
+				for i in range(0, sv.size() - 2, 3):
+					indices.append(base + i)
+					indices.append(base + i + 1)
+					indices.append(base + i + 2)
+	if verts.is_empty():
+		return false
+	var arrays_out: Array = []
+	arrays_out.resize(Mesh.ARRAY_MAX)
+	arrays_out[Mesh.ARRAY_VERTEX] = verts
+	arrays_out[Mesh.ARRAY_NORMAL] = normals
+	arrays_out[Mesh.ARRAY_COLOR] = colors
+	arrays_out[Mesh.ARRAY_INDEX] = indices
+	var merged := ArrayMesh.new()
+	merged.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays_out)
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.albedo_color = Color.WHITE
+	material.roughness = 0.9
+	material.metallic = 0.0
+	material.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	var merged_mi := MeshInstance3D.new()
+	merged_mi.name = "MergedModel"
+	merged_mi.mesh = merged
+	merged_mi.material_override = material
+	for raw in meshes:
+		var mi := raw as Node
+		if mi.get_parent():
+			mi.get_parent().remove_child(mi)
+		mi.free()
+	root.add_child(merged_mi)
+	return true
+
+
+static func _collect_meshes(node: Node, out: Array) -> void:
+	if node is MeshInstance3D and (node as MeshInstance3D).mesh != null:
+		out.append(node)
+	for child in node.get_children():
+		_collect_meshes(child, out)

@@ -19,6 +19,8 @@ extends SceneTree
 ##   --bench-seconds=N      measurement window in seconds        (default 10)
 ##   --bench-warmup=N       warm-up seconds before measuring    (default 3)
 ##   --bench-profile=P      desktop | mobile                    (default "desktop")
+##   --bench-adaptive       let the quality ladder settle instead of pinning it
+##   --bench-scale=S        pin the 3D render scale (desktop or mobile)
 ##   --bench-target=FPS     fps target used for the verdict     (default 60)
 ##   --bench-orbit          orbit the camera over the campus while measuring
 ##   --bench-vsync=on|off   default "off" (uncapped) when a window exists
@@ -61,6 +63,9 @@ var _verbose := false
 var _out_path := ""
 var _scene_path := MAIN_SCENE
 var _spot := ""
+var _hide: Array = []
+var _scale_override := 0.0
+var _adaptive := false
 
 var _frame_ms: Array = []
 var _draw_max := 0
@@ -128,18 +133,26 @@ func _parse_args() -> void:
 				_scene_path = value
 			"spot":
 				_spot = value
+			"hide":
+				_hide = value.split(",", false)
+			"scale":
+				_scale_override = clampf(value.to_float(), 0.25, 1.0)
+			"adaptive":
+				_adaptive = true
 
 
 # ------------------------------------------------------------------ run
 
 func _run() -> void:
 	print("=== ANITS BENCH ===")
-	_setup_scene()
+	await _setup_scene()
 	await process_frame
 	await process_frame
 	_apply_profile()
 	await process_frame
 	_apply_spot()
+	await process_frame
+	_apply_hide()
 	await process_frame
 	if _orbit:
 		_free_camera()
@@ -167,6 +180,14 @@ func _setup_scene() -> void:
 		return
 	_main = packed.instantiate()
 	root.add_child(_main)
+	# The ladder is frozen by default so a run is repeatable; --bench-adaptive
+	# leaves it running through the warm-up so the settled quality is measured.
+	if not _adaptive:
+		_main.set("bench_mode", true)
+	# Autoloads are added to the tree before this script runs, but their _ready
+	# (and CampusDB's JSON load) may still be pending.  Wait one frame so the
+	# bench measures the real campus, not an empty one.
+	await process_frame
 	if _mode != "game":
 		_notes.append("mode=%s" % _mode)
 		return
@@ -175,6 +196,9 @@ func _setup_scene() -> void:
 	if not _autoload_present("CampusDB"):
 		_notes.append("autoloads_missing")
 		return
+	var db := root.get_node_or_null("CampusDB")
+	if db != null and not bool(db.get("loaded")):
+		db.call("load_all")
 	if not _main.has_method("_on_start"):
 		_notes.append("no_start_method")
 		return
@@ -192,33 +216,24 @@ func _autoload_present(singleton_name: String) -> bool:
 
 
 ## Applies the phone quality profile when asked, so the desktop can be used
-## as an A/B rig.  On a real phone src/main.gd already did this in _ready().
+## as an A/B rig.  On a real phone src/main.gd already did this in _ready();
+## with `--low-poly` it also builds the phone sky and shadow profile, so this
+## only pins the internal resolution for repeatable runs.
 func _apply_profile() -> void:
 	var mobile := _profile == "mobile" or OS.has_feature("mobile")
 	if not mobile:
+		# The adaptive ladder settles here on the dev laptop; pin it so the
+		# settled desktop look can be measured repeatably.
+		if _scale_override > 0.0:
+			root.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+			root.scaling_3d_scale = _scale_override
+			Engine.max_fps = 60
 		return
 	root.msaa_3d = Viewport.MSAA_DISABLED
 	root.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 	root.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-	root.scaling_3d_scale = 0.78
+	root.scaling_3d_scale = _scale_override if _scale_override > 0.0 else 0.60
 	Engine.max_fps = 60
-	# Sky3D: no cumulus layer, shorter fog, no glow, cheaper shadows.
-	var sky3d := root.find_child("WorldEnvironment", true, false)
-	if sky3d == null:
-		return
-	var dome = sky3d.get("sky")
-	if dome != null:
-		dome.set("cumulus_coverage", 0.0)
-		dome.set("cirrus_coverage", 0.28)
-		dome.set("fog_end", 520.0)
-	var env = sky3d.get("environment")
-	if env != null:
-		env.set("glow_enabled", false)
-	var sun = sky3d.get("sun")
-	if sun != null:
-		sun.set("directional_shadow_mode", DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS)
-		sun.set("directional_shadow_max_distance", 92.0)
-		sun.set("shadow_blur", 0.8)
 
 
 ## Moves the player to a known worst-case viewpoint before the measurement.
@@ -248,6 +263,61 @@ func _apply_spot() -> void:
 	if player.has_method("snap_camera"):
 		player.call("snap_camera")
 	_notes.append("spot=%s(%d,%d)" % [key, int(plan.x), int(plan.y)])
+
+
+## Profiling aid: hides a subsystem so its cost can be isolated.
+func _apply_hide() -> void:
+	if _hide.is_empty():
+		return
+	for what in _hide:
+		match str(what):
+			"npcs":
+				for n in get_nodes_in_group("npcs"):
+					var node := n as Node3D
+					if node:
+						node.visible = false
+						node.set_process(false)
+						node.set_physics_process(false)
+			"labels":
+				for n in _main.find_children("*", "Label3D", true, false):
+					(n as Label3D).visible = false
+			"trees":
+				for n in _main.find_children("Tree*", "MultiMeshInstance3D", true, false):
+					(n as Node3D).visible = false
+			"grass":
+				for n in _main.find_children("Grass*", "MultiMeshInstance3D", true, false):
+					(n as Node3D).visible = false
+			"interiors":
+				for room_name in ["admin_room", "library_room", "classroom_room", "canteen_room"]:
+					var room: Node = _main.get(room_name)
+					if room:
+						(room as Node3D).visible = false
+			"shadows":
+				for n in _main.find_children("*", "DirectionalLight3D", true, false):
+					(n as DirectionalLight3D).shadow_enabled = false
+			"sky":
+				var we := _main.find_child("WorldEnvironment", true, false)
+				if we:
+					var env: Environment = we.get("environment")
+					if env:
+						env.background_mode = Environment.BG_COLOR
+						env.sky = null
+						env.glow_enabled = false
+						env.ssao_enabled = false
+						env.fog_enabled = false
+						env.volumetric_fog_enabled = false
+			"post":
+				var layer: Node = _main.get("_post_layer")
+				if layer:
+					(layer as CanvasLayer).visible = false
+			"hud":
+				var hud: Node = _main.get("hud")
+				if hud:
+					(hud as CanvasLayer).visible = false
+			"lights":
+				for n in _main.find_children("*", "Light3D", true, false):
+					(n as Light3D).visible = false
+	_notes.append("hide=" + ",".join(_hide))
 
 
 ## Stops the player rig from driving the camera, so the orbit owns it.
@@ -389,6 +459,8 @@ func _report() -> bool:
 	_kv("render_valid", str(render_valid))
 	_kv("window", "%dx%d" % [root.size.x, root.size.y])
 	_kv("scaling_3d", "%.2f" % root.scaling_3d_scale)
+	_kv("adaptive", "on" if _adaptive else "off")
+	_kv("quality_step", str(_main.get("_quality_step")) if _main else "-")
 	_kv("msaa_3d", str(root.msaa_3d))
 	_kv("warmup_s", "%.1f" % _warmup_seconds)
 	_kv("window_s", "%.1f" % _measure_seconds)

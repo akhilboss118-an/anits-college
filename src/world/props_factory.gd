@@ -33,6 +33,15 @@ const NATURE_DIR := "res://glTF/"
 const ROAD_TEXTURE := "res://addons/road-generator/resources/road_texture.png"
 const GRASS_CARD_TEXTURE := "res://addons/simplegrasstextured/textures/grassbushcc008.png"
 
+## Court texture layout: a 30 x 17 m plane with the 28 x 15 m court painted
+## inside it.  One texture keeps every line, key and arc in a single draw call.
+const COURT_TEX_W := 512
+const COURT_TEX_H := 290
+const COURT_TEX_X0 := -15.0
+const COURT_TEX_Z0 := -8.5
+const COURT_TEX_W_M := 30.0
+const COURT_TEX_H_M := 17.0
+
 ## Species names must match the glTF files in res://glTF.
 const SPECIES := {
 	"tree": ["CommonTree_1", "CommonTree_2", "CommonTree_3", "CommonTree_4", "CommonTree_5"],
@@ -48,6 +57,15 @@ const SPECIES := {
 	"rock": ["Rock_Medium_1", "Rock_Medium_2", "Rock_Medium_3"],
 	"pebble": ["Pebble_Round_1", "Pebble_Round_2", "Pebble_Square_1"],
 	"stepping_stone": ["RockPath_Round_Wide", "RockPath_Square_Wide"],
+}
+
+## Cheapest species for the mobile / GL-Compatibility pass.  The twisted and
+## dead trees are 9-10 k triangles each, so they stay desktop-only.
+const LOW_POLY_SPECIES := {
+	"tree": ["CommonTree_3", "CommonTree_5"],
+	"pine": ["Pine_4", "Pine_5"],
+	"bush": ["Bush_Common"],
+	"flower_bush": ["Bush_Common_Flowers"],
 }
 
 static var _models: Dictionary = {}
@@ -292,6 +310,144 @@ void fragment() {
 """
 	_foliage_shader = sh
 	return sh
+
+
+# ------------------------------------------------------------------ grass cards
+
+## Three crossed alpha cards (6 triangles) replace the 155-622 triangle glTF
+## grass tufts.  At 2-4 k instances this is the single biggest triangle cut in
+## the scene while actually looking denser than the old thin meshes.
+static func grass_card_mesh() -> Mesh:
+	if _meshes.has("grass_card"):
+		return _meshes["grass_card"]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in 3:
+		var yaw := float(i) * PI / 3.0
+		var right := Vector3(cos(yaw), 0.0, sin(yaw)) * 0.55
+		var bl := -right
+		var br := right
+		var tl := -right + Vector3.UP
+		var tr := right + Vector3.UP
+		# Normal points up so the card catches the same light as the lawn
+		# instead of turning black when the camera looks at its back face.
+		var n := Vector3.UP
+		st.set_normal(n); st.set_uv(Vector2(0.0, 1.0)); st.add_vertex(bl)
+		st.set_normal(n); st.set_uv(Vector2(1.0, 1.0)); st.add_vertex(br)
+		st.set_normal(n); st.set_uv(Vector2(1.0, 0.0)); st.add_vertex(tr)
+		st.set_normal(n); st.set_uv(Vector2(0.0, 1.0)); st.add_vertex(bl)
+		st.set_normal(n); st.set_uv(Vector2(1.0, 0.0)); st.add_vertex(tr)
+		st.set_normal(n); st.set_uv(Vector2(0.0, 0.0)); st.add_vertex(tl)
+	var mesh := st.commit()
+	_meshes["grass_card"] = mesh
+	return mesh
+
+
+static func grass_card_material() -> ShaderMaterial:
+	if _materials.has("grass_card_mat"):
+		return _materials["grass_card_mat"]
+	var tex := load(GRASS_CARD_TEXTURE) as Texture2D
+	var sh := Shader.new()
+	sh.code = """
+shader_type spatial;
+render_mode cull_disabled, depth_draw_opaque, diffuse_burley, specular_disabled;
+
+uniform sampler2D albedo_tex : source_color, filter_linear, repeat_disable;
+uniform float alpha_cut = 0.35;
+uniform float wind_strength = 0.055;
+uniform float wind_speed = 1.45;
+
+varying float v_height;
+
+void vertex() {
+	float h = clamp(VERTEX.y, 0.0, 1.0);
+	v_height = h;
+	vec3 origin = MODEL_MATRIX[3].xyz;
+	float phase = origin.x * 0.31 + origin.z * 0.23;
+	float gust = sin(TIME * wind_speed + phase) * 0.72
+		+ sin(TIME * wind_speed * 0.41 + phase * 1.7) * 0.28;
+	float bend = pow(h, 1.35);
+	VERTEX.x += gust * wind_strength * bend;
+	VERTEX.z += cos(TIME * wind_speed * 0.83 + phase * 1.1) * wind_strength * 0.35 * bend;
+}
+
+void fragment() {
+	vec4 tex = texture(albedo_tex, UV);
+	if (tex.a < alpha_cut) {
+		discard;
+	}
+	vec3 col = tex.rgb * COLOR.rgb;
+	// Slightly darker roots, brighter tips: cheap depth without another pass.
+	col *= mix(0.74, 1.05, v_height);
+	ALBEDO = col;
+	ROUGHNESS = 1.0;
+	SPECULAR = 0.0;
+	BACKLIGHT = col * 0.35;
+}
+"""
+	var m := ShaderMaterial.new()
+	m.shader = sh
+	m.set_shader_parameter("albedo_tex", tex)
+	_materials["grass_card_mat"] = m
+	return m
+
+
+# ------------------------------------------------------------------ basketball net
+
+## A low-poly net for the campus hoops: ten cords and three rings as thin
+## triangles.  Both hoops share this one mesh, so the whole net costs two draw
+## calls and a few hundred triangles.
+static func hoop_net_mesh() -> Mesh:
+	if _meshes.has("hoop_net"):
+		return _meshes["hoop_net"]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var top_r := 0.225
+	var bottom_r := 0.135
+	var drop := 0.46
+	for i in 10:
+		var a := TAU * float(i) / 10.0
+		var b := a + 0.24
+		var top := Vector3(cos(a) * top_r, 0.0, sin(a) * top_r)
+		var bottom := Vector3(cos(b) * bottom_r, -drop, sin(b) * bottom_r)
+		var side := (bottom - top).normalized().cross(Vector3.UP).normalized() * 0.009
+		var n := Vector3(cos(a), 0.0, sin(a))
+		_net_quad(st, top - side, top + side, bottom + side, bottom - side, n)
+	for ring_i in 3:
+		var t := float(ring_i + 1) / 4.0
+		var y := -drop * t
+		var radius := lerpf(top_r, bottom_r, t)
+		var segments := 18
+		for i in segments:
+			var a0 := TAU * float(i) / float(segments)
+			var a1 := TAU * float(i + 1) / float(segments)
+			var inner0 := Vector3(cos(a0) * (radius - 0.008), y, sin(a0) * (radius - 0.008))
+			var outer0 := Vector3(cos(a0) * (radius + 0.008), y, sin(a0) * (radius + 0.008))
+			var inner1 := Vector3(cos(a1) * (radius - 0.008), y, sin(a1) * (radius - 0.008))
+			var outer1 := Vector3(cos(a1) * (radius + 0.008), y, sin(a1) * (radius + 0.008))
+			_net_quad(st, inner0, outer0, outer1, inner1, Vector3.UP)
+	var mesh := st.commit()
+	_meshes["hoop_net"] = mesh
+	return mesh
+
+
+static func _net_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3,
+		n: Vector3) -> void:
+	for v in [a, b, c, a, c, d]:
+		st.set_normal(n)
+		st.add_vertex(v)
+
+
+static func hoop_net_material() -> StandardMaterial3D:
+	if _materials.has("hoop_net"):
+		return _materials["hoop_net"]
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color.html("#f4f2e6")
+	m.roughness = 1.0
+	m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_materials["hoop_net"] = m
+	return m
 
 
 # ------------------------------------------------------------------ props
@@ -741,6 +897,158 @@ static func court_material() -> StandardMaterial3D:
 	m.uv1_scale = Vector3(0.35, 0.35, 0.35)
 	_materials["court"] = m
 	return m
+
+
+## The whole 28 x 15 m court painted into one 512 x 290 texture: wood planks,
+## keys, free-throw circles, three-point arcs and the centre logo.  Replacing
+## the old handful of thin boxes with this one texture removes the z-fighting
+## and gives the court real painted markings.
+static func court_texture() -> Texture2D:
+	if _textures.has("court_texture"):
+		return _textures["court_texture"]
+	var img := Image.create(COURT_TEX_W, COURT_TEX_H, false, Image.FORMAT_RGB8)
+	img.fill(Color.html("#b96f43"))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 90210
+	# Plank rows with subtle tonal variation and dark seams.
+	for row in 34:
+		var y0 := int(float(row) / 34.0 * float(COURT_TEX_H))
+		var y1 := int(float(row + 1) / 34.0 * float(COURT_TEX_H))
+		var tone := Color.html("#b96f43").lerp(Color.html("#c98252"), rng.randf())
+		img.fill_rect(Rect2i(0, y0, COURT_TEX_W, maxi(1, y1 - y0)), tone)
+		_img_hline(img, y0, 0, COURT_TEX_W, Color.html("#9a5734"), 1)
+	# Grain: short low-contrast strokes, deterministic so the court never
+	# changes between launches.
+	for i in 360:
+		var gx := rng.randf_range(0.0, float(COURT_TEX_W))
+		var gy := rng.randf_range(0.0, float(COURT_TEX_H))
+		var length := rng.randf_range(6.0, 26.0)
+		var tone := Color.html("#a86139") if rng.randf() < 0.5 else Color.html("#d08a55")
+		_img_line(img, Vector2(gx, gy), Vector2(gx + length, gy + rng.randf_range(-2.0, 2.0)), tone, 1)
+
+	var line := Color.html("#f4e6cc")
+	var key_blue := Color.html("#1d4a66")
+	# Painted keys at both ends.
+	_img_rect(img, -14.0, -2.45, -8.2, 2.45, key_blue)
+	_img_rect(img, 8.2, -2.45, 14.0, 2.45, key_blue)
+	# Boundary, centre line and centre circle.
+	_img_rect_outline(img, -14.0, -7.5, 14.0, 7.5, line, 2)
+	_img_line(img, _court_px(0.0, -7.5), _court_px(0.0, 7.5), line, 2)
+	_img_ring(img, 0.0, 0.0, 1.8, line, 2)
+	# Free-throw circles sit on the top of each key.
+	_img_ring(img, -8.2, 0.0, 1.8, line, 2)
+	_img_ring(img, 8.2, 0.0, 1.8, line, 2)
+	_img_rect_outline(img, -14.0, -2.45, -8.2, 2.45, line, 2)
+	_img_rect_outline(img, 8.2, -2.45, 14.0, 2.45, line, 2)
+	# Three-point arcs (radius 6.75 m around each hoop) with the short
+	# straight corner segments.
+	for side in [-1.0, 1.0]:
+		var s := float(side)
+		var cx := s * 12.425
+		var half := 1.393
+		var a0 := -half if s < 0.0 else PI - half
+		var a1 := half if s < 0.0 else PI + half
+		_img_ring(img, cx, 0.0, 6.75, line, 2, a0, a1)
+		var sx0 := -14.0 if s < 0.0 else 11.0
+		var sx1 := -11.0 if s < 0.0 else 14.0
+		_img_line(img, _court_px(sx0, -6.6), _court_px(sx1, -6.6), line, 2)
+		_img_line(img, _court_px(sx0, 6.6), _court_px(sx1, 6.6), line, 2)
+	# Centre-court logo: a simple navy disc with a red ring and a gold pip.
+	_img_disc(img, _court_px(0.0, 0.0), 18, Color.html("#1d4a66"))
+	_img_ring(img, 0.0, 0.0, 1.15, Color.html("#c23b3b"), 3)
+	_img_disc(img, _court_px(0.0, 0.0), 5, Color.html("#f2c14e"))
+	img.generate_mipmaps()
+	var tex := ImageTexture.create_from_image(img)
+	_textures["court_texture"] = tex
+	return tex
+
+
+static func court_texture_material() -> StandardMaterial3D:
+	if _materials.has("court_texture_mat"):
+		return _materials["court_texture_mat"]
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = court_texture()
+	m.roughness = 0.86
+	m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	_materials["court_texture_mat"] = m
+	return m
+
+
+static func _court_px(x: float, z: float) -> Vector2:
+	return Vector2(
+		(x - COURT_TEX_X0) / COURT_TEX_W_M * float(COURT_TEX_W),
+		(z - COURT_TEX_Z0) / COURT_TEX_H_M * float(COURT_TEX_H))
+
+
+static func _img_rect(img: Image, x0: float, z0: float, x1: float, z1: float, color: Color) -> void:
+	var a := _court_px(minf(x0, x1), minf(z0, z1))
+	var b := _court_px(maxf(x0, x1), maxf(z0, z1))
+	img.fill_rect(Rect2i(int(a.x), int(a.y), maxi(1, int(b.x - a.x)), maxi(1, int(b.y - a.y))), color)
+
+
+static func _img_rect_outline(img: Image, x0: float, z0: float, x1: float, z1: float,
+		color: Color, width: int) -> void:
+	_img_line(img, _court_px(x0, z0), _court_px(x1, z0), color, width)
+	_img_line(img, _court_px(x0, z1), _court_px(x1, z1), color, width)
+	_img_line(img, _court_px(x0, z0), _court_px(x0, z1), color, width)
+	_img_line(img, _court_px(x1, z0), _court_px(x1, z1), color, width)
+
+
+static func _img_hline(img: Image, y: int, x0: int, x1: int, color: Color, width: int) -> void:
+	if y < 0 or y >= img.get_height():
+		return
+	var a := maxi(0, x0)
+	var b := mini(img.get_width() - 1, x1)
+	for x in range(a, b + 1):
+		for dy in range(-width + 1, width):
+			var py := y + dy
+			if py >= 0 and py < img.get_height():
+				img.set_pixel(x, py, color)
+
+
+static func _img_line(img: Image, a: Vector2, b: Vector2, color: Color, width: int) -> void:
+	var steps := int(maxf(absf(b.x - a.x), absf(b.y - a.y)))
+	if steps <= 0:
+		_img_dot(img, a, width, color)
+		return
+	for i in steps + 1:
+		_img_dot(img, a.lerp(b, float(i) / float(steps)), width, color)
+
+
+static func _img_dot(img: Image, p: Vector2, width: int, color: Color) -> void:
+	var r := maxi(0, width - 1)
+	var cx := int(p.x)
+	var cy := int(p.y)
+	for dy in range(-r, r + 1):
+		for dx in range(-r, r + 1):
+			if dx * dx + dy * dy > r * r:
+				continue
+			var px := cx + dx
+			var py := cy + dy
+			if px >= 0 and px < img.get_width() and py >= 0 and py < img.get_height():
+				img.set_pixel(px, py, color)
+
+
+static func _img_disc(img: Image, p: Vector2, radius: int, color: Color) -> void:
+	var cx := int(p.x)
+	var cy := int(p.y)
+	for dy in range(-radius, radius + 1):
+		for dx in range(-radius, radius + 1):
+			if dx * dx + dy * dy > radius * radius:
+				continue
+			var px := cx + dx
+			var py := cy + dy
+			if px >= 0 and px < img.get_width() and py >= 0 and py < img.get_height():
+				img.set_pixel(px, py, color)
+
+
+static func _img_ring(img: Image, cx: float, cz: float, radius: float, color: Color,
+		width: int, a0: float = 0.0, a1: float = TAU) -> void:
+	var steps := 128
+	for i in steps + 1:
+		var a := lerpf(a0, a1, float(i) / float(steps))
+		_img_dot(img, _court_px(cx + cos(a) * radius, cz + sin(a) * radius), width, color)
 
 
 ## The NCC parade ground.

@@ -4,7 +4,8 @@ A third-person campus game rebuilt from the original **ANITS – First Day** web
 in **Godot 4.7.2**. Same campus, same models, same voices — now with the complete
 **10-day campaign**, four walk-in interiors, five minigames, a student bag, roads
 around the whole college, a photo main menu, a 5 × 2 level-select grid, a
-stride-matched walk cycle and an adaptive 60 fps quality ladder.
+stride-matched walk cycle and two adaptive quality profiles tuned for desktop and
+low-end mobile.
 
 **Play in the browser:** <https://akhilboss118-an.github.io/anits-college/>
 
@@ -17,15 +18,15 @@ stride-matched walk cycle and an adaptive 60 fps quality ladder.
 
 | Area | Content |
 | --- | --- |
-| Campus | 17 buildings, 12 streets, 6 wall runs, main gate + Back Gate, four walk-in interiors (Admin Office, Central Library, Room 204, Canteen), 150 trees, 130 bushes, 4,200 grass tufts, 91 parked cars, benches, lamps, vending machines |
+| Campus | 17 buildings, 12 streets, 6 wall runs, main gate + Back Gate, four walk-in interiors (Admin Office, Central Library, Room 204, Canteen), 150 trees, 130 bushes, 4,200 grass cards, 91 parked cars, benches, lamps, vending machines. Flat-colour imported buildings are merged into single meshes and the row blocks are MultiMesh batches; phones drop to 83 trees / 72 bushes / 1,680 grass cards / 50 cars |
 | People | 64 NPCs with name labels, routes and the original dialogue (62 animated rigs), plus the player (Mike / Amy) |
 | Story | All 10 days play from start to finish. Day 1 tutorial; fees, bank ATM and Room 204 on Day 3; library quiz, basketball, NCC drill and fest; lab-manual run; canteen challenge; final first-class quiz. Each day unlocks the next. |
-| Minigames | Basketball shootout, NCC cadence drill, samosa typing, fest dance battle, quiz engine, plus mash and command QTE variants — all with keyboard and touch input |
+| Minigames | Basketball shootout with mouse/touch aim and a THROW button (gravity arc, rim and backboard collisions, 7 s shot clock, 5 shots / 3 hits), NCC cadence drill, samosa typing, fest dance battle, quiz engine, plus mash and command QTE variants — all with keyboard and touch input |
 | Inventory | Student bag on `B` / touch **Bag**: ID card, stamped fee receipt, library card and signed lab manual; **SHOW ID** clears the gate check on every day |
 | Front end | Year select (2023–2025 uniforms), character select with live 3D previews, name entry, photo main menu, 10-card level grid, loading screen |
 | UI | Anchored HUD (mission, wallet, energy, minimap, prompts, subtitles, toasts), pause menu, touch layout with a virtual stick |
 | Audio | The web build's original voice clips; **no music** |
-| Modes | `--check` scripted tour, `--beauty` screenshot pass, `--touch-preview` phone layout, `--menu-shot` menu captures |
+| Modes | `--check` scripted tour, `--beauty` / `--beauty-low` screenshot passes, `--touch-preview` phone layout, `--menu-shot` menu captures, `--low-poly` phone profile on desktop |
 
 ## Controls
 
@@ -40,36 +41,51 @@ stride-matched walk cycle and an adaptive 60 fps quality ladder.
 | `E` | Talk / use / advance dialogue |
 | `G` | Salute |
 | `B` | Open the student bag (show ID during gate checks) |
+| Mouse move / drag | Aim the basketball shot |
+| Click / `Space` | Throw the basketball (or use the on-screen THROW button) |
 | `Esc` | Pause |
 
 ### Touch
 
 Left thumb stick to move, drag anywhere on the right to look, and the on-screen
 `E`, `G`, `RUN` and `BAG` buttons. The touch layer only appears on touch devices
-(or with `-- --touch-preview`).
+(or with `-- --touch-preview`), and only once a level has started — the menus and
+level grid stay clean. In the basketball shootout, drag to aim and tap the
+**THROW** button.
 
 ## Performance
 
-The frame rate is protected on every platform. MSAA is off, the 3D buffer starts
-at **0.88** on desktop and **0.78** on mobile, and if the game stays below
-**58 fps** for three seconds it steps the render scale down (desktop
-`0.88 → 0.78 → 0.68 → 0.60`, mobile `0.78 → 0.68 → 0.58 → 0.50`) and finally
-turns the sun shadow off.
+The frame rate is protected on every platform. MSAA is off, and the game ships
+two quality profiles:
+
+- **Desktop (Forward+)** starts at **0.88**. If the game stays below **58 fps**
+  for three seconds the ladder steps the 3D scale to **0.78 → 0.68 → 0.60**,
+  turns SSAO and volumetric fog off, switches to one shadow split and finally
+  turns the sun shadow off.
+- **Phone / web-touch / `--low-poly`** starts at **0.60**, replaces the Sky3D
+  atmosphere with a cheap procedural sky and depth fog, uses one 64 m shadow
+  split with no tree shadows, disables glow / SSAO / volumetric fog, and runs
+  the reduced-density low-poly prop set (83 trees, 72 bushes, 1,680 grass cards,
+  50 cars, 45 % ground cover). If needed it steps to **0.54 → 0.50 → 0.46** and
+  then drops the shadow.
 
 Measured on a Windows 11 laptop with an AMD Radeon integrated GPU (1080p,
-Forward+, D3D12):
+Forward+, D3D12), with `tests/bench.gd`:
 
-| Run | Settled scale | fps avg | Draw calls | Primitives | Verdict |
+| Run | Scale | fps avg | Frame p50 | Draw calls | Primitives |
 | --- | --- | --- | --- | --- | --- |
-| Spawn view, desktop start | 0.88 | 43.5 | 132 | 2.10 M | below target |
-| Spawn view, adaptive ladder (heat-soaked) | **0.60** | **40.3** | 132 | 1.43 M | conservative result |
-| Spawn view, cool session (not reproducible) | 0.60 | 59.4 | 132 | 1.43 M | reference only |
-| Phone profile | 0.78 | 52.6 | 132 | 2.16 M | below target |
+| Desktop full quality, spawn | 0.88 | 21.3 | 47.0 ms | 1,150 | 3.11 M |
+| Desktop full quality, court | 0.88 | 27.0 | 36.6 ms | 548 | 3.01 M |
+| Desktop after the ladder, spawn | 0.60 | 41.7 | 23.9 ms | 667 | 1.89 M |
+| Desktop after the ladder, court | 0.60 | 46.2 | 21.2 ms | 385 | 1.45 M |
+| Phone profile, eight hotspots | 0.60 | 61.6–89.0 | 11.1–15.7 ms | 324–984 | 0.78–1.68 M |
 
-The laptop throttles under sustained load: the 59.4 fps cool-session figure
-could not be reproduced once the machine was heat-soaked, so ~40 fps is the
-number to plan against on this integrated GPU. The full plan, budgets and knob
-list are in [`tests/PERFORMANCE.md`](tests/PERFORMANCE.md).
+The phone profile was measured at all eight bench viewpoints on the same laptop,
+standing in for a low-end handset: spawn 72.4, gate 73.3, admin 71.6, parade
+61.6, parking 89.0, court 82.5, canteen 86.1 and lawn 72.5 fps. The integrated
+desktop GPU does not hold 60 fps at full desktop quality, so the ladder takes it
+to 0.60; a discrete GPU stays at 0.88. The full plan, budgets and knob list are
+in [`tests/PERFORMANCE.md`](tests/PERFORMANCE.md).
 
 ## Build
 
@@ -91,7 +107,7 @@ New-Item -ItemType File -Path "$PROJ\build\web\.nojekyll" -Force
 The shipped APK is `build/ANITS-College-Simulation-v1.0.apk`
 (115.6 MB, `com.akhilboss.anits`, version 1.0, minSdk 24, targetSdk 36,
 arm64-v8a, signed with the debug keystore). Its SHA-256 is
-`1129492df8930a6a5463247fcf8dc11d4f1c1961ff24869c2baa1f63cf4c4f69`.
+`534afcf3d09c05b916ba87caf3d54002ccd84aceac957653e5e1790bfddaba6b`.
 
 ## Run and verify
 
@@ -99,7 +115,7 @@ arm64-v8a, signed with the debug keystore). Its SHA-256 is
 # play from source
 & $GODOT --path $PROJ
 
-# headless gate: import, 138 unit checks, smoke run, scripted tour
+# headless gate: import, 142 unit checks, smoke run, scripted tour
 powershell -ExecutionPolicy Bypass -File "$PROJ\verify.ps1"
 
 # benchmark
@@ -107,7 +123,7 @@ powershell -ExecutionPolicy Bypass -File "$PROJ\verify.ps1"
     --bench-profile=desktop --bench-spot=spawn --bench-warmup=14 --bench-seconds=5
 ```
 
-`verify.ps1` currently reports **138 checks, 0 failures**. The suite walks every
+`verify.ps1` currently reports **142 checks, 0 failures**. The suite walks every
 day's real mission step machine (gate ID checks, NPC talks, plan and world-space
 objectives, salutes, checks, minigame wins), drives each minigame's win path and
 checks the interiors, inventory and persistence. The tour walks the whole Day 1
@@ -123,8 +139,12 @@ route while writing the screenshots in `docs/screenshots/godot/`.
 | Central Library interior | Campus Canteen interior |
 | ![Room 204](docs/screenshots/godot/beauty/14_classroom_204.png) | ![Level select](docs/screenshots/godot/menu_levels.png) |
 | Room 204 interior | Level select — 5 × 2 Day cards |
+| ![Desktop court](docs/screenshots/godot/beauty/07_basketball.png) | ![Phone-profile court](docs/screenshots/godot/beauty_low/07_basketball.png) |
+| Desktop full quality — basketball court | Phone profile (`--low-poly`) — the same court |
 
-More in [`docs/screenshots/godot/`](docs/screenshots/godot/).
+More in [`docs/screenshots/godot/`](docs/screenshots/godot/), including the
+full low-poly set in
+[`docs/screenshots/godot/beauty_low/`](docs/screenshots/godot/beauty_low/).
 
 ## Project layout
 
@@ -156,7 +176,7 @@ More in [`docs/screenshots/godot/`](docs/screenshots/godot/).
 A 34-page technical report covering the port — architecture, campus and roads,
 character pipeline, walk cycle, uniforms by joining year, UI, touch controls,
 rendering, performance, testing and deployment — is at
-[`docs/ANITS_Godot_Report.pdf`](docs/ANITS_Godot_Report.pdf) (34.5 MB). The
+[`docs/ANITS_Godot_Report.pdf`](docs/ANITS_Godot_Report.pdf) (37.8 MB). The
 source is [`docs/report/report.html`](docs/report/report.html); rebuild it with
 `docs/report/build_report.ps1`.
 

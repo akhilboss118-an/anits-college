@@ -494,7 +494,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><th>Source build</th><td><code>ANITS-WEB GAME/</code> — <code>js/game.js</code> (1.85 MB), <code>js/levels.js</code>, <code>js/menu.js</code>, <code>js/voice.js</code>, <code>index.html</code>, <code>css/</code></td></tr>
         <tr><th>Target project</th><td><code>new-game-project/</code> — <code>project.godot</code>, main scene <code>res://src/main.tscn</code></td></tr>
         <tr><th>Engine / renderer</th><td>Godot 4.7.2 stable · Forward+ · D3D12 (Windows) · Jolt Physics</td></tr>
-        <tr><th>Report version</th><td>1.0 — issued 13 November 2026</td></tr>
+        <tr><th>Report version</th><td>1.0 — issued 15 November 2026</td></tr>
         <tr><th>Scope</th><td>Front end, campus world, the complete 10-day mission campaign, four walk-in interiors, five minigames, inventory, HUD, touch controls, voice and dialogue, test and build pipeline</td></tr>
         <tr><th>Status</th><td>Day&nbsp;1 plays end to end; Days&nbsp;2–10 are stubbed; no music track is implemented (see §10)</td></tr>
       </tbody>
@@ -540,8 +540,8 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td class="toc-n">07</td><td>Touch controls (mobile)</td><td class="toc-s">Small joystick, look-drag, context-only E / G / NEXT</td><td class="toc-p">23</td></tr>
         <tr><td class="toc-n">08</td><td>Admin Office interior</td><td class="toc-s">The sealed waiting room, the desk, the glass doors</td><td class="toc-p">24</td></tr>
         <tr><td class="toc-n">09</td><td>Characters, voice &amp; dialogue</td><td class="toc-s">64 NPCs, 632 recordings, per-character voice profiles, no music</td><td class="toc-p">25</td></tr>
-        <tr><td class="toc-n">10</td><td>Rendering &amp; the 60&nbsp;fps strategy</td><td class="toc-s">PC pipeline, mobile quality ladder, budget and levers</td><td class="toc-p">27</td></tr>
-        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">138-check headless suite, scripted tour, mobile preview</td><td class="toc-p">29</td></tr>
+        <tr><td class="toc-n">10</td><td>Rendering &amp; the 60&nbsp;fps strategy</td><td class="toc-s">Desktop pipeline, phone profile, eight measured hotspots</td><td class="toc-p">27</td></tr>
+        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">142-check headless suite, scripted tour, mobile preview</td><td class="toc-p">29</td></tr>
         <tr><td class="toc-n">12</td><td>Known limitations &amp; future work</td><td class="toc-s">Open items, in priority order</td><td class="toc-p">31</td></tr>
         <tr><td class="toc-n">13</td><td>Build &amp; deploy</td><td class="toc-s">Signed Android APK and the GitHub Pages web build</td><td class="toc-p">32</td></tr>
         <tr><td class="toc-n">A</td><td>Appendix A - Controls reference</td><td class="toc-s">Keyboard, mouse and touch bindings</td><td class="toc-p">33</td></tr>
@@ -569,7 +569,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 2 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 2 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 3 — EXEC SUMMARY I ============================ -->
@@ -592,7 +592,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <div class="kpi"><div class="k-v">17</div><div class="k-l">buildings generated from data</div></div>
       <div class="kpi"><div class="k-v">64</div><div class="k-l">NPCs with original lines</div></div>
       <div class="kpi"><div class="k-v">632</div><div class="k-l">voice recordings replayed</div></div>
-      <div class="kpi"><div class="k-v">138</div><div class="k-l">headless checks, 0 failures</div></div>
+      <div class="kpi"><div class="k-v">142</div><div class="k-l">headless checks, 0 failures</div></div>
     </div>
 
     <h2>The porting thesis</h2>
@@ -622,7 +622,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <li><strong>Audio.</strong> <code>src/autoload/voice_bank.gd</code> replays the original's own 632 MP3 recordings, matched to the line text through <code>clips.json</code> (340 lines) and <code>clips_girl.json</code> (310 lines), and reuses the original per-character pitch/rate profiles.</li>
     </ul>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 3 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 3 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 4 — EXEC SUMMARY II ============================ -->
@@ -640,7 +640,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Campus world</td><td>17 buildings, 12 street rectangles, 5 zones, 6 wall runs, hinged main gate + Back Gate arch, kerbs, footpaths, crosswalk, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts in 32 culled chunks, 14 lamps, 7 benches, 4 vending machines.</td><td><code>campus_data.json</code>, <code>campus_builder.gd</code></td></tr>
         <tr><td>Player</td><td>Walk 2.4&nbsp;m/s, run 5.6&nbsp;m/s, energy-drink boost ×1.3 for 30&nbsp;s, no jump, 1.3&nbsp;m step-up, third-person boom at 5.4&nbsp;m with building avoidance down to 1.2&nbsp;m.</td><td><code>src/actors/player.gd</code>, <code>campus_data.json</code></td></tr>
         <tr><td>NPCs</td><td>All 64 characters, original models, original routes, original dialogue; distance-culled skeletons at 95&nbsp;m. Floating name tags are removed — names appear only in dialogue.</td><td><code>src/actors/npc.gd</code>, <code>npcs.json</code></td></tr>
-        <tr><td>Mission</td><td>All 10 days playable: Day&nbsp;1 campus tour; fees and bank ATM; Room&nbsp;204; library quiz; basketball; NCC drill; lab-manual run; canteen typing challenge; fest dance; first-class quiz. Each day ends in a completion dialog that unlocks the next.</td><td><code>mission_runner.gd</code>, <code>level_complete_dialog.gd</code>, 138-check suite</td></tr>
+        <tr><td>Mission</td><td>All 10 days playable: Day&nbsp;1 campus tour; fees and bank ATM; Room&nbsp;204; library quiz; basketball; NCC drill; lab-manual run; canteen typing challenge; fest dance; first-class quiz. Each day ends in a completion dialog that unlocks the next.</td><td><code>mission_runner.gd</code>, <code>level_complete_dialog.gd</code>, 142-check suite</td></tr>
         <tr><td>New systems</td><td>Four walk-in interiors (Admin, Library, Room&nbsp;204, Canteen); seven minigame variants; student bag with ID, fee receipt, library card and lab manual; bank ATM, notice boards and water coolers.</td><td><code>*_interior.gd</code>, <code>minigame_overlay.gd</code>, <code>inventory_panel.gd</code></td></tr>
         <tr><td>HUD</td><td>Mission panel, wallet and energy, dialogue panel, subtitles, interaction prompt, minimap, toasts, keyboard legend — all anchor-based, so they survive any aspect ratio.</td><td><code>src/ui/hud.gd</code></td></tr>
         <tr><td>Touch</td><td>Small 84&nbsp;px virtual stick with auto-run at the outer ring, look-drag anywhere, and context-only <em>E</em> / <em>G</em> / <em>BAG</em> buttons that call the same resolvers as the keyboard.</td><td><code>src/ui/touch_controls.gd</code></td></tr>
@@ -670,7 +670,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       Android slots remain empty because no handset was available (§10).
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 4 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 4 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 5 — AT A GLANCE ============================ -->
@@ -725,7 +725,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Voice</td><td>632 MP3s, 340 + 310 clip entries</td><td>Master / Music / SFX / Voice / UI buses</td></tr>      </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 5 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 5 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 6 — PORTING METHOD ============================ -->
@@ -767,7 +767,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       headless test suite does (§11).
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 6 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 6 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 7 — PAIR: GATE ============================ -->
@@ -819,7 +819,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       the layout are the original's.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 7 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 7 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 8 — PAIR: ADMIN ============================ -->
@@ -876,7 +876,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       sealed inside the room — see §8.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 8 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 8 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 9 — PAIR: CSE / IT ============================ -->
@@ -935,7 +935,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       cadets 1.7/1.62/1.6&nbsp;m, Colonel Singh 1.85&nbsp;m, Remy 1.75&nbsp;m.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 9 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 9 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 10 — PAIR: CANTEEN / NCC ============================ -->
@@ -992,7 +992,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       expansion used, and the reason the headless suite can assert the count.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 10 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 10 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 11 — CAMPUS LAYOUT I ============================ -->
@@ -1035,7 +1035,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <thead><tr><th style="width:24%">Zone</th><th style="width:24%">Plan rect</th><th>Godot treatment</th></tr></thead>
       <tbody>
         <tr><td>Parade ground</td><td>[146, 357, 249, 427]</td><td>Sand-coloured slab with a raised paved footpath framing all four sides</td></tr>
-        <tr><td>Basketball court</td><td>[260, 251, 340, 314]</td><td>Court material with a 28 × 15 m painted court, two hoop posts, boards and torus rings</td></tr>
+        <tr><td>Basketball court</td><td>[260, 251, 340, 314]</td><td>Court material with a 28 × 15 m painted court, two hoop posts, boards and torus rings. The markings are one texture on a <code>PlaneMesh</code> with plain 0–1 UVs, so both keys, the free-throw circles, the three-point arcs and the centre logo are visible; a <code>BoxMesh</code> would show only the centre third because each face maps to one cell of a 3 × 2 atlas.</td></tr>
         <tr><td>Power supply</td><td>[250, 320, 365, 415]</td><td>Ground slab</td></tr>
         <tr><td>Central lawn</td><td>[95, 320, 150, 360]</td><td>Mown lawn slab; the only zone grass may be scattered into</td></tr>
         <tr><td>Parking</td><td>[64, 160, 98, 290]</td><td>Asphalt apron; 91 cars in three rows of 30 / 31 / 30</td></tr>
@@ -1070,7 +1070,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       what the headless suite asserts (§11.1).
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 11 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 11 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 12 — BUILDINGS ============================ -->
@@ -1130,7 +1130,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       side, which is also where the web game put its labels.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 12 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 12 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 13 — ROADS ============================ -->
@@ -1186,7 +1186,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       </figure>
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 13 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 13 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 14 — CAMPUS LANDMARKS ============================ -->
@@ -1251,7 +1251,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       same window grids and the same colours as the original.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 14 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 14 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 14 — DAY 1 TABLE ============================ -->
@@ -1291,7 +1291,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td><code>at</code></td><td>Enter a radius around a plan point</td><td><code>Mission.notify_position()</code> converts the plan point to world metres and advances inside the radius. Polled every frame from <code>main.gd::_process()</code>.</td></tr>
         <tr><td><code>salute</code></td><td>Press <em>G</em> near the colonel</td><td><code>Mission.notify_salute()</code> advances only for a salute-type step.</td></tr>
         <tr><td><code>chk</code></td><td>Predicate on run state</td><td>Day&nbsp;2 waits for the bank withdrawal (<code>notify_check("bank")</code>); Day&nbsp;8 waits for two vending-machine drinks (<code>notify_check("drinks")</code>).</td></tr>
-        <tr><td><code>mini</code></td><td>A minigame completion</td><td>Quiz, shootout, cadence drill, typing, mash, command QTE and dance, all in <code>src/ui/minigame_overlay.gd</code>; the overlay emits <code>minigame_completed</code> and the mission advances on a win.</td></tr>
+        <tr><td><code>mini</code></td><td>A minigame completion</td><td>Quiz, cadence drill, typing, mash, command QTE and dance in <code>src/ui/minigame_overlay.gd</code>, plus the basketball shootout in <code>src/ui/basketball_court.gd</code>. The shootout is aimed: the mouse (or a finger drag) sets the target, <em>click</em> or the <strong>THROW</strong> button releases the ball, and the ball follows a gravity arc with rim and backboard collisions. It is 5 shots, 3 hits, with a 7&nbsp;s shot clock; keyboard players aim with the arrow keys and throw with <code>Space</code>. The overlay emits <code>minigame_completed</code> and the mission advances on a win.</td></tr>
       </tbody>
     </table>
 
@@ -1305,7 +1305,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       unusable — he stands inside a company of 18 cadets.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 15 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 15 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 15 — DAY 1 GATE ============================ -->
@@ -1369,7 +1369,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       Leaving reverses it through <code>hall_return_pos</code>.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 16 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 16 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 16 — DAY 1 REST ============================ -->
@@ -1428,7 +1428,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       the level grid.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 17 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 17 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 17 — HUD ============================ -->
@@ -1468,7 +1468,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 18 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 18 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 18 — MAIN MENU ============================ -->
@@ -1530,7 +1530,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       4&nbsp;s replay afterwards, tap or SKIP after 0.7&nbsp;s, and no music.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 19 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 19 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 20 — UNIFORMS ============================ -->
@@ -1609,7 +1609,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       changes; mission state, NPC behaviour and collision are untouched.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 20 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 20 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 19 — LEVEL SELECT ============================ -->
@@ -1651,7 +1651,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and the quote and LEVELS badge sit where the web build puts them.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 21 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 21 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 21 — STARTUP ============================ -->
@@ -1710,7 +1710,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       5.6&nbsp;s and 8.6&nbsp;s.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 22 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 22 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 22 — TOUCH ============================ -->
@@ -1756,7 +1756,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and the mobile renderer path, not on a physical handset. See §11.3 and §12.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 23 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 23 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 20 — ADMIN OFFICE ============================ -->
@@ -1806,7 +1806,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       either side.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 24 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 24 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 21 — CHARACTERS ============================ -->
@@ -1885,7 +1885,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and leans the body 0.12&nbsp;rad into the direction of travel.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 25 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 25 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 22 — VOICE ============================ -->
@@ -1954,159 +1954,145 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       which is what happens if the player talks to an NPC out of mission order.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 26 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 26 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 23 — RENDERING PC ============================ -->
 <section class="page">
   <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">10 · Rendering &amp; the 60 fps strategy</span></div>
   <div class="body">
-    <h1 class="sec"><span class="sec-no">10 · Rendering &amp; the 60 fps strategy</span>The desktop pipeline</h1>
+    <h1 class="sec"><span class="sec-no">10 · Rendering &amp; the 60 fps strategy</span>Two profiles, one campus</h1>
 
     <p class="lead">
-      The target is <strong>60&nbsp;fps</strong>, capped in code by
-      <code>Engine.max_fps = 60</code>. This section describes the frame budget,
-      the levers, and what the Windows build measured on the integrated Radeon
-      laptop used for development. Android slots are empty because no handset
-      was available.
+      The target is <strong>60&nbsp;fps</strong>, capped by
+      <code>Engine.max_fps = 60</code>. Desktop Forward+ keeps the full campus
+      and Sky3D; phones, touch browsers and <code>--low-poly</code> switch to a
+      reduced-density, cheap-sky profile. This section records both on the
+      integrated Radeon laptop used for development.
     </p>
 
     <h3>Sky, sun and atmosphere</h3>
     <p>
-      The sky is the Sky3D addon (<code>res://addons/sky_3d/</code>), which owns
-      the sky dome, the atmosphere, the clouds, the sun, the moon and the time of
-      day. Time is frozen at <code>current_time = 9.35</code>, the web build's
-      morning look; the game clock is independent. The dome is tuned with <code>atm_sun_intensity 16</code>,
+      Desktop uses the Sky3D addon (<code>res://addons/sky_3d/</code>): the sky
+      dome, atmosphere, clouds, sun, moon and time of day. Time is frozen at
+      <code>current_time = 9.35</code>, the web build's morning look; the game
+      clock is independent. The dome is tuned with <code>atm_sun_intensity 16</code>,
       <code>atm_darkness 0.42</code>, <code>atm_thickness 0.62</code>,
       <code>fog_start 150</code>, <code>fog_end 760</code> and
-      <code>fog_falloff 2.1</code>. The environment uses ACES tone mapping
-      (exposure 0.88, white 1.6) with a subtle glow (0.14, bloom 0.03,
-      HDR 1.25).
+      <code>fog_falloff 2.1</code>, with ACES tone mapping (exposure 0.88, white
+      1.6) and a subtle glow. The phone profile replaces the raymarched dome with
+      a <code>ProceduralSkyMaterial</code> (top <code>#3f7fd6</code>, horizon
+      <code>#cfe4f5</code>) and depth fog; the sun is one directional light at
+      <code>(−33.8, 47.1, 0)</code> with a single orthogonal 64&nbsp;m shadow
+      split. That removes the most expensive full-screen pass on the devices
+      that can least afford it.
     </p>
 
     <h3>Draw-call strategy</h3>
     <table>
       <caption>How the campus stays cheap</caption>
-      <thead><tr><th style="width:30%">Category</th><th style="width:34%">Technique</th><th>Effect</th></tr></thead>
+      <thead><tr><th style="width:28%">Category</th><th style="width:38%">Technique</th><th>Effect</th></tr></thead>
       <tbody>
-        <tr><td>Trees, bushes, flowers</td><td>One <code>MultiMeshInstance3D</code> per species per surface</td><td>150 trees cost a handful of draw calls instead of 150 nodes</td></tr>
-        <tr><td>Grass</td><td>4&nbsp;200 tufts in 32 chunks, chunk hidden beyond 85&nbsp;m</td><td>Only nearby chunks are submitted</td></tr>
-        <tr><td>Kerbs</td><td>Two <code>MultiMesh</code>es, yellow and white</td><td>~1&nbsp;000 blocks in 2 draw calls</td></tr>
-        <tr><td>Road dashes, zebra crossing</td><td>One <code>MultiMesh</code> each</td><td>Markings are free</td></tr>
-        <tr><td>Cars</td><td>Three batches, three rows of 30 / 31 / 30</td><td>91 cars in 3 draw calls</td></tr>
-        <tr><td>Small-prop colliders</td><td>One shared <code>StaticBody3D</code> holding many box shapes</td><td>Dozens of physics bodies instead of hundreds</td></tr>
-        <tr><td>Small props</td><td><code>cast_shadow = OFF</code> on bushes, kerbs, kerb caps, ground</td><td>Fewer shadow draws</td></tr>
-        <tr><td>NPC skeletons</td><td>Deactivated beyond 95&nbsp;m; no floating name tags</td><td>64 characters, a fraction animated at any time</td></tr>
-        <tr><td>Minimap</td><td>Baked once into a <code>SubViewport</code> with roads, zones, footprints and labels; only the arrow and objective dot redraw</td><td>No per-frame image rebuild</td></tr>
+        <tr><td>Imported buildings</td><td>Admin (218 meshes), Workshop (138), Bank, Café and Auditorium merged into one vertex-coloured mesh each</td><td>5 draw calls instead of hundreds</td></tr>
+        <tr><td>Row blocks</td><td>CSE / IT / ECE / EEE / Chemical units drawn as two MultiMeshes per row</td><td>2 draw calls per row instead of 2 per unit</td></tr>
+        <tr><td>Trees, bushes, flowers</td><td>One <code>MultiMeshInstance3D</code> per species per surface; the phone profile uses four cheap species and no tree shadows</td><td>150 trees cost a handful of calls; the phone drops to 83</td></tr>
+        <tr><td>Grass</td><td>4,200 low-poly grass cards in 32 chunks; 1,680 on the phone; a chunk hides beyond 95&nbsp;m (62&nbsp;m on the phone)</td><td>Only nearby chunks are submitted</td></tr>
+        <tr><td>Interiors</td><td>Admin, Library, Room&nbsp;204 and Canteen hidden while the player is outside; only the active room is shown</td><td>Four room kits leave the frame</td></tr>
+        <tr><td>NPCs</td><td>Visual and <code>AnimationPlayer</code> deactivated beyond 95&nbsp;m (45&nbsp;m on the phone); no floating name tags</td><td>64 characters, a fraction animated at any time</td></tr>
+        <tr><td>Kerbs, markings, cars</td><td>Two kerb MultiMeshes, one marking MultiMesh, three car batches</td><td>~1,000 kerb blocks and 91 cars in a handful of calls</td></tr>
+        <tr><td>Small props</td><td><code>cast_shadow = OFF</code> on bushes, kerbs, caps and ground cover</td><td>Fewer shadow draws</td></tr>
+        <tr><td>Minimap</td><td>Baked once into a <code>SubViewport</code>; only the arrow and objective dot redraw</td><td>No per-frame image rebuild</td></tr>
       </tbody>
     </table>
 
-    <h3>Deterministic scatter</h3>
-    <p>
-      All vegetation uses the original's LCG (<code>src/util/lcg.gd</code>,
-      multiplier 16807), seeded from <code>props.seed = 5</code>, so every
-      machine and run produces the same campus and the same screenshots.
-    </p>
-
+    <h3>Frame-time budget and the measured result</h3>
     <table>
-      <caption>Frame-time budget and the measured desktop result</caption>
-      <thead><tr><th style="width:40%">Item</th><th class="num">Budget</th><th>Status</th></tr></thead>
+      <caption>AMD Radeon integrated laptop, 1080p, Forward+ / D3D12</caption>
+      <thead><tr><th style="width:42%">Run</th><th class="num">Budget</th><th>Measured</th></tr></thead>
       <tbody>
-        <tr><td>CPU — scripts, NPC updates, physics</td><td class="num">≤ 6 ms</td><td>Target</td></tr>
-        <tr><td>GPU — draw submission and shading</td><td class="num">≤ 8 ms</td><td>Target</td></tr>
-        <tr><td>Total frame</td><td class="num">≤ 16.6 ms</td><td>Target (60 fps)</td></tr>
-        <tr><td>Measured, desktop 1080p, spawn view</td><td class="num">24.8 ms</td><td><strong>40.3&nbsp;fps</strong> at 0.60 scale on the heat-soaked laptop; A/B against the pre-HUD build measured 39.7&nbsp;fps, so the new HUD is frame-neutral</td></tr>
+        <tr><td>CPU — scripts, NPC updates, physics</td><td class="num">≤ 6 ms</td><td>Not the bottleneck; the frame is GPU-bound</td></tr>
+        <tr><td>Desktop full quality, 0.88</td><td class="num">≤ 16.6 ms</td><td><strong>21.3 fps</strong> spawn / <strong>27.0 fps</strong> court (47.0 / 36.6 ms p50)</td></tr>
+        <tr><td>Desktop after the ladder, 0.60</td><td class="num">≤ 16.6 ms</td><td><strong>41.7 fps</strong> spawn / <strong>46.2 fps</strong> court (23.9 / 21.2 ms p50)</td></tr>
+        <tr><td>Phone profile, court, 0.60</td><td class="num">≤ 16.6 ms</td><td><strong>82.5 fps</strong> (11.9 ms p50)</td></tr>
       </tbody>
     </table>
     <p class="tbl-note">
-      Hardware: AMD Radeon integrated, Godot 4.7.2 Forward+, 1920 × 1080. The
-      run starts at 0.88 / 43.5&nbsp;fps, steps down and settles at 0.60; a
-      discrete GPU never leaves 0.88.
+      Full quality is GPU-bound on this integrated GPU; the ladder steps to
+      0.60, disables SSAO / volumetric fog and turns the sun shadow off. A
+      discrete GPU holds 0.88. If it still drops, cut post effects first, then
+      the shadow split, then resolution. All eight phone hotspots are measured
+      on the next page.
     </p>
-    <div class="note">
-      <span class="note-l">Order of attack if the frame rate drops</span>
-      Lower <code>scaling_3d_scale</code> first; then the grass and NPC
-      animation distances; then shadow distance and splits; glow last.
-    </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 27 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 27 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 24 — RENDERING MOBILE ============================ -->
 <section class="page">
   <div class="run-head"><span class="rh-l">ANITS College Simulation · Godot 4 Port</span><span class="rh-r">10 · Rendering &amp; the 60 fps strategy</span></div>
   <div class="body">
-    <h1 class="sec"><span class="sec-no">10 · Rendering &amp; the 60 fps strategy</span>The Android quality ladder</h1>
+    <h1 class="sec"><span class="sec-no">10 · Rendering &amp; the 60 fps strategy</span>The phone profile</h1>
 
     <p class="lead">
-      The mobile path is detected at start-up with
-      <code>OS.has_feature("mobile")</code> and is applied in
-      <code>main.gd::_apply_mobile_quality()</code> and
-      <code>_build_environment()</code>.
+      The phone path is selected at start-up by
+      <code>OS.has_feature("mobile")</code>, by touch input in a web build, or
+      explicitly with <code>--low-poly</code>. It starts at <strong>0.60</strong>
+      and combines the cheap sky, one 64&nbsp;m shadow split, low-poly props and
+      no post effects. The pair below is the same court under both profiles.
     </p>
 
+    <div class="pair">
+      <figure>
+        <img src="../screenshots/godot/beauty/07_basketball.png" alt="Desktop full quality: the basketball court with the Sky3D atmosphere, full-density trees and 0.88 render scale.">
+        <figcaption><b>Figure 10.1 (desktop).</b> Full density, Sky3D atmosphere, 0.88.</figcaption>
+      </figure>
+      <figure>
+        <img src="../screenshots/godot/beauty_low/07_basketball.png" alt="Phone profile: the same basketball court with low-poly props, a procedural sky and 0.60 render scale.">
+        <figcaption><b>Figure 10.2 (phone).</b> 83 trees, 1,680 grass cards, cheap sky, 0.60.</figcaption>
+      </figure>
+    </div>
+
     <table>
-      <caption>Mobile vs. desktop rendering settings</caption>
-      <thead><tr><th style="width:28%">Setting</th><th style="width:26%">Desktop</th><th>Android / iOS</th></tr></thead>
+      <caption>Phone profile vs. desktop full quality</caption>
+      <thead><tr><th style="width:28%">Setting</th><th style="width:34%">Desktop</th><th>Phone profile</th></tr></thead>
       <tbody>
-        <tr><td>3D resolution scale</td><td><strong>0.88</strong>, bilinear (adaptive)</td><td><strong>0.78</strong>, bilinear (adaptive)</td></tr>
-        <tr><td>MSAA (3D)</td><td>Disabled</td><td>Disabled</td></tr>
-        <tr><td>Screen-space AA</td><td>Disabled</td><td>Disabled</td></tr>
-        <tr><td>Directional shadow</td><td>2 parallel splits, max distance 112 m, blur 0.9</td><td>2 parallel splits, max distance 92 m, blur 0.8</td></tr>
-        <tr><td>Adaptive step-down</td><td>0.78 → 0.68 → 0.60, shadow off</td><td>0.68 → 0.58 → 0.50, shadow off</td></tr>
-        <tr><td>Shadow map size</td><td>2048</td><td>1024</td></tr>
-        <tr><td>Cumulus clouds</td><td>Coverage 0.36</td><td>Disabled (coverage 0)</td></tr>
-        <tr><td>Cirrus clouds</td><td>Coverage 0.36</td><td>Coverage 0.28</td></tr>
-        <tr><td>Fog end distance</td><td>760 m</td><td>520 m</td></tr>
-        <tr><td>Glow</td><td>On, intensity 0.14</td><td>Disabled</td></tr>
-        <tr><td>Texture compression</td><td>—</td><td>ETC2 / ASTC enabled at import</td></tr>
-        <tr><td>Frame cap</td><td>60 fps</td><td>60 fps</td></tr>
+        <tr><td>3D resolution scale</td><td>0.88 (ladder 0.78 / 0.68 / 0.60)</td><td><strong>0.60</strong> (ladder 0.54 / 0.50 / 0.46)</td></tr>
+        <tr><td>Sky</td><td>Sky3D atmosphere, clouds, sun, moon</td><td><code>ProceduralSkyMaterial</code> + depth fog</td></tr>
+        <tr><td>Directional shadow</td><td>2 splits, 128 m, 2048 map</td><td>1 orthogonal split, 64 m, 1024 map</td></tr>
+        <tr><td>Tree shadows</td><td>Yes</td><td>No</td></tr>
+        <tr><td>Post effects</td><td>Glow, SSAO, volumetric fog</td><td>All off</td></tr>
+        <tr><td>Vegetation</td><td>150 trees, 130 bushes, 4,200 grass cards</td><td>83 trees, 72 bushes, 1,680 grass cards</td></tr>
+        <tr><td>Cars / ground cover</td><td>91 cars, 100 % cover</td><td>50 cars, 45 % cover</td></tr>
+        <tr><td>NPC / label cull</td><td>95 m / 62 m</td><td>45 m / 45 m</td></tr>
+        <tr><td>Interiors</td><td>Hidden while outside</td><td>Hidden while outside</td></tr>
       </tbody>
     </table>
 
-    <h3>What the mobile path costs</h3>
-    <ul>
-      <li>Rendering at 78&nbsp;% of the screen and upscaling bilinearly — the most significant single saving, and the least noticeable at arm's length on a phone.</li>
-      <li>If the frame rate still drops below 58&nbsp;fps for three seconds, the scale steps down (68, 58, 50&nbsp;%) and finally the sun shadow is turned off, so the game degrades instead of stuttering.</li>
-      <li>Halving the shadow map and distance removes most of the shadow-pass cost on tile-based mobile GPUs.</li>
-      <li>Disabling the cumulus layer removes the most expensive part of Sky3D; the cirrus layer stays so the sky is not empty.</li>
-      <li>A shorter fog end dissolves the horizon earlier, rasterising less campus.</li>
-    </ul>
-
-    <p>
-      The same adaptive ladder runs on desktop. On the integrated Radeon laptop
-      used for the Windows build, a heat-soaked session settled at 0.60 with
-      <strong>40.3&nbsp;fps</strong> (24.8&nbsp;ms) in the spawn view. An A/B run
-      against the pre-HUD build measured 39.7&nbsp;fps — within noise, so the
-      new mission, wallet and minimap widgets cost nothing measurable. An
-      earlier, cool-machine session recorded 59.4&nbsp;fps at the same scale;
-      that figure is not reproducible once the laptop is heat-soaked, so this
-      report treats ~40&nbsp;fps as the conservative desktop result. The phone
-      profile measured 52.6&nbsp;fps at 0.78, so the phone ladder keeps its
-      extra steps.
-    </p>
-
     <table>
-      <caption>Android measurement slots</caption>
-      <thead><tr><th style="width:40%">Scenario</th><th class="num">Target</th><th>Measured</th></tr></thead>
+      <caption>Eight hotspots, phone profile at 0.60, same laptop</caption>
+      <thead><tr><th style="width:36%">Spot</th><th class="num">fps avg</th><th class="num">Frame p50</th><th class="num">Draw calls</th><th class="num">Primitives</th></tr></thead>
       <tbody>
-        <tr><td>Mid-range phone, 1080×2400, Day 1 route</td><td class="num">60 fps</td><td class="num"><!-- BENCH: --></td></tr>
-        <tr><td>Mid-range phone, parade ground (densest view)</td><td class="num">60 fps</td><td class="num"><!-- BENCH: --></td></tr>
-        <tr><td>Low-end phone, central campus</td><td class="num">≥ 30 fps</td><td class="num"><!-- BENCH: --></td></tr>
-        <tr><td>Peak memory, 20 minutes of play</td><td class="num">≤ 400 MB</td><td class="num"><!-- BENCH: --></td></tr>
+        <tr><td>Spawn / main gate road</td><td class="num">72.4</td><td class="num">13.7 ms</td><td class="num">710</td><td class="num">1.27 M</td></tr>
+        <tr><td>Main gate</td><td class="num">73.3</td><td class="num">13.5 ms</td><td class="num">585</td><td class="num">1.52 M</td></tr>
+        <tr><td>Admin Block</td><td class="num">71.6</td><td class="num">13.6 ms</td><td class="num">570</td><td class="num">1.48 M</td></tr>
+        <tr><td>Parade ground</td><td class="num">61.6</td><td class="num">15.7 ms</td><td class="num">984</td><td class="num">1.68 M</td></tr>
+        <tr><td>Parking apron</td><td class="num">89.0</td><td class="num">11.1 ms</td><td class="num">326</td><td class="num">0.95 M</td></tr>
+        <tr><td>Basketball court</td><td class="num">82.5</td><td class="num">11.9 ms</td><td class="num">431</td><td class="num">0.94 M</td></tr>
+        <tr><td>Canteen</td><td class="num">86.1</td><td class="num">11.5 ms</td><td class="num">324</td><td class="num">0.78 M</td></tr>
+        <tr><td>Central lawn</td><td class="num">72.5</td><td class="num">13.5 ms</td><td class="num">510</td><td class="num">1.57 M</td></tr>
+        <tr class="tot"><td>Range</td><td class="num">61.6–89.0</td><td class="num">11.1–15.7 ms</td><td class="num">324–984</td><td class="num">0.78–1.68 M</td></tr>
       </tbody>
     </table>
 
     <div class="note warn">
-      <span class="note-l">Why these cells are empty</span>
-      No Android device was available in the environment where this report was
-      written. Filling these cells requires a device run, not a desktop
-      simulation, so the values are left as explicit placeholders rather than
-      estimates. The mobile renderer path and the touch-preview path were both
-      exercised (§11) and pass, but they are not a performance measurement.
+      <span class="note-l">Measured on a laptop, not a handset</span>
+      No Android device was available. These numbers use the same code path as
+      the APK (<code>--low-poly</code> on the dev laptop), so they validate the
+      profile and the budget, not a specific phone's thermals. The device slots
+      remain a hardware follow-up.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 28 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 28 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 25 — TESTING ============================ -->
@@ -2126,8 +2112,8 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
   --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
   --script res://tests/run_tests.gd</pre>
     <p>
-      The suite is <strong>138 checks</strong> across nine groups. The recorded
-      result is <strong>138 checks, 0 failures</strong>. The original data
+      The suite is <strong>142 checks</strong> across ten groups. The recorded
+      result is <strong>142 checks, 0 failures</strong>. The original data
       checks remain; the new groups walk every day's real mission state machine,
       drive each minigame's win path, and cover the interiors, the bag and
       item persistence.
@@ -2144,8 +2130,9 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
         <tr><td>Mission runner</td><td class="num">37</td><td>All 10 day tables: step types, NPC ids, world-space objectives, ID gating, minigame steps and completion</td></tr>
         <tr><td>Campaign walk</td><td class="num">20</td><td>Every day completes its real step machine; talking to the guard never satisfies the ID check</td></tr>
         <tr><td>Minigame win paths</td><td class="num">6</td><td>Quiz, typing, drill, dance, mash and command QTE reach their win state</td></tr>
+        <tr><td>Basketball shooting</td><td class="num">4</td><td>An aimed shot follows its gravity arc to the rim; five aimed shots win the shootout; Day&nbsp;5 carries a 5-shot / 3-hit step with a 7&nbsp;s clock</td></tr>
         <tr><td>New systems</td><td class="num">9</td><td>Three interiors instantiate; minigame, bag and day-complete overlays exist; item grants; lore lines</td></tr>
-        <tr class="tot"><td>Total</td><td class="num">138</td><td>Recorded result: 0 failures</td></tr>
+        <tr class="tot"><td>Total</td><td class="num">142</td><td>Recorded result: 0 failures</td></tr>
       </tbody>
     </table>
     <div class="note">
@@ -2157,7 +2144,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       stops before its last step.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 29 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 29 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 26 — TESTING II ============================ -->
@@ -2203,7 +2190,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     <table>
       <thead><tr><th style="width:26%">Check</th><th style="width:34%">How</th><th>What it covers</th></tr></thead>
       <tbody>
-        <tr><td>Mobile renderer path</td><td>Build with the mobile feature tags set so <code>_mobile_gpu</code> is true</td><td>0.78 resolution scale, MSAA off, 2 shadow splits at 92 m, cumulus disabled, fog end 520 m, glow off</td></tr>
+        <tr><td>Mobile renderer path</td><td>Build with the mobile feature tags set so <code>_mobile_gpu</code> is true, or launch with <code>-- --low-poly</code></td><td>0.60 resolution scale, cheap procedural sky, MSAA off, one orthogonal 64 m shadow split, no tree shadows, low-poly prop density, glow / SSAO / volumetric fog off</td></tr>
         <tr><td>Touch preview</td><td>Launch with <code>-- --touch-preview</code></td><td>The phone HUD layout, the small on-screen stick, context-only E / G / BAG / NEXT buttons, the prompt without key art, the minimap relocation</td></tr>
       </tbody>
     </table>
@@ -2225,7 +2212,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       are used as the side-by-side pairs in §3.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 30 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 30 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 27 — LIMITATIONS ============================ -->
@@ -2239,7 +2226,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <thead><tr><th style="width:6%">#</th><th style="width:26%">Limitation</th><th style="width:34%">Impact</th><th>Status</th></tr></thead>
       <tbody>
         <tr><td class="num">1</td><td>No physical-device validation</td><td>Touch latency, thermal behaviour and OEM GPU differences are unverified</td><td>Substituted by the mobile-renderer and touch-preview passes (§11.3)</td></tr>
-        <tr><td class="num">2</td><td>No Android frame-rate data</td><td>Desktop is measured; no phone or iPhone was benchmarked</td><td>Desktop settles at 0.60 / 40.3&nbsp;fps (§10); the Android slots remain empty</td></tr>
+        <tr><td class="num">2</td><td>No Android frame-rate data</td><td>Desktop is measured; no phone or iPhone was benchmarked</td><td>Desktop settles at 0.60 / 41.7–46.2&nbsp;fps (§10); the phone profile measures 61.6–89.0&nbsp;fps on the dev laptop, but a physical handset is still unmeasured</td></tr>
         <tr><td class="num">3</td><td>Props are CC0 substitutes</td><td>Trees, bushes, grass, rocks and the road texture come from the Quaternius, Road Generator and SimpleGrassTextured packs, not from the original</td><td>Intentional — see Appendix B</td></tr>
         <tr><td class="num">4</td><td>Facial animation is disabled</td><td>The Mixamo facial morph meshes render as white shapes in Godot, so eyes, brows and mouth are hidden</td><td>Deliberate; the body animations are intact</td></tr>
         <tr><td class="num">5</td><td>Two characters are static meshes</td><td>Laksmi and the gate guard have no skeleton, so they do not play the walk or salute clips</td><td>They stand at their posts; the other 62 NPCs animate</td></tr>
@@ -2251,7 +2238,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
 
     <h2>Future work, in order</h2>
     <ol>
-      <li><strong>Validate on real hardware</strong>: an Android handset and an iPhone, then fill the benchmark slots in §10 with device numbers.</li>
+      <li><strong>Validate on real hardware</strong>: an Android handset and an iPhone, then fill the physical-device slots in §10 with device numbers.</li>
       <li><strong>Add character variety</strong> — the largest optional visual gap. New student and staff meshes would replace repeated rigs without touching the mission code.</li>
       <li><strong>Optional art pass</strong>: interior kits, vehicles and parade props, in that order, using the same low-poly material language.</li>
       <li><strong>Separate walk and run clips</strong> per rig, plus idle variants, to remove the shared-cycle compromise.</li>
@@ -2259,7 +2246,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <li><strong>Cloud saves</strong> on top of the existing per-day <code>user://</code> slots.</li>
     </ol>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 31 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 31 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 28 — BUILD ============================ -->
@@ -2270,8 +2257,8 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
 
     <div class="note ok">
       <span class="note-l">Both shipped artefacts are built</span>
-      The release is complete: a signed <strong>111.5&nbsp;MB Android APK</strong>
-      attached to the <code>v1.0</code> GitHub release, and a <strong>128&nbsp;MB
+      The release is complete: a signed <strong>115.6&nbsp;MB Android APK</strong>
+      attached to the <code>v1.0</code> GitHub release, and a <strong>138&nbsp;MB
       web export</strong> published from the <code>gh-pages</code> branch at
       <code>akhilboss118-an.github.io/anits-college/</code>. Both presets are
       committed in <code>export_presets.cfg</code>.
@@ -2289,7 +2276,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
         <tr><td>Package / version</td><td><code>com.akhilboss.anits</code>, 1.0 (code 1)</td></tr>
         <tr><td>ABI / SDK</td><td>arm64-v8a; minSdk 24, targetSdk 36</td></tr>
         <tr><td>Signing</td><td>APK signature schemes v2 and v3 (debug keystore)</td></tr>
-        <tr><td>Size / download</td><td>111.5&nbsp;MB; <code>releases/download/v1.0/ANITS-College-Simulation-v1.0.apk</code></td></tr>
+        <tr><td>Size / download</td><td>115.6&nbsp;MB (121,200,868 bytes); <code>releases/download/v1.0/ANITS-College-Simulation-v1.0.apk</code></td></tr>
       </tbody>
     </table>
 
@@ -2303,7 +2290,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
     <table>
       <thead><tr><th style="width:30%">Setting</th><th>Value</th></tr></thead>
       <tbody>
-        <tr><td>Export files</td><td><code>index.html</code>, <code>index.js</code>, <code>index.wasm</code> (39.5&nbsp;MB), <code>index.pck</code> (94.4&nbsp;MB)</td></tr>
+        <tr><td>Export files</td><td><code>index.html</code>, <code>index.js</code>, <code>index.wasm</code> (39.5&nbsp;MB), <code>index.pck</code> (98.6&nbsp;MB)</td></tr>
         <tr><td>Runtime</td><td>Godot 4.7.2, OpenGL ES 3.0 / WebGL 2.0, single-threaded</td></tr>
         <tr><td>Hosting</td><td><code>gh-pages</code> branch root; <code>main</code> keeps source only</td></tr>
         <tr><td>Live URL</td><td><code>https://akhilboss118-an.github.io/anits-college/</code></td></tr>
@@ -2312,7 +2299,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
 
     <p>
       Pages serves the PCK and WASM compressed (about 85.3&nbsp;MB and
-      10.2&nbsp;MB on the wire) and sets <code>application/wasm</code> itself.
+      9.6&nbsp;MB on the wire) and sets <code>application/wasm</code> itself.
       The branch is force-pushed from a temporary repository because the
       available token has <code>repo</code> scope only, so an Actions workflow
       cannot be committed; the full recipe is in
@@ -2321,14 +2308,14 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
 
     <h3>13.3 — Running from source</h3>
     <p>
-      <code>verify.ps1</code> runs the import, the 138-check suite, a 300-frame
+      <code>verify.ps1</code> runs the import, the 142-check suite, a 300-frame
       smoke run and the scripted tour in one command; the benchmark is separate
       (§10). The live build was also booted in a headless Chromium at 1280×720
       and reached the year-select screen, which confirms the deployed PCK and
       WASM load together.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 32 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 32 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 29 — APPENDIX A ============================ -->
@@ -2345,6 +2332,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td><code>Shift</code></td><td>Run</td><td>5.6 m/s instead of 2.4 m/s</td></tr>
         <tr><td><code>Q</code> / <code>Z</code></td><td>Turn the camera</td><td>1.8 rad/s keyboard rotation</td></tr>
         <tr><td>Left-drag</td><td>Look</td><td>Yaw sensitivity 0.006, pitch 0.004; pitch clamped to 0.05–1.1 rad</td></tr>
+        <tr><td>Mouse move / drag</td><td>Aim the basketball shot</td><td>Moves the aim marker; click or <code>Space</code> (or the THROW button) releases the ball</td></tr>
         <tr><td><code>E</code></td><td>Talk / use / skip a line</td><td>One resolver: dialogue, vending machine, bank, Admin Office door, skip</td></tr>
         <tr><td><code>G</code></td><td>Salute</td><td>Also advances the Day&nbsp;1 salute step and makes the cadet company answer</td></tr>
         <tr><td><code>B</code></td><td>Student bag</td><td>Opens the bag; SHOW ID satisfies the gate check on every day</td></tr>
@@ -2359,6 +2347,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td>Left stick</td><td>Move</td><td>84 px radius, 0.14 dead zone; feeds the same move vector as WASD</td></tr>
         <tr><td>Outer ring</td><td>Run</td><td>Deflection ≥ 0.92 starts a run, ≤ 0.80 releases; the ring turns gold</td></tr>
         <tr><td>Drag (right area)</td><td>Look</td><td>Relative delta × <code>Settings.look_sensitivity</code> (0.3–2.5, default 1.0)</td></tr>
+        <tr><td>Drag on the court</td><td>Aim / throw</td><td>Drag to place the aim marker, then tap the <strong>THROW</strong> button; tapping the court also throws</td></tr>
         <tr><td>Tap</td><td>Skip a dialogue line</td><td>Under 16 px of travel</td></tr>
         <tr><td><em>E</em> button</td><td>Talk / use</td><td>Visible only when an NPC or machine is in range; same resolver and radii as the keyboard</td></tr>
         <tr><td><em>G</em> button</td><td>Salute</td><td>Visible only when the Colonel or a salute step is in range</td></tr>
@@ -2378,8 +2367,6 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td>Step-up height</td><td class="num">1.3 m</td><td><code>player.step_up</code></td></tr>
         <tr><td>Camera boom</td><td class="num">5.4 m</td><td><code>player.camera_distance</code></td></tr>
         <tr><td>Camera boom in dialogue</td><td class="num">3.2 m</td><td><code>player.camera_distance_dialogue</code></td></tr>
-        <tr><td>Camera boom in the office</td><td class="num">3.1 m</td><td>Overridden in <code>main.gd::_enter_office()</code></td></tr>
-        <tr><td>Minimum boom</td><td class="num">1.2 m</td><td><code>player.camera_min_distance</code></td></tr>
         <tr><td>NPC interaction radius</td><td class="num">3.8 m</td><td><code>player.interact_radius</code></td></tr>
         <tr><td>Machine / service radius</td><td class="num">3.4 m</td><td><code>player.machine_radius</code>, <code>service_radius</code></td></tr>
         <tr><td>Admin Office door radius</td><td class="num">2.8 m</td><td><code>player.office_door_radius</code></td></tr>
@@ -2387,7 +2374,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 33 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 33 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 30 — APPENDIX B/C ============================ -->
@@ -2433,12 +2420,12 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td><code>src/ui/touch_controls.gd</code></td><td>Small virtual stick, look drag, context-only E / G / BAG / NEXT buttons</td></tr>
         <tr><td><code>src/util/campus.gd</code>, <code>src/util/lcg.gd</code></td><td>Plan-pixel conversion; the 16807 generator</td></tr>
         <tr><td><code>src/data/*.json</code></td><td>Campus plan, the 64 NPCs, the economy tables</td></tr>
-        <tr><td><code>tests/run_tests.gd</code></td><td>The 138-check suite: data, campaign walk, minigame wins, interiors and inventory</td></tr>
+        <tr><td><code>tests/run_tests.gd</code></td><td>The 142-check suite: data, campaign walk, minigame wins, interiors and inventory</td></tr>
         <tr><td><code>docs/</code></td><td>Analysis, architecture, asset ledger and this report</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 13 Nov 2026</span><span class="rf-pg">Page 34 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 34 of 34</span></div>
 </section>
 
 </body>

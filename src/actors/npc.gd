@@ -11,7 +11,10 @@
 ## dialogue panel is the only place a name appears.
 
 ## Distance culling of the model itself (the web build uses 90 - 100 m).
+## Phones keep the crowd only close by: 64 animated skeletons are the single
+## biggest CPU cost of the campus on a low-end device.
 const VISUAL_FAR_DIST := 95.0
+const VISUAL_FAR_DIST_LOW := 45.0
 
 ## How often the camera is looked up again (it rarely changes).
 const CAMERA_REFRESH := 0.5
@@ -27,6 +30,8 @@ var route_index: int = 0
 var route_dir: int = 1
 var walk_speed: float = 1.2
 var base_facing: float = 0.0
+## Set by main.gd on the reduced-density phone/web profile.
+var low_poly: bool = false
 
 var _visual: CharacterVisual
 var _camera: Camera3D = null
@@ -148,7 +153,7 @@ func _process(delta: float) -> void:
 		return
 	var d := global_position.distance_to(cam.global_position)
 	# distance culling: the campus has 64 animated skeletons
-	_visual.set_active(d < VISUAL_FAR_DIST)
+	_visual.set_active(d < (VISUAL_FAR_DIST_LOW if low_poly else VISUAL_FAR_DIST))
 
 
 ## The camera hardly ever changes, so it is only looked up twice a second.

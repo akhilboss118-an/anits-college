@@ -27,6 +27,12 @@ var admin_office: AdminOffice
 var library_interior: LibraryInterior
 var classroom_interior: ClassroomInterior
 var canteen_interior: CanteenInterior
+## Room contents are hidden while the player is outside, so the four dressed
+## interiors (1326 meshes, 20 lights) cost nothing during normal play.
+var admin_room: Node3D
+var library_room: Node3D
+var classroom_room: Node3D
+var canteen_room: Node3D
 var minigame_overlay: MinigameOverlay
 var inventory_panel: InventoryPanel
 var level_complete_dialog: LevelCompleteDialog
@@ -52,6 +58,14 @@ var _intro_shot_mode: bool = false
 var _flow_shot_mode: bool = false
 var _touch_mode: bool = false
 var _mobile_gpu: bool = false
+## Phone-class rendering profile.  True on a real phone and for the
+## `--low-poly` benchmark, so the desktop bench measures the phone build.
+var _phone_profile: bool = false
+## Reduced-density props: phones, the web GL build and `--low-poly`.
+var _low_poly: bool = false
+## The Sky3D atmosphere shader is a full-screen raymarch; phones get a
+## procedural gradient sky instead (same palette, a fraction of the cost).
+var _cheap_sky: bool = false
 var _check_report: Array = []
 var _sun: DirectionalLight3D = null
 var _shadow_frame: int = 0
@@ -62,13 +76,26 @@ var _post_layer: CanvasLayer = null
 var _vignette: ColorRect = null
 var _ssao: bool = false
 var _env: Environment = null
+## Test hook: the benchmark freezes the adaptive quality ladder so every run
+## measures the same fixed quality level.
+var bench_mode: bool = false
 
 
 func _ready() -> void:
 	Engine.max_fps = 60
 	_mobile_gpu = OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios")
+	_renderer = RenderingServer.get_current_rendering_method()
+	# A phone browser reports neither `mobile` nor `android`, so touch input on
+	# the web build is the signal that the phone profile is needed there.
+	var touch_device := Settings.is_touch_mode() if Settings else false
+	_phone_profile = _mobile_gpu or (touch_device and OS.has_feature("web")) \
+		or OS.get_cmdline_user_args().has("--low-poly") \
+		or OS.get_cmdline_user_args().has("--beauty-low")
+	_low_poly = _phone_profile or _renderer == "gl_compatibility"
+	_cheap_sky = _phone_profile
 	_check_mode = OS.get_cmdline_user_args().has("--check")
-	_beauty_mode = OS.get_cmdline_user_args().has("--beauty")
+	_beauty_mode = OS.get_cmdline_user_args().has("--beauty") \
+		or OS.get_cmdline_user_args().has("--beauty-low")
 	_menu_shot_mode = OS.get_cmdline_user_args().has("--menu-shot")
 	_intro_shot_mode = OS.get_cmdline_user_args().has("--intro-shot")
 	_flow_shot_mode = OS.get_cmdline_user_args().has("--flow-shot")
@@ -104,12 +131,18 @@ func _apply_mobile_quality() -> void:
 	## do not exist.  There the edges are cleaned with 2x MSAA instead, and the
 	## cinematic look comes from the colour grade and the vignette pass, which
 	## work on every renderer.
-	_renderer = RenderingServer.get_current_rendering_method()
 	var viewport := get_viewport()
 	viewport.msaa_3d = Viewport.MSAA_DISABLED
 	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
 	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-	viewport.scaling_3d_scale = 0.78 if _mobile_gpu else 0.88
+	# Phones start at 60% internal resolution and the adaptive ladder can take
+	# them to 50%; the web build starts at 78% and desktops at 88%.
+	if _phone_profile:
+		viewport.scaling_3d_scale = 0.60
+	elif _renderer == "gl_compatibility":
+		viewport.scaling_3d_scale = 0.78
+	else:
+		viewport.scaling_3d_scale = 0.88
 	if _renderer == "forward_plus":
 		# Desktop / the signed APK on a Vulkan-capable phone.
 		viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
@@ -120,6 +153,9 @@ func _apply_mobile_quality() -> void:
 
 
 func _build_environment() -> void:
+	if _cheap_sky:
+		_build_low_poly_environment()
+		return
 	## Sky3D (downloaded asset) replaces the old procedural sky: it owns the
 	## sky dome, atmosphere, clouds, sun, moon and time of day. Time is frozen
 	## at the web build's morning look and only the visual side is used.
@@ -228,6 +264,73 @@ func _build_environment() -> void:
 			sun.directional_shadow_max_distance = 92.0
 			sun.shadow_blur = 0.9
 
+## Phone-class sky: the same warm morning palette as Sky3D, drawn by Godot's
+## procedural sky (a few triangles) instead of the raymarched cloud shader.
+## Depth fog replaces the screen-space atmospheric pass and gives the campus
+## the same sense of distance for almost nothing.
+func _build_low_poly_environment() -> void:
+	var sky_mat := ProceduralSkyMaterial.new()
+	sky_mat.sky_top_color = Color("#3f7fd6")
+	sky_mat.sky_horizon_color = Color("#cfe4f5")
+	sky_mat.sky_curve = 0.10
+	sky_mat.sky_energy_multiplier = 1.0
+	sky_mat.ground_bottom_color = Color("#22331c")
+	sky_mat.ground_horizon_color = Color("#9fb08c")
+	sky_mat.ground_curve = 0.08
+	sky_mat.ground_energy_multiplier = 0.55
+	sky_mat.sun_angle_max = 22.0
+	sky_mat.sun_curve = 0.12
+	sky_mat.use_debanding = false
+	var sky := Sky.new()
+	sky.sky_material = sky_mat
+	sky.radiance_size = Sky.RADIANCE_SIZE_32
+	sky.process_mode = Sky.PROCESS_MODE_REALTIME
+
+	var env := Environment.new()
+	env.background_mode = Environment.BG_SKY
+	env.sky = sky
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_sky_contribution = 0.55
+	env.ambient_light_energy = 0.95
+	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 0.96
+	env.tonemap_white = 1.50
+	env.adjustment_enabled = true
+	env.adjustment_brightness = 1.02
+	env.adjustment_contrast = 1.07
+	env.adjustment_saturation = 1.06
+	env.glow_enabled = false
+	env.ssao_enabled = false
+	env.volumetric_fog_enabled = false
+	env.fog_enabled = true
+	env.fog_light_color = Color("#c8dcef")
+	env.fog_light_energy = 0.62
+	env.fog_sun_scatter = 0.14
+	env.fog_density = 0.0022
+	env.fog_aerial_perspective = 0.35
+	env.fog_sky_affect = 0.12
+
+	var we := WorldEnvironment.new()
+	we.name = "WorldEnvironment"
+	we.environment = env
+	add_child(we)
+	_env = env
+
+	var sun := DirectionalLight3D.new()
+	sun.name = "Sun"
+	sun.rotation_degrees = Vector3(-33.8, 47.1, 0.0)
+	sun.light_color = Color(1.0, 0.9412, 0.8157)
+	sun.light_energy = 1.20
+	sun.shadow_enabled = true
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	sun.directional_shadow_max_distance = 64.0
+	sun.shadow_bias = 0.0010
+	sun.shadow_blur = 0.85
+	add_child(sun)
+	_sun = sun
+
+
 func _build_post_process() -> void:
 	## One cheap full-screen pass over the 3D image: a soft cinematic vignette
 	## and a gentle bottom-edge gradient that lifts the HUD and dialogue off the
@@ -265,7 +368,7 @@ void fragment() {
 }
 """
 	mat.shader = sh
-	if _mobile_gpu:
+	if _phone_profile:
 		mat.set_shader_parameter("edge_strength", 0.24)
 		mat.set_shader_parameter("bottom_strength", 0.15)
 	_vignette.material = mat
@@ -315,13 +418,16 @@ func _on_start(profile: Dictionary) -> void:
 	else:
 		if hud:
 			hud.visible = true
-		if _touch_mode and touch_controls:
-			touch_controls.visible = true
 		if player:
 			player.teleport_to_plan(122, 448)
 			player.input_enabled = true
 		current_interior = ""
 		in_office = false
+
+	# Gameplay starts here, whether this is a fresh campus build or a return
+	# from the main menu, so this is the one place the touch layer appears.
+	if _touch_mode and touch_controls:
+		touch_controls.visible = true
 
 	# The level grid starts any unlocked day; Day 1 is the tutorial.
 	GameState.current_day = clampi(int(profile.get("day", 1)), 1, GameState.MAX_DAYS)
@@ -386,6 +492,33 @@ func _start_next_day(next_day: int) -> void:
 		hud.toast("Day %d: %s" % [next_day, Mission.current().get("text", "")], 4.0)
 
 
+## Wraps everything an interior builds into one child node, so the room can be
+## hidden while the player is outside.  The exterior door is added afterwards
+## (build_hall_door / build_campus_door), so it stays visible on campus.
+func _wrap_interior_room(interior: Node3D, room_name: String) -> Node3D:
+	var room := Node3D.new()
+	room.name = room_name
+	interior.add_child(room)
+	for child in interior.get_children():
+		if child == room:
+			continue
+		interior.remove_child(child)
+		room.add_child(child)
+	room.visible = false
+	return room
+
+
+func _set_room_visible(room: Node3D, value: bool) -> void:
+	if room:
+		room.visible = value
+
+
+## Screenshot tours frame the interiors, so they need every room visible.
+func _show_all_interiors() -> void:
+	for room in [admin_room, library_room, classroom_room, canteen_room]:
+		_set_room_visible(room, true)
+
+
 func _build_campus() -> void:
 	world = Node3D.new()
 	world.name = "World"
@@ -393,11 +526,16 @@ func _build_campus() -> void:
 	campus = Node3D.new()
 	campus.set_script(CAMPUS_SCRIPT)
 	world.add_child(campus)
+	# Phones (and the GL-Compatibility web build) get the reduced-density,
+	# low-poly prop pass.  Desktop Forward+ keeps the full campus; `--low-poly`
+	# lets the bench measure the phone density on a desktop GPU.
+	campus.low_poly = _low_poly
 	campus.build(CampusDB.campus)
 	admin_office = ADMIN_OFFICE_SCRIPT.new()
 	admin_office.name = "AdminOffice"
 	world.add_child(admin_office)
 	admin_office.build()
+	admin_room = _wrap_interior_room(admin_office, "AdminRoom")
 	var admin_building: Dictionary = CampusDB.building_by_name("ADMIN BLOCK")
 	if not admin_building.is_empty():
 		var r: Array = admin_building.get("rect", [0, 0, 1, 1])
@@ -411,6 +549,7 @@ func _build_campus() -> void:
 	library_interior.name = "LibraryInterior"
 	world.add_child(library_interior)
 	library_interior.build()
+	library_room = _wrap_interior_room(library_interior, "LibraryRoom")
 	var lib_door_pos := Campus.map_to_world(Vector2(99.0, 175.0))
 	library_interior.build_campus_door(Vector3(lib_door_pos.x, 0.0, lib_door_pos.z), -PI * 0.5)
 
@@ -419,6 +558,7 @@ func _build_campus() -> void:
 	classroom_interior.name = "ClassroomInterior"
 	world.add_child(classroom_interior)
 	classroom_interior.build()
+	classroom_room = _wrap_interior_room(classroom_interior, "ClassroomRoom")
 	var room_door_pos := Campus.map_to_world(Vector2(155.0, 263.5))
 	classroom_interior.build_campus_door(Vector3(room_door_pos.x, 0.0, room_door_pos.z), PI * 0.5)
 
@@ -427,6 +567,7 @@ func _build_campus() -> void:
 	canteen_interior.name = "CanteenInterior"
 	world.add_child(canteen_interior)
 	canteen_interior.build()
+	canteen_room = _wrap_interior_room(canteen_interior, "CanteenRoom")
 	var can_door_pos := Campus.map_to_world(Vector2(286.0, 126.0))
 	canteen_interior.build_campus_door(Vector3(can_door_pos.x, 0.0, can_door_pos.z), -PI * 0.5)
 
@@ -628,6 +769,7 @@ func _build_npcs() -> void:
 	for data in CampusDB.npc_list:
 		var npc := Node3D.new()
 		npc.set_script(NPC_SCRIPT)
+		npc.set("low_poly", _low_poly)
 		world.add_child(npc)
 		npc.setup(data)
 		# Ms. Laksmi works inside the sealed Admin Office, behind her desk.
@@ -658,6 +800,9 @@ func _build_touch_controls() -> void:
 	touch_controls = CanvasLayer.new()
 	touch_controls.set_script(TOUCH_SCRIPT)
 	add_child(touch_controls)
+	# The stick and buttons belong to gameplay only; the main menu, year and
+	# character screens must not show them.  _on_start() reveals the layer.
+	touch_controls.visible = false
 	touch_controls.move_changed.connect(_on_touch_move)
 	touch_controls.look_dragged.connect(_on_touch_look)
 	touch_controls.run_changed.connect(_on_touch_run)
@@ -784,6 +929,7 @@ func _enter_office() -> void:
 		return
 	current_interior = "admin_office"
 	in_office = true
+	_set_room_visible(admin_room, true)
 	player.global_position = admin_office.entry_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = PI
@@ -802,6 +948,7 @@ func _exit_office() -> void:
 		return
 	current_interior = ""
 	in_office = false
+	_set_room_visible(admin_room, false)
 	player.global_position = admin_office.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = PI * 0.5
@@ -816,6 +963,7 @@ func _enter_library() -> void:
 		return
 	current_interior = "library"
 	in_office = false
+	_set_room_visible(library_room, true)
 	player.global_position = library_interior.entry_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = PI
@@ -832,6 +980,7 @@ func _exit_library() -> void:
 		return
 	current_interior = ""
 	in_office = false
+	_set_room_visible(library_room, false)
 	player.global_position = library_interior.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = -PI * 0.5
@@ -846,6 +995,7 @@ func _enter_classroom() -> void:
 		return
 	current_interior = "classroom"
 	in_office = false
+	_set_room_visible(classroom_room, true)
 	player.global_position = classroom_interior.entry_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = -PI * 0.5
@@ -862,6 +1012,7 @@ func _exit_classroom() -> void:
 		return
 	current_interior = ""
 	in_office = false
+	_set_room_visible(classroom_room, false)
 	player.global_position = classroom_interior.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = PI * 0.5
@@ -876,6 +1027,7 @@ func _enter_canteen() -> void:
 		return
 	current_interior = "canteen"
 	in_office = false
+	_set_room_visible(canteen_room, true)
 	player.global_position = canteen_interior.entry_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = PI
@@ -892,6 +1044,7 @@ func _exit_canteen() -> void:
 		return
 	current_interior = ""
 	in_office = false
+	_set_room_visible(canteen_room, false)
 	player.global_position = canteen_interior.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = -PI * 0.5
@@ -1017,6 +1170,8 @@ func _adaptive_quality(delta: float) -> void:
 	# frame time of a PNG readback, so the ladder is paused in those modes.
 	if _check_mode or _beauty_mode or _menu_shot_mode or _intro_shot_mode or _flow_shot_mode:
 		return
+	if bench_mode:
+		return
 	var fps := Engine.get_frames_per_second()
 	if fps <= 0:
 		return
@@ -1030,11 +1185,13 @@ func _adaptive_quality(delta: float) -> void:
 
 
 func _degrade_quality() -> void:
+	if _quality_step >= 3:
+		return
 	_quality_step += 1
 	var viewport := get_viewport()
 	match _quality_step:
 		1:
-			viewport.scaling_3d_scale = 0.68 if _mobile_gpu else 0.78
+			viewport.scaling_3d_scale = 0.54 if _phone_profile else 0.78
 			# Drop the most expensive post effects first, then shadows.
 			if _env:
 				if _ssao:
@@ -1043,13 +1200,13 @@ func _degrade_quality() -> void:
 				_env.volumetric_fog_enabled = false
 			viewport.msaa_3d = Viewport.MSAA_DISABLED
 		2:
-			viewport.scaling_3d_scale = 0.58 if _mobile_gpu else 0.68
+			viewport.scaling_3d_scale = 0.50 if _phone_profile else 0.68
 			if _sun:
 				_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-				_sun.directional_shadow_max_distance = 72.0
+				_sun.directional_shadow_max_distance = 56.0 if _phone_profile else 72.0
 				_sun.shadow_blur = 0.7
 		3:
-			viewport.scaling_3d_scale = 0.50 if _mobile_gpu else 0.60
+			viewport.scaling_3d_scale = 0.46 if _phone_profile else 0.60
 			if _sun:
 				_sun.shadow_enabled = false
 			print("  [quality] stepped down to level 3 (fps safety)")
@@ -1337,6 +1494,7 @@ func _run_check() -> void:
 	if menu:
 		menu.visible = false
 	_build_campus()
+	_show_all_interiors()
 	_build_player()
 	_build_npcs()
 	_build_hud()
@@ -1423,8 +1581,8 @@ func _run_check() -> void:
 	var env_res: Environment = env_node.environment if env_node else null
 	if env_res:
 		env_res.fog_enabled = false
-	if env_node:
-		env_node.set("fog_enabled", false)
+	if env_node is Sky3D:
+		(env_node as Sky3D).fog_enabled = false
 	player.camera.global_position = Vector3(0.0, 165.0, 210.0)
 	player.camera.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
 	await get_tree().process_frame
@@ -1613,11 +1771,13 @@ func _run_beauty() -> void:
 	if menu:
 		menu.visible = false
 	_build_campus()
+	_show_all_interiors()
 	_build_player()
 	_build_npcs()
 	_build_hud()
 	Mission.start_day(1)
-	var out_dir := "res://docs/screenshots/godot/beauty"
+	var out_dir := "res://docs/screenshots/godot/beauty_low" if _phone_profile \
+		else "res://docs/screenshots/godot/beauty"
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	player.set_physics_process(false)
 	hud.visible = false
@@ -1636,7 +1796,7 @@ func _run_beauty() -> void:
 	# 6 - the NCC ground with the open auditorium pavilion
 	await _beauty_shot("06_ncc_ground.png", Vector2(212, 424), 9.0, Vector2(236, 398), 5.0)
 	# 7 - the basketball court
-	await _beauty_shot("07_basketball.png", Vector2(300, 305), 11.0, Vector2(300, 282), 3.0)
+	await _beauty_shot("07_basketball.png", Vector2(300, 320), 16.0, Vector2(300, 282), 1.5)
 	# 8 - the temple and the central lawn
 	await _beauty_shot("08_temple.png", Vector2(96, 341), 7.0, Vector2(112, 340), 4.0)
 	# 9 - the back gate
@@ -1689,4 +1849,5 @@ func _beauty_shot(file_name: String, cam_plan: Vector2, cam_height: float,
 	cam.fov = 55.0
 	await get_tree().process_frame
 	await get_tree().process_frame
-	await _shot("res://docs/screenshots/godot/beauty/" + file_name)
+	var folder := "beauty_low" if _phone_profile else "beauty"
+	await _shot("res://docs/screenshots/godot/%s/%s" % [folder, file_name])

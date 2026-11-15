@@ -2,12 +2,14 @@ class_name MinigameOverlay
 extends CanvasLayer
 ## Interactive Minigame Overlay for ANITS College Simulation.
 ## Powers:
-##   - Basketball Shootout (timing bar oscillating, target in green zone)
+##   - Basketball Shootout (mouse/touch aimed shot with a real gravity arc)
 ##   - Parade Drill & Fest Dance (QTE arrow commands with countdown timer)
 ##   - Samosa Speed-Eating Challenge (rapid button mash with progress bar)
 ##   - Library & First Class Quizzes (4-option multiple choice cards)
 
 signal minigame_completed(won: bool)
+
+const COURT_SCRIPT := preload("res://src/ui/basketball_court.gd")
 
 var is_active: bool = false
 var _config: Dictionary = {}
@@ -28,16 +30,21 @@ var _timer: float = 0.0
 var _time_limit: float = 0.0
 var _anim_time: float = 0.0
 
-# shoot
+# shoot (mouse/touch aimed basketball)
 var _shoot_count: int = 0
 var _shoot_hits: int = 0
 var _shoot_shots_total: int = 5
 var _shoot_need: int = 3
-var _shoot_marker_pos: float = 0.0
-var _shoot_marker: ColorRect
-var _shoot_bar: Control
+var _shoot_clock: float = 7.0
+var _shoot_clock_max: float = 7.0
+var _shoot_reset_delay: float = 0.8
 var _shoot_dots: Array[ColorRect] = []
 var _shoot_busy: bool = false
+var _shoot_view: BasketballCourt
+var _shoot_throw_btn: Button
+var _shoot_score_lbl: Label
+var _shoot_clock_lbl: Label
+var _shoot_reset_token: int = 0
 
 # cmd (QTE)
 var _cmd_seq: Array = []
@@ -224,6 +231,9 @@ func start_minigame(cfg: Dictionary, on_finish: Callable = Callable()) -> void:
 	_result_box.visible = false
 	_content_box.visible = true
 	_clear_content()
+	var big := _kind == "shoot"
+	_panel.custom_minimum_size = Vector2(700, 610) if big else Vector2(560, 360)
+	_content_box.custom_minimum_size = Vector2(640, 430) if big else Vector2(480, 140)
 
 	match _kind:
 		"shoot":
@@ -254,11 +264,14 @@ func _process(delta: float) -> void:
 
 	match _kind:
 		"shoot":
-			if not _shoot_busy and _shoot_marker != null and _shoot_bar != null:
-				var t := _anim_time * (2.4 + float(_shoot_count) * 0.35)
-				_shoot_marker_pos = 0.5 + sin(t) * 0.46
-				var bar_w := _shoot_bar.size.x
-				_shoot_marker.position.x = _shoot_marker_pos * bar_w - 4.0
+			if _shoot_view != null and not _shoot_busy and not _result_box.visible:
+				if _shoot_clock > 0.0:
+					_shoot_clock -= delta
+					if _shoot_clock <= 0.0:
+						_shoot_clock = 0.0
+						_register_shot(false)
+					elif _shoot_clock_lbl != null:
+						_shoot_clock_lbl.text = "SHOT CLOCK  %.1fs" % _shoot_clock
 		"cmd":
 			if _cmd_time_left > 0.0 and _cmd_idx < _cmd_seq.size():
 				_cmd_time_left -= delta
@@ -313,8 +326,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match _kind:
 			"shoot":
-				if event.keycode == KEY_SPACE or event.keycode == KEY_ENTER:
-					_shoot_attempt()
+				if _shoot_view == null:
+					return
+				match event.keycode:
+					KEY_LEFT, KEY_A:
+						_shoot_view.set_aim(_shoot_view.aim + Vector2(-10.0, 0.0))
+					KEY_RIGHT, KEY_D:
+						_shoot_view.set_aim(_shoot_view.aim + Vector2(10.0, 0.0))
+					KEY_UP, KEY_W:
+						_shoot_view.set_aim(_shoot_view.aim + Vector2(0.0, -10.0))
+					KEY_DOWN, KEY_S:
+						_shoot_view.set_aim(_shoot_view.aim + Vector2(0.0, 10.0))
+					KEY_SPACE, KEY_ENTER:
+						_shoot_throw()
 			"cmd":
 				var k := ""
 				match event.keycode:
@@ -360,35 +384,41 @@ func _start_shoot() -> void:
 	_shoot_hits = 0
 	_shoot_shots_total = int(_config.get("shots", 5))
 	_shoot_need = int(_config.get("need", 3))
+	_shoot_clock_max = maxf(3.0, float(_config.get("clock", 7.0)))
+	_shoot_clock = _shoot_clock_max
+	_shoot_reset_delay = maxf(0.0, float(_config.get("reset_delay", 0.8)))
 	_shoot_busy = false
+	_shoot_reset_token += 1
 	_anim_time = 0.0
+	_shoot_dots.clear()
 
-	_sub_lbl.text = "Press SPACE or tap the button when the marker is in the green.\nScore %d of %d shots!" % [_shoot_need, _shoot_shots_total]
-	_hint_lbl.text = "SPACE = Shoot"
+	_sub_lbl.text = "Aim with the mouse (or drag on touch) and press THROW.\nScore %d of %d shots before the shot clock runs out!" % [_shoot_need, _shoot_shots_total]
+	_hint_lbl.text = "Mouse / drag = aim  •  Click court or THROW = shoot  •  Arrows + SPACE = keyboard"
 
-	# Timing bar
-	_shoot_bar = Control.new()
-	_shoot_bar.custom_minimum_size = Vector2(440, 36)
-	_content_box.add_child(_shoot_bar)
+	_shoot_view = COURT_SCRIPT.new()
+	_shoot_view.name = "BasketballCourt"
+	_shoot_view.shot_resolved.connect(_on_shot_resolved)
+	_shoot_view.throw_requested.connect(_shoot_throw)
+	_content_box.add_child(_shoot_view)
+	# Start slightly off the sweet spot so the first shot still needs an aim.
+	_shoot_view.set_aim(_shoot_view.RIM_CENTER - Vector2(58.0, 20.0))
 
-	var bg := ColorRect.new()
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.color = Color("#0b1b3a")
-	_shoot_bar.add_child(bg)
+	var hud_row := HBoxContainer.new()
+	hud_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	hud_row.add_theme_constant_override("separation", 24)
+	_content_box.add_child(hud_row)
 
-	# Green sweet spot in center (width ~ 22%)
-	var green := ColorRect.new()
-	green.position = Vector2(440.0 * 0.39, 0)
-	green.size = Vector2(440.0 * 0.22, 36)
-	green.color = Color("#3ce678")
-	_shoot_bar.add_child(green)
+	_shoot_score_lbl = Label.new()
+	_shoot_score_lbl.add_theme_font_size_override("font_size", 17)
+	_shoot_score_lbl.add_theme_color_override("font_color", Color("#ffd54a"))
+	_shoot_score_lbl.text = "HITS  0 / %d  •  NEED %d" % [_shoot_shots_total, _shoot_need]
+	hud_row.add_child(_shoot_score_lbl)
 
-	# Moving yellow marker
-	_shoot_marker = ColorRect.new()
-	_shoot_marker.size = Vector2(8, 40)
-	_shoot_marker.position = Vector2(220, -2)
-	_shoot_marker.color = Color("#ffd54a")
-	_shoot_bar.add_child(_shoot_marker)
+	_shoot_clock_lbl = Label.new()
+	_shoot_clock_lbl.add_theme_font_size_override("font_size", 17)
+	_shoot_clock_lbl.add_theme_color_override("font_color", Color("#7cc4ff"))
+	_shoot_clock_lbl.text = "SHOT CLOCK  %.1fs" % _shoot_clock
+	hud_row.add_child(_shoot_clock_lbl)
 
 	# Dot indicators row
 	var dot_row := HBoxContainer.new()
@@ -396,42 +426,95 @@ func _start_shoot() -> void:
 	dot_row.add_theme_constant_override("separation", 10)
 	_content_box.add_child(dot_row)
 
-	_shoot_dots.clear()
 	for i in _shoot_shots_total:
 		var dot := ColorRect.new()
-		dot.custom_minimum_size = Vector2(16, 16)
+		dot.custom_minimum_size = Vector2(18, 18)
 		dot.color = Color("#16305c")
 		dot_row.add_child(dot)
 		_shoot_dots.append(dot)
 
-	# On-screen shoot button for mobile/mouse
-	var shoot_btn := Button.new()
-	shoot_btn.text = "SHOOT NOW"
-	shoot_btn.custom_minimum_size = Vector2(140, 38)
-	shoot_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	shoot_btn.pressed.connect(_shoot_attempt)
-	_content_box.add_child(shoot_btn)
+	# The big throw button: mouse, touch and keyboard all release here.
+	_shoot_throw_btn = Button.new()
+	_shoot_throw_btn.text = "THROW  (click / SPACE)"
+	_shoot_throw_btn.custom_minimum_size = Vector2(280, 54)
+	_shoot_throw_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var throw_sb := StyleBoxFlat.new()
+	throw_sb.bg_color = Color("#e8792f")
+	throw_sb.corner_radius_top_left = 27
+	throw_sb.corner_radius_top_right = 27
+	throw_sb.corner_radius_bottom_left = 27
+	throw_sb.corner_radius_bottom_right = 27
+	throw_sb.border_width_left = 2
+	throw_sb.border_width_top = 2
+	throw_sb.border_width_right = 2
+	throw_sb.border_width_bottom = 2
+	throw_sb.border_color = Color("#ffd54a")
+	_shoot_throw_btn.add_theme_stylebox_override("normal", throw_sb)
+	var hover_sb := throw_sb.duplicate() as StyleBoxFlat
+	hover_sb.bg_color = Color("#ff9a45")
+	_shoot_throw_btn.add_theme_stylebox_override("hover", hover_sb)
+	_shoot_throw_btn.add_theme_stylebox_override("pressed", hover_sb)
+	_shoot_throw_btn.add_theme_color_override("font_color", Color("#1a1208"))
+	_shoot_throw_btn.add_theme_font_size_override("font_size", 20)
+	_shoot_throw_btn.pressed.connect(_shoot_throw)
+	_content_box.add_child(_shoot_throw_btn)
 
 
-func _shoot_attempt() -> void:
-	if _shoot_busy or not is_active:
+func _shoot_throw() -> void:
+	if not is_active or _shoot_busy or _result_box.visible or _shoot_view == null:
+		return
+	if not _shoot_view.throw_ball():
 		return
 	_shoot_busy = true
-	var ok := absf(_shoot_marker_pos - 0.5) < 0.11
-	if ok:
-		_shoot_hits += 1
+	_shoot_clock = _shoot_clock_max
+	_shoot_throw_btn.disabled = true
+	_hint_lbl.text = "Ball in the air..."
 
-	var cur_idx := _shoot_count
+
+func _on_shot_resolved(hit: bool) -> void:
+	if not is_active:
+		return
+	_register_shot(hit)
+
+
+func _register_shot(hit: bool) -> void:
+	_shoot_busy = true
 	_shoot_count += 1
-	if cur_idx < _shoot_dots.size():
-		_shoot_dots[cur_idx].color = Color("#3ce678") if ok else Color("#ff4d5a")
-
-	var timer := get_tree().create_timer(0.4)
-	await timer.timeout
-	_shoot_busy = false
+	if hit:
+		_shoot_hits += 1
+	var idx := _shoot_count - 1
+	if idx >= 0 and idx < _shoot_dots.size():
+		_shoot_dots[idx].color = Color("#3ce678") if hit else Color("#ff4d5a")
+	if _shoot_score_lbl != null:
+		_shoot_score_lbl.text = "HITS  %d / %d  •  NEED %d" % [_shoot_hits, _shoot_shots_total, _shoot_need]
+	if _shoot_clock_lbl != null:
+		_shoot_clock_lbl.text = "SHOT CLOCK  %.1fs" % _shoot_clock
 
 	if _shoot_count >= _shoot_shots_total:
+		if _shoot_throw_btn != null:
+			_shoot_throw_btn.disabled = true
 		_end_game(_shoot_hits >= _shoot_need)
+		return
+
+	var token := _shoot_reset_token
+	_hint_lbl.text = "Nice shot! Get ready for the next one." if hit else "Not enough - line up the next shot."
+	if _shoot_reset_delay > 0.0:
+		await get_tree().create_timer(_shoot_reset_delay).timeout
+		if not is_active or token != _shoot_reset_token or _result_box.visible:
+			return
+	_reset_after_shot()
+
+
+func _reset_after_shot() -> void:
+	if _shoot_view != null:
+		_shoot_view.reset_ball()
+	_shoot_clock = _shoot_clock_max
+	if _shoot_clock_lbl != null:
+		_shoot_clock_lbl.text = "SHOT CLOCK  %.1fs" % _shoot_clock
+	if _shoot_throw_btn != null:
+		_shoot_throw_btn.disabled = false
+	_hint_lbl.text = "Mouse / drag = aim  •  Click court or THROW = shoot  •  Arrows + SPACE = keyboard"
+	_shoot_busy = false
 
 
 # ------------------------------------------------------------------ CMD (QTE Parade/Dance)
@@ -651,6 +734,8 @@ func _end_game(won: bool) -> void:
 func _on_retry() -> void:
 	_result_box.visible = false
 	_content_box.visible = true
+	_clear_content()
+	_shoot_view = null
 	match _kind:
 		"shoot": _start_shoot()
 		"cmd": _start_cmd()

@@ -78,7 +78,15 @@
     "office_seats": 4,
     "vending_machines": 4,
     "gattu_trees": 2,
-    "compression_note": "grass 6923 -> 4200 in 32 chunks (95 m radius) for the mobile budget; every other count matches the web game"
+    "mobile_density": {
+      "trees": 0.55,
+      "bushes": 0.55,
+      "grass": 0.40,
+      "ground_cover": 0.45,
+      "cars": 0.55,
+      "grass_radius": 0.65
+    },
+    "compression_note": "desktop keeps the web counts (4200 grass cards); Android/GL uses mobile_density: 83 trees, 72 bushes, 1680 grass cards, 50 cars, 45% ground cover, 62 m grass radius"
   },
 
   "lamps": [
@@ -90,13 +98,13 @@
   ],
 
   "benches": [
-    { "pos": [292.7, 273.1], "yaw": 1.5708, "where": "basketball ground" },
-    { "pos": [292.7, 285.6], "yaw": 1.5708, "where": "basketball ground" },
-    { "pos": [292.7, 298.1], "yaw": 1.5708, "where": "basketball ground" },
-    { "pos": [292.4, 244.5], "yaw": -1.5708, "where": "IT block frontage" },
-    { "pos": [292.4, 258.0], "yaw": -1.5708, "where": "IT block frontage" },
-    { "pos": [292.4, 278.0], "yaw": -1.5708, "where": "IT block frontage" },
-    { "pos": [292.4, 291.5], "yaw": -1.5708, "where": "IT block frontage" }
+    { "pos": [272.0, 273.1], "yaw": 1.5708, "where": "basketball ground" },
+    { "pos": [272.0, 285.6], "yaw": 1.5708, "where": "basketball ground" },
+    { "pos": [272.0, 298.1], "yaw": 1.5708, "where": "basketball ground" },
+    { "pos": [292.4, 240.0], "yaw": -1.5708, "where": "IT block frontage" },
+    { "pos": [292.4, 246.0], "yaw": -1.5708, "where": "IT block frontage" },
+    { "pos": [292.4, 252.0], "yaw": -1.5708, "where": "IT block frontage" },
+    { "pos": [292.4, 258.0], "yaw": -1.5708, "where": "IT block frontage" }
   ],
 
   "vending_machines": [

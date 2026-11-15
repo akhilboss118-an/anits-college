@@ -31,6 +31,7 @@ func _run_all() -> void:
 	_test_mission_all_days()
 	_test_campaign_walk()
 	_test_minigame_wins()
+	_test_basketball()
 	_test_new_systems()
 
 
@@ -321,6 +322,49 @@ func _test_minigame_wins() -> void:
 		cmd._handle_cmd_key(str(cmd._cmd_seq[cmd._cmd_idx]))
 	_check("command QTE answers every call", cmd._cmd_ok >= 4 and cmd._result_box.visible)
 	cmd.free()
+
+
+func _test_basketball() -> void:
+	## The shootout is a real aimed projectile now: a shot at the rim must drop
+	## through, a wild shot must miss, and five aimed shots must win the event.
+	print("[basketball shooting]")
+	var court_script := preload("res://src/ui/basketball_court.gd")
+	var court: Node = court_script.new()
+	root.add_child(court)
+
+	var result := [-1]
+	court.shot_resolved.connect(func(hit: bool): result[0] = 1 if hit else 0)
+	court.aim_at_rim()
+	_check("court accepts the first shot", court.throw_ball())
+	_drive_court(court, 400)
+	_check("aimed shot drops through the hoop", result[0] == 1 and court.shots_hit == 1)
+
+	court.reset_ball()
+	result[0] = -1
+	court.set_aim(Vector2(90.0, 30.0))
+	court.throw_ball()
+	_drive_court(court, 400)
+	_check("wild shot misses the hoop", result[0] == 0 and court.shots_hit == 1)
+	court.free()
+
+	var overlay: Node = preload("res://src/ui/minigame_overlay.gd").new()
+	root.add_child(overlay)
+	overlay.start_minigame({"kind": "shoot", "title": "TEST", "shots": 5, "need": 3,
+		"clock": 7.0, "reset_delay": 0.0})
+	for i in 5:
+		overlay._shoot_view.aim_at_rim()
+		overlay._shoot_throw()
+		_drive_court(overlay._shoot_view, 400)
+	_check("five aimed shots win the shootout",
+		overlay._shoot_hits >= 3 and overlay._result_box.visible)
+	overlay.free()
+
+
+func _drive_court(court: Node, frames: int) -> void:
+	for i in frames:
+		court._process(1.0 / 60.0)
+		if not court.flying and not court._awaiting_result:
+			return
 
 
 func _test_mission_all_days() -> void:

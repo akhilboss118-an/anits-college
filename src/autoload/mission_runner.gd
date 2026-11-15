@@ -126,9 +126,9 @@ func _build_day_steps(d: int) -> Array:
 			body = [
 				{"text": "Go to the Basketball Court for the freshers' match.",
 				 "type": "at", "pos": [290, 275], "radius": 9, "say": "Basketball players: Shoot your shots, fresher!"},
-				{"text": "Basketball shootout: score 3 of 5 shots! Press SPACE when in the green.",
+				{"text": "Basketball shootout: score 3 of 5 shots! Aim with the mouse and press THROW to shoot.",
 				 "type": "mini",
-				 "mini": {"kind": "shoot", "title": "BASKETBALL SHOOTOUT", "shots": 5, "need": 3}},
+				 "mini": {"kind": "shoot", "title": "BASKETBALL SHOOTOUT", "shots": 5, "need": 3, "clock": 7.0}},
 				{"text": "Celebrate with your friend Arjun at the Canteen.",
 				 "type": "npc", "npc": "arjun",
 				 "lines": {"arjun": ["Super shots! You are a proper basketball player!"]}}
