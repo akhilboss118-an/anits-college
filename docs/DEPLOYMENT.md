@@ -24,7 +24,7 @@ There is no GitHub Actions workflow in the repository.
 
 Two constraints drove this split:
 
-1. The web export is ~138 MB on disk (`index.pck` alone is 98.5 MB). Keeping it
+1. The web export is ~138 MB on disk (`index.pck` alone is 98.6 MB). Keeping it
    in `main` would bloat every clone and every source push.
 2. The available GitHub token has **`repo` scope only**. Pushing
    `.github/workflows/pages.yml` is rejected (`workflow` scope is required), so
@@ -75,7 +75,7 @@ Expected output:
 | `index.html` | ~6 KB (plus a small runtime patch on the LAN server) |
 | `index.js` | ~280 KB |
 | `index.wasm` | ~39.5 MB |
-| `index.pck` | ~98.5 MB |
+| `index.pck` | ~98.6 MB |
 | `.nojekyll` | 0 B |
 
 ### 2.3 Test locally before publishing
@@ -151,7 +151,7 @@ Notes:
   preserve. Every deploy replaces it.
 - GitHub prints a warning that `index.pck` is larger than the recommended
   50 MB. That is advisory; the hard limit is **100 MB per file**, and the
-  largest file is 98.5 MB.
+  largest file is 98.6 MB.
 - If a deploy key is not available, HTTPS works for small updates but is
   unreliable for the ~91 MB pack on a slow uplink. Tuning
   `http.postBuffer`, `http.version=HTTP/1.1`, `http.lowSpeedLimit=0` and
@@ -203,7 +203,7 @@ Expected:
 | --- | --- | --- | --- |
 | `index.html` | 200 | `text/html` | |
 | `index.pck` | 200 | `application/octet-stream` | served compressed; the Content-Length differs from the local size |
-| `index.wasm` | 200 | `application/wasm` | served compressed, ~10 MB |
+| `index.wasm` | 200 | `application/wasm` | served compressed, ~9.6 MB |
 | `index.js` | 200 | `text/javascript` | |
 | `.nojekyll` | 200 | — | |
 
@@ -292,7 +292,7 @@ powershell -ExecutionPolicy Bypass -File "$PROJ\verify.ps1"
 It runs, in order:
 
 1. `--headless --import`
-2. `tests/run_tests.gd` - **138 checks, 0 failures**
+2. `tests/run_tests.gd` - **142 checks, 0 failures**
 3. a 300-frame headless smoke run
 4. the scripted `--check` tour (10 screenshots, full Day 1 route)
 
@@ -300,7 +300,7 @@ Expected tail:
 
 ```
 OK: import
---- 138 checks, 0 failures ---
+--- 142 checks, 0 failures ---
 OK: unit tests (tests/run_tests.gd)
 OK: smoke run (300 frames)
 OK: scripted tour (--check)
@@ -314,10 +314,10 @@ The benchmark is separate:
     --bench-profile=desktop --bench-spot=spawn --bench-warmup=14 --bench-seconds=5
 ```
 
-The bench prints `result=PASS` when the measured average meets the target. On
-the heat-soaked integrated GPU it settles at 0.60 and ~40.3 fps (below target);
-a cool session reached 59.4 fps at the same scale, and a discrete GPU stays at
-0.88.
+The bench prints `result=PASS` when the measured average meets the target. The
+desktop ladder settles at 0.60 and **41.7–46.2 fps** on the integrated GPU
+(below target); a discrete GPU stays at 0.88. The phone profile measures
+**61.6–89.0 fps** across the eight hotspots on the same laptop.
 
 ---
 
@@ -343,5 +343,5 @@ a cool session reached 59.4 fps at the same scale, and a discrete GPU stays at
 - `ANITS-WEB GAME/` — the 72 MB reference web build; kept locally as the source
   of truth, excluded by `.gitignore` and `.gdignore`.
 - `.godot/` — regenerable import cache.
-- The PDF report is tracked in `main` (~34.5 MB) but is not part of the Pages
+- The PDF report is tracked in `main` (~37.8 MB) but is not part of the Pages
   branch; it is linked from the repository, not the live site.
