@@ -653,12 +653,15 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       The Godot build has <strong>not</strong> been run on a physical Android
       handset. Device validation was replaced by two substitute checks: the
       <em>mobile renderer path</em> (<code>OS.has_feature("mobile")</code> ⇒
-      <code>scaling_3d_scale = 0.78</code>, MSAA off, 2 shadow splits, cumulus
-      clouds disabled, fog end 520&nbsp;m) and the <em>touch-preview pass</em>
+      <code>scaling_3d_scale = 0.60</code>, MSAA off, one 64&nbsp;m shadow
+      split, a procedural sky and the reduced-density low-poly props) and the
+      <em>touch-preview pass</em>
       (<code>-- --touch-preview</code> forces the phone HUD layout and the on-screen
-      stick on the desktop). Both exercise the same code paths the phone build
-      takes, but they are not a substitute for a real device. This is carried
-      forward as an open item in §12.
+      stick on the desktop). The touch layer is created hidden and appears only
+      after a level starts, so the menus and level grid stay clean. Both
+      exercise the same code paths the phone build takes, but they are not a
+      substitute for a real device. This is carried forward as an open item in
+      §12.
     </div>
 
     <div class="note">
@@ -1062,12 +1065,6 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       hand-written geometry in the whole campus is the Admin Office, because it
       is the one room the player can walk into. This is what makes the plan
       portable: a different campus is a different <code>campus_data.json</code>.
-    </p>
-    <p>
-      Two coordinate spaces are in play. The plan is authored in plan pixels and
-      converted once, at load time, into world metres. The authored data is
-      therefore directly comparable with the web build's own tables, which is
-      what the headless suite asserts (§11.1).
     </p>
   </div>
   <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 11 of 34</span></div>
@@ -2336,7 +2333,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td><code>E</code></td><td>Talk / use / skip a line</td><td>One resolver: dialogue, vending machine, bank, Admin Office door, skip</td></tr>
         <tr><td><code>G</code></td><td>Salute</td><td>Also advances the Day&nbsp;1 salute step and makes the cadet company answer</td></tr>
         <tr><td><code>B</code></td><td>Student bag</td><td>Opens the bag; SHOW ID satisfies the gate check on every day</td></tr>
-        <tr><td><code>Esc</code></td><td>Skip the current line / pause</td><td>Finishes a typing line first; otherwise opens the pause overlay (RESUME / MAIN MENU)</td></tr>
+        <tr><td><code>Esc</code></td><td>Skip the current line / pause</td><td>Finishes a typing line, else opens the pause overlay</td></tr>
       </tbody>
     </table>
 
