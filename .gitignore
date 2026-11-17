@@ -1,0 +1,20 @@
+# Node dependencies
+node_modules/
+package-lock.json.bak
+npm-debug.log*
+
+# Web build output (generated via npm run build)
+www/
+
+# Android build outputs
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+*.apk
+*.aab
+
+# OS files
+.DS_Store
+Thumbs.db

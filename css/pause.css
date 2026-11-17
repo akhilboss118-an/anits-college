@@ -1,0 +1,52 @@
+/* ===== Pause menu + settings ===== */
+#pz-btn{position:fixed;top:12px;right:12px;z-index:45;display:none;align-items:center;justify-content:center;width:42px;height:42px;min-width:0;margin:0;padding:0;border-radius:50%;
+  background:radial-gradient(circle at 35% 28%,rgba(70,92,134,.7),rgba(8,14,28,.8));border:2px solid rgba(255,213,74,.92);color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.4);cursor:pointer;transition:transform .12s,background .12s}
+#pz-btn:hover:not(:disabled){transform:scale(1.07);filter:none;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+#pz-btn:active:not(:disabled){transform:scale(.92);background:rgba(255,213,74,.94);color:#201800;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+#pz-btn svg{width:20px;height:20px}
+body.touch #pz-btn{width:36px;height:36px;top:max(8px,env(safe-area-inset-top));right:calc(max(8px,env(safe-area-inset-right)) + 160px);border-width:1.5px}
+body.touch #pz-btn svg{width:16px;height:16px}
+
+#pz{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:12px;
+  background:radial-gradient(ellipse 70% 60% at 50% 20%,rgba(255,196,60,.14),transparent 60%),rgba(5,10,22,.86);font-family:'Figtree',system-ui,sans-serif;color:#fff;touch-action:pan-y}
+#pz.on{display:flex;animation:pzin .22s ease both}
+@keyframes pzin{from{opacity:0}to{opacity:1}}
+#pz .pzb{width:min(460px,94vw);max-height:96vh;overflow:auto;padding:22px 24px 18px;border-radius:22px;text-align:center;
+  background:linear-gradient(165deg,rgba(22,32,54,.96),rgba(8,12,24,.96));border:1.5px solid rgba(255,213,74,.75);box-shadow:0 24px 70px rgba(0,0,0,.55),0 0 0 5px rgba(255,213,74,.08)}
+#pz .pzb[hidden]{display:none}
+#pz .pzh{margin-bottom:14px}
+#pz .pzh b{display:block;font:800 26px/1 'Bricolage Grotesque','Figtree',sans-serif;letter-spacing:.2em;color:#ffd54a}
+#pz .pzh small{display:block;margin-top:7px;font:700 11px/1 'Figtree',sans-serif;letter-spacing:.18em;color:rgba(255,255,255,.65)}
+#pz .pzg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#pz .pzg .pzp,#pz .pzg .pzw{grid-column:1/-1}
+#pz .pzg.one{margin-top:14px}
+#pz button{margin:0;padding:13px 10px;font-size:14px;letter-spacing:.06em;border-radius:999px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3);box-shadow:none;min-height:46px}
+#pz button:hover:not(:disabled){transform:none;filter:brightness(1.25);box-shadow:none}
+#pz button:active:not(:disabled){transform:scale(.97);box-shadow:none}
+#pz button.pzp{background:linear-gradient(180deg,#ffe486,#ffc22e);color:#241a00;border-color:transparent;font-size:16px;box-shadow:0 4px 0 #b9831a,0 10px 20px rgba(0,0,0,.3)}
+#pz button.pzp:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #b9831a}
+#pz .pzk{margin-top:14px;font-size:11px;line-height:2;color:rgba(255,255,255,.6)}
+#pz .pzk kbd{display:inline-block;min-width:20px;padding:0 5px;margin:0 1px;border-radius:5px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);border-bottom-width:2px;font:600 10px 'Figtree',sans-serif;color:#fff}
+body.touch #pz .pzk{display:none}
+#pz label{display:block;margin:14px 0 0;text-align:left;font:700 11px 'Figtree',sans-serif;letter-spacing:.16em;color:rgba(255,255,255,.75)}
+#pz input[type=range]{display:block;width:100%;height:28px;margin:6px 0 0;accent-color:#ffd54a;touch-action:pan-y}
+#pz p{margin:0 0 16px;font-size:14px;line-height:1.45;color:rgba(255,255,255,.8)}
+#pz .pzb:focus-within button:focus-visible{outline:2px solid #ffd54a;outline-offset:2px}
+
+@media(max-height:520px){
+  #pz .pzb{padding:12px 18px 12px;border-radius:18px;width:min(520px,94vw)}
+  #pz .pzh{margin-bottom:8px}#pz .pzh b{font-size:20px}#pz .pzh small{margin-top:4px;font-size:10px}
+  #pz .pzg{gap:7px}#pz button{padding:8px 8px;min-height:40px;font-size:13px}#pz button.pzp{font-size:14px}
+  #pz label{margin-top:6px;font-size:10px}#pz input[type=range]{height:22px;margin-top:2px}#pz .pzg.one{margin-top:8px}
+  #pz p{margin-bottom:10px;font-size:13px}
+}
+
+#pz .pzl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+#pz .pzl button{letter-spacing:.04em;font-size:13px}
+#pz .pzl button.on{background:rgba(255,213,74,.2);border-color:#ffd54a;color:#ffd54a}
+
+/* Beside the minimap rather than on top of it; 44px minimum phone target. */
+html.mobile body.touch #pz-btn{top:max(10px,env(safe-area-inset-top));right:calc(var(--sr) + var(--map-size) + 8px);
+  width:44px;height:44px;min-width:44px;min-height:44px;margin:0;border:1.5px solid rgba(242,247,255,.74);
+  background:rgba(20,31,50,.77);box-shadow:0 4px 12px rgba(0,0,0,.32)}
+html.mobile body.touch #pz-btn svg{width:19px;height:19px}

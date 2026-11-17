@@ -1,0 +1,6 @@
+{
+  "appId": "com.anits.collegegame",
+  "appName": "ANITS",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

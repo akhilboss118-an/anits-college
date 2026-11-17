@@ -1,0 +1,22 @@
+{
+  "name": "anits-college-game",
+  "version": "1.0.0",
+  "description": "ANITS College 3D story simulation game",
+  "main": "server.js",
+  "scripts": {
+    "build": "node build-web.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "game",
+    "threejs",
+    "simulation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2"
+  }
+}

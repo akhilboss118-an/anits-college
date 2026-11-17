@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ANITS</string>
+    <string name="title_activity_main">ANITS</string>
+    <string name="package_name">com.anits.collegegame</string>
+    <string name="custom_url_scheme">com.anits.collegegame</string>
+</resources>

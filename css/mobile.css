@@ -1,0 +1,339 @@
+/* ===== Mobile / touch mode =====
+   js/mobile.js adds html.mobile + body.touch; js/touch.js builds the controls (#tc, #tcm).
+   --u is the base size of one round button; everything scales with the screen height. */
+:root{
+  --u:clamp(46px,15vh,66px);
+  --jr:calc(var(--u)*2.15);                         /* joystick diameter */
+  --sl:max(16px,env(safe-area-inset-left));
+  --sr:max(16px,env(safe-area-inset-right));
+  --sb:max(14px,env(safe-area-inset-bottom));
+}
+html.mobile,html.mobile body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+html.mobile #nm{-webkit-user-select:text;user-select:text}
+body.touch,body.touch canvas{touch-action:none}
+body.touch #menu,body.touch #shop,body.touch #inv .ib,body.touch #set .box,body.touch .grid{touch-action:pan-y}
+
+/* ---- rotate-to-landscape screen ---- */
+#rotate{position:fixed;inset:0;z-index:2147483000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#020a1a;color:#fff;font-family:'Figtree',system-ui,sans-serif;text-align:center;padding:24px}
+@media (orientation:portrait){html.mobile #rotate{display:flex}}
+#rotate svg{width:92px;height:92px;margin-bottom:6px;animation:rotphone 2.6s ease-in-out infinite}
+@keyframes rotphone{0%,18%{transform:rotate(0)}52%,78%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+#rotate b{font:800 24px 'Bricolage Grotesque',sans-serif;letter-spacing:.05em}#rotate span{opacity:.7;font-size:15px}
+#a2hs{position:fixed;left:50%;bottom:calc(var(--sb) + 8px);transform:translateX(-50%);z-index:2147482000;max-width:min(560px,90vw);padding:10px 16px;border-radius:14px;background:rgba(10,15,25,.92);border:1.5px solid #ffd54a;color:#fff;font:600 13px/1.4 'Figtree',system-ui,sans-serif;text-align:center}
+
+/* ---- controls ---- */
+#tc{position:fixed;inset:0;z-index:8;pointer-events:none;display:none}
+#tcz{position:absolute;left:0;bottom:0;width:44%;height:76%;pointer-events:auto;touch-action:none}
+.tcj{position:absolute;width:var(--jr);height:var(--jr);border-radius:50%;pointer-events:none;touch-action:none;
+  background:radial-gradient(circle,rgba(255,255,255,.04) 0 40%,rgba(255,255,255,.14) 100%);
+  border:2px solid rgba(255,255,255,.36);box-shadow:0 0 0 7px rgba(0,0,0,.14),inset 0 0 24px rgba(0,0,0,.28);transition:border-color .15s,background .15s}
+.tcj::after{content:'';position:absolute;inset:22%;border-radius:50%;border:1.5px dashed rgba(255,255,255,.2)}
+.tcj .lbl{position:absolute;left:0;right:0;top:11%;text-align:center;font:800 9px/1 system-ui,sans-serif;letter-spacing:.22em;color:rgba(255,255,255,.6);transition:opacity .15s}
+.tcj.on .lbl{opacity:0}
+.tcj.on{border-color:rgba(255,213,74,.9);background:radial-gradient(circle,rgba(255,213,74,.08) 0 40%,rgba(255,255,255,.2) 100%)}
+#tcjL{left:var(--sl);bottom:var(--sb)}
+#tcjR{right:var(--sr);bottom:var(--sb);pointer-events:auto}
+#tcjR::before{content:'';position:absolute;inset:-16px;border-radius:50%}
+.tck{position:absolute;left:50%;top:50%;width:calc(var(--u)*.95);height:calc(var(--u)*.95);margin:calc(var(--u)*-.475) 0 0 calc(var(--u)*-.475);border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,rgba(255,238,160,.96),rgba(255,196,40,.8));border:2px solid rgba(255,255,255,.85);box-shadow:0 4px 14px rgba(0,0,0,.45);will-change:transform;pointer-events:none}
+
+.tcb{--bs:var(--u);position:absolute;width:var(--bs);height:var(--bs);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:radial-gradient(circle at 35% 28%,rgba(70,92,134,.66),rgba(8,14,28,.76));border:2px solid rgba(255,213,74,.92);color:#fff;
+  pointer-events:auto;touch-action:none;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.2);transition:transform .07s,background .07s}
+.tcb b{font-family:system-ui,sans-serif;font-weight:800;font-size:calc(var(--bs)*.44);line-height:1}
+.tcb small{font:700 8.5px/1.1 system-ui,sans-serif;letter-spacing:.08em;opacity:.92}
+.tcb svg{width:38%;height:38%;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tcb.dn{transform:scale(.9);background:rgba(255,213,74,.94);color:#201800}
+#tcE{--bs:calc(var(--u)*1.3);right:calc(var(--sr) + var(--jr) + 12px);bottom:calc(var(--sb) + 6px)}
+#tcG{right:calc(var(--sr) + var(--jr) + 34px);bottom:calc(var(--sb) + var(--u)*1.3 + 14px)}
+#tcS{--bs:calc(var(--u)*1.15);right:calc(var(--sr) + var(--jr) + var(--u)*1.2 + 46px);bottom:calc(var(--sb) + var(--u)*1.3 + 14px);border-color:#7dff9a}
+#tcS b{font-size:calc(var(--bs)*.3)}
+#tcR{right:calc(var(--sr) + var(--u)*1.7);bottom:calc(var(--sb) + var(--jr) + 16px)}
+#tcB{right:calc(var(--sr) + 2px);bottom:calc(var(--sb) + var(--jr) + 16px)}
+#tcR.lock{background:rgba(125,255,154,.9);color:#102;border-color:#fff}
+#tcF{--bs:34px;top:10px;right:calc(max(8px,env(safe-area-inset-right)) + 116px);border-width:1.5px;border-color:rgba(255,255,255,.5)}
+#tcF svg{width:56%;height:56%}
+
+/* ---- mini-game pad: arrow D-pad (left) and one big button (right) ---- */
+#tcm{position:fixed;inset:0;z-index:40;pointer-events:none;display:none}
+#tcdp{position:absolute;left:var(--sl);bottom:var(--sb);display:none;grid-template:repeat(3,calc(var(--u)*1.05)) / repeat(3,calc(var(--u)*1.05));gap:3px}
+#tcdp .dp{position:static;--bs:100%;width:100%;height:100%;font-size:calc(var(--u)*.5);background:radial-gradient(circle at 35% 28%,rgba(70,92,134,.8),rgba(8,14,28,.85))}
+#tcA{--bs:calc(var(--u)*2);right:calc(var(--sr) + 10px);bottom:calc(var(--sb) + 6px);border-width:3px;display:none}
+#tcA b{font-size:calc(var(--u)*.34);letter-spacing:.1em}
+
+/* ---- HUD for small landscape screens ---- */
+body.touch #hint,body.touch #lockhint,body.touch #cred,body.touch #inv-btn{display:none!important}
+body.touch #mm{top:8px;bottom:auto;right:max(8px,env(safe-area-inset-right));transform:scale(.6);transform-origin:top right}
+body.touch #mis{max-width:30vw;padding:7px 10px;top:8px;left:max(8px,env(safe-area-inset-left))}
+body.touch #mis div{font-size:12px;margin-top:2px}body.touch #mis b{font-size:10px}
+body.touch #wal{top:8px!important;bottom:auto!important;left:50%!important;transform:translateX(-50%)!important;font-size:13px;padding:5px 12px}
+body.touch #en{top:44px!important;bottom:auto!important;left:50%!important;transform:translateX(-50%)!important;width:190px;padding:4px 10px}
+body.touch #sub{left:calc(var(--sl) + var(--jr) + 14px);right:calc(var(--sr) + var(--jr) + var(--u)*1.3 + 30px);width:auto;bottom:calc(var(--sb) + 64px);transform:none;max-width:none;font-size:14px}
+body.touch #dlg{left:calc(var(--sl) + var(--jr) + 14px);right:calc(var(--sr) + var(--jr) + var(--u)*1.3 + 30px);width:auto;bottom:calc(var(--sb) - 4px);transform:none;font-size:14px;line-height:1.35;max-height:48vh;overflow:auto;padding:8px 12px;z-index:9;touch-action:pan-y}
+body.touch #pr{top:55%;font-size:16px}
+body.touch #shop{z-index:10}
+body.touch #ov h1{font-size:26px}body.touch #ov p{font-size:14px}
+body.touch #cl-talk{bottom:calc(var(--sb) + 4px)}
+
+/* ---- short landscape screens (phones): tighten menus, panels and mini-games ---- */
+@media (max-height:520px){
+  #s-levels .head{top:2vh}
+  #s-levels .logo b{font-size:clamp(28px,9vh,42px)}
+  #s-levels .logo i{font-size:11px;margin-top:3px;padding-top:3px}
+  .lvlbadge{top:19vh;padding:3px 34px;font-size:15px;border-radius:10px}
+  .grid{top:28vh;bottom:10vh;gap:8px}
+  .lv .lb{padding:5px 4px 4px;font-size:14px}.lv .lb small{font-size:8px}
+  .foot{padding:6px 12px;font-size:9px}
+  #ov{padding:10px}#ov h1{font-size:24px!important}#ov p{margin:2px 0;font-size:13px!important}#ov button{margin-top:12px;padding:10px 34px;font-size:17px}#ov .keys{margin-top:12px;gap:6px 12px}#ov #chr{margin-top:10px}
+  #menu .head{top:3vh}#menu .head h2{font-size:clamp(20px,6vh,34px)}#menu .head p{margin:3px 0 0;font-size:12px}
+  .cards{top:17vh;bottom:4vh}.card h3{font-size:19px;margin:2px 0}.card p{font-size:11px;margin:0 0 8px}
+  .btn{margin:0 0 10px;padding:12px 20px}.mm-wrap .logo{margin-bottom:3vh}
+  .back{top:12px;left:16px;padding:8px 16px;font-size:12px}
+  .lvlbadge{top:19vh;padding:6px 40px}.grid{top:29vh;bottom:5vh}
+  .center h2{margin-bottom:6px}.center p{margin:0 0 12px}#nm{padding:10px 18px;font-size:20px;margin-bottom:12px}
+  #wel2{font-size:clamp(34px,15vh,80px)}
+  #set .box{padding:16px 20px}#set h2{font-size:22px;margin-bottom:6px}#set label{margin:8px 0 4px}#set .row{margin-top:10px}
+  #shop{max-height:96vh;padding:10px 12px}#shop .dr{padding:5px 4px}#shop img{width:60px;height:34px}#shop .di small{display:none}
+  body.touch #inv .ib{max-height:96vh;padding:14px 18px;display:flex;flex-direction:column;overflow:hidden}body.touch #inv .ig{overflow:auto;min-height:0;flex:0 1 auto;touch-action:pan-y}body.touch #inv .x{flex:none}body.touch #inv .ic{zoom:.74}body.touch #inv h2{font-size:20px}body.touch #inv .sub{margin:4px 0 10px;font-size:13px}body.touch #inv .ig{gap:10px}body.touch #inv .slot{padding:8px;gap:6px}body.touch #inv .slot small{min-height:0}body.touch #inv .x{margin-top:10px}
+  body.touch #mini .mb{padding:14px 18px;max-height:calc(100vh - 12px);overflow:auto}body.touch #mi-t{margin-bottom:6px}body.touch #mi-s{font-size:13px;margin-bottom:8px;min-height:0}body.touch #mi-b{min-height:70px;gap:7px}body.touch #mi-h{margin-top:8px}
+  body.touch .mi-big{font-size:54px}body.touch .mi-opt{padding:8px 14px;font-size:14px}body.touch .mi-res{font-size:22px}
+}
+body.touch #mini.pad .mb{width:min(520px,52vw)}
+body.touch #mini.shootmode.pad .mb{width:min(250px,38vw);min-width:0}body.touch #mini.shootmode #mi-s{font-size:11px}
+
+/* ---- phone performance + sharpness (added) ----
+   Live backdrop-filter blur over a moving WebGL canvas re-blurs every frame = big lag on phones.
+   Use a slightly more solid glass instead; same look, no per-frame blur. */
+html.mobile .p,html.mobile #shop,html.mobile #set,html.mobile #ov,html.mobile #call,html.mobile #inv,html.mobile #mini{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.mobile .p{background:linear-gradient(160deg,rgba(22,32,54,.88),rgba(10,16,30,.8))!important;box-shadow:0 4px 12px rgba(0,0,0,.35)!important}
+html.mobile #shop{background:linear-gradient(165deg,rgba(18,26,46,.97),rgba(8,12,24,.97))!important}
+html.mobile #set{background:rgba(2,8,22,.88)!important}
+/* menu background: a full-screen CSS blur is costly and softens everything; use a plain dim layer instead */
+html.mobile #menu .bg{transform:none!important}
+html.mobile #menu .bg.blur{filter:none!important}
+html.mobile #menu .bg.blur::after{content:"";position:absolute;inset:0;background:rgba(2,10,26,.5)}
+html.mobile canvas{image-rendering:auto}
+
+/* ---- year slider (2023 / 2024 / 2025): always fits a phone screen ----
+   Everything is sized from the screen HEIGHT so the stack (title, big year, slider, uniform info, button)
+   can never be taller than the phone in landscape. */
+html.mobile #s-year .head{top:2.6vh;padding:0 4vw}
+html.mobile #s-year .head h2{font-size:clamp(17px,6.2vh,30px);letter-spacing:.04em;line-height:1.1}
+html.mobile #s-year .head p{margin:3px 0 0;font-size:clamp(10px,3.3vh,14px)}
+html.mobile .ysl{top:calc(2.6vh + clamp(17px,6.2vh,30px) + clamp(10px,3.3vh,14px) + 16px);bottom:max(2vh,env(safe-area-inset-bottom));gap:clamp(6px,2.2vh,16px);padding:0 max(4vw,env(safe-area-inset-left)) 0 max(4vw,env(safe-area-inset-right))}
+html.mobile .ysl .yr{font-size:clamp(40px,19vh,92px);line-height:1}
+html.mobile .yslw{width:min(560px,80vw)}
+html.mobile #ys{height:12px;touch-action:pan-y}
+html.mobile #ys::-webkit-slider-thumb{width:32px;height:32px;border-width:4px}
+html.mobile #ys::-moz-range-thumb{width:24px;height:24px}
+/* tick labels sit exactly under the thumb stops and are big enough to tap */
+html.mobile .ticks{margin-top:4px;padding:0 16px}
+html.mobile .ticks button{width:72px;margin:0 -36px;min-height:40px;padding:0;text-align:center;font-size:clamp(13px,4vh,16px);touch-action:manipulation}
+/* uniform info: swatches on the left, name + description on the right (saves a lot of height) */
+html.mobile .yinfo{display:grid;grid-template-columns:auto auto;column-gap:14px;row-gap:2px;align-items:center;justify-items:start;text-align:left;max-width:90vw}
+html.mobile .yinfo .sw{grid-row:1 / span 2;margin:0;gap:8px}
+html.mobile .yinfo .sw i{width:clamp(28px,10vh,44px);height:clamp(28px,10vh,44px)}
+html.mobile .yinfo h3{font-size:clamp(16px,5.4vh,26px);line-height:1.1}
+html.mobile .yinfo p{font-size:clamp(9px,3vh,13px);letter-spacing:.08em;line-height:1.25}
+html.mobile #ys-go{padding:clamp(8px,2.4vh,13px) clamp(26px,7vw,40px);font-size:clamp(13px,4vh,16px);margin-top:2px;touch-action:manipulation}
+/* very short screens (small phones / browser bars showing) */
+@media (max-height:360px){
+  html.mobile #s-year .head h2{font-size:17px}
+  html.mobile #s-year .head p{display:none}
+  html.mobile .ysl{top:calc(2.6vh + 24px)}
+  html.mobile .ysl .yr{font-size:clamp(34px,17vh,60px)}
+}
+
+/* settings: graphics quality picker */
+#set .gq{display:flex;gap:8px;flex-wrap:wrap}
+#set .gq button{flex:1;min-width:64px;padding:9px 6px;border-radius:10px;border:1.5px solid rgba(120,190,255,.55);background:rgba(255,255,255,.08);color:#fff;font:800 13px 'Figtree',sans-serif;letter-spacing:.08em;cursor:pointer;touch-action:manipulation}
+#set .gq button.on{background:linear-gradient(180deg,#2a8cff,#1255c0);border-color:#6cc0ff}
+
+/* ===== Landscape play HUD / contextual controls =====
+   These rules only touch the mobile shell. World, missions and keyboard play stay unchanged. */
+html.mobile body.touch{
+  --u:clamp(44px,13vh,56px);
+  --pad-step:clamp(42px,13vh,54px);
+  --jr:clamp(96px,28vh,124px);
+  --map-size:clamp(86px,25vh,108px);
+  --sl:max(12px,env(safe-area-inset-left));
+  --sr:max(12px,env(safe-area-inset-right));
+  --sb:max(10px,env(safe-area-inset-bottom));
+}
+
+/* The upper edge is one clear information row: objective, energy, pause, map. */
+html.mobile body.touch #mis{
+  top:max(10px,env(safe-area-inset-top));left:var(--sl);
+  width:clamp(180px,31vw,310px);max-width:31vw;
+  padding:9px 31px 10px 13px;border-left:4px solid #ffd54a;
+  border-radius:14px;z-index:10;
+}
+html.mobile body.touch #mis #mn{display:block;color:#fff;font-size:clamp(10px,2.8vh,13px);letter-spacing:0;line-height:1.2}
+html.mobile body.touch #mis #mt{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+  overflow:hidden;font-size:clamp(11px,2.95vh,13px);line-height:1.22;
+  margin-top:5px;font-weight:500;overflow-wrap:anywhere;
+}
+html.mobile body.touch #mis #mh{display:none!important}
+html.mobile body.touch #mis.expanded{width:min(380px,55vw);max-width:55vw;z-index:60;background:rgba(13,23,41,.97)!important}
+html.mobile body.touch #mis.expanded #mt{display:block;max-height:min(45vh,170px);overflow:auto;-webkit-line-clamp:unset}
+#mission-expand{position:absolute;right:5px;top:6px;width:32px;height:32px;min-width:32px;min-height:32px;margin:0;padding:6px;
+  display:grid;place-items:center;background:transparent;border:0;border-radius:50%;box-shadow:none;color:#dce7f4;touch-action:manipulation}
+#mission-expand svg{width:19px;height:19px;transition:transform .18s ease}
+#mis.expanded #mission-expand svg{transform:rotate(180deg)}
+#mission-expand:hover:not(:disabled),#mission-expand:active:not(:disabled){box-shadow:none;transform:none;background:rgba(255,255,255,.14)}
+#mission-expand:focus-visible{outline:2px solid #ffd54a;outline-offset:1px}
+
+html.mobile body.touch #en{
+  top:max(10px,env(safe-area-inset-top))!important;bottom:auto!important;
+  left:50%!important;transform:translateX(-50%)!important;
+  width:clamp(170px,29vw,215px);height:42px;padding:6px 11px;gap:7px;
+  border-radius:999px;white-space:nowrap;z-index:9;
+}
+html.mobile body.touch #en span{font-size:11px;letter-spacing:0;text-transform:capitalize;color:#fff}
+html.mobile body.touch #en span::before{content:'⚡';font-size:19px;vertical-align:-2px;margin-right:3px;color:#ffd54a}
+html.mobile body.touch #enb{height:11px;min-width:35px}
+html.mobile body.touch #enf{background:linear-gradient(90deg,#ffc02e,#ffda55)}
+html.mobile body.touch #en b{color:#fff;font-size:13px;min-width:20px}
+html.mobile body.touch #wal{
+  top:calc(max(10px,env(safe-area-inset-top)) + 48px)!important;bottom:auto!important;
+  left:50%!important;transform:translateX(-50%)!important;
+  width:178px;max-width:27vw;padding:4px 10px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;line-height:1.2;z-index:8;
+}
+html.mobile body.touch #mm{
+  top:max(10px,env(safe-area-inset-top));bottom:auto;right:var(--sr);
+  width:var(--map-size);height:var(--map-size);padding:4px;
+  border:2px solid rgba(247,250,255,.85);border-radius:17px;
+  transform:none;box-shadow:0 4px 16px rgba(0,0,0,.35);overflow:hidden;z-index:8;
+}
+html.mobile body.touch #mm canvas{width:100%;height:100%;border-radius:11px}
+html.mobile body.touch #mm::before{content:'N';position:absolute;top:3px;left:50%;transform:translateX(-50%);z-index:1;
+  font:800 10px/1 'Figtree',sans-serif;color:#fff;text-shadow:0 1px 3px #06101d;pointer-events:none}
+html.mobile body.touch #mission-pin{display:none!important}
+html.mobile body.touch #mission-say{top:calc(max(10px,env(safe-area-inset-top)) + 84px);max-width:min(300px,43vw);font-size:12px}
+
+/* ---- MOVE joystick (v2): floating analog stick. #tcz is the touch zone, #tcd the stick that follows the thumb ---- */
+#tcz{width:46%;height:78%;z-index:0}
+#tcd{position:absolute;left:var(--sl);bottom:var(--sb);width:calc(var(--pad-step)*3);height:calc(var(--pad-step)*3);
+  border-radius:50%;pointer-events:none;touch-action:none;opacity:.8;
+  background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.1),rgba(11,19,36,.58) 72%);
+  border:2px solid rgba(235,242,255,.42);box-shadow:0 0 0 5px rgba(0,0,0,.1),inset 0 0 22px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.28);
+  transition:opacity .15s,border-color .15s,box-shadow .15s}
+#tcd::before{content:'';position:absolute;inset:17%;border-radius:50%;border:1.5px dashed rgba(255,255,255,.2)}
+#tcd.on{opacity:1;border-color:#ffd54a;box-shadow:0 0 0 5px rgba(0,0,0,.1),0 0 24px rgba(255,213,74,.35),inset 0 0 22px rgba(0,0,0,.4)}
+#tcd.on.run{border-color:#ff9f1c;box-shadow:0 0 0 5px rgba(0,0,0,.1),0 0 28px rgba(255,159,28,.6),inset 0 0 22px rgba(255,120,0,.22)}
+.tcd-a{position:absolute;font-size:calc(var(--pad-step)*.3);line-height:1;color:rgba(255,255,255,.5);transition:color .1s,text-shadow .1s;pointer-events:none}
+.tcd-a.u{top:6%;left:50%;margin-left:-.5em}.tcd-a.d{bottom:6%;left:50%;margin-left:-.5em}
+.tcd-a.l{left:6%;top:50%;margin-top:-.5em}.tcd-a.r{right:6%;top:50%;margin-top:-.5em}
+#tcd[data-u="1"] .u,#tcd[data-d="1"] .d,#tcd[data-l="1"] .l,#tcd[data-r="1"] .r{color:#ffd54a;text-shadow:0 0 10px rgba(255,213,74,.9)}
+#tcd.run[data-u="1"] .u,#tcd.run[data-d="1"] .d,#tcd.run[data-l="1"] .l,#tcd.run[data-r="1"] .r{color:#ff9f1c;text-shadow:0 0 10px rgba(255,159,28,.95)}
+#tcd .lbl,#tcd .tcd-run{position:absolute;left:0;right:0;bottom:17%;text-align:center;font:800 9px/1 'Figtree',system-ui,sans-serif;letter-spacing:.2em;pointer-events:none;transition:opacity .15s}
+#tcd .lbl{color:rgba(255,255,255,.55)}#tcd.on .lbl{opacity:0}
+#tcd .tcd-run{color:#ff9f1c;opacity:0;text-shadow:0 0 8px rgba(255,159,28,.8)}#tcd.run .tcd-run{opacity:1}
+#tcd-knob{position:absolute;left:50%;top:50%;width:calc(var(--pad-step)*1.05);height:calc(var(--pad-step)*1.05);margin:calc(var(--pad-step)*-.525) 0 0 calc(var(--pad-step)*-.525);
+  border-radius:50%;background:radial-gradient(circle at 35% 28%,#fff,#c3d2ec 55%,#8fa6d0);border:2px solid #fff;
+  box-shadow:0 5px 14px rgba(0,0,0,.5),inset 0 -4px 8px rgba(40,60,100,.35);will-change:transform;pointer-events:none}
+#tcd.on #tcd-knob{background:radial-gradient(circle at 35% 28%,#fff6c9,#ffd54a 58%,#e6a600);box-shadow:0 5px 16px rgba(0,0,0,.5),0 0 16px rgba(255,213,74,.6)}
+#tcd.on.run #tcd-knob{background:radial-gradient(circle at 35% 28%,#ffe3b8,#ff9f1c 58%,#e06a00);box-shadow:0 5px 16px rgba(0,0,0,.5),0 0 18px rgba(255,159,28,.75)}
+
+html.mobile body.touch .tcb{--bs:var(--u);border:1.8px solid rgba(242,247,255,.65);
+  background:rgba(23,32,52,.73);box-shadow:0 4px 13px rgba(0,0,0,.3);min-width:0;margin:0;padding:3px;
+  transition:transform .1s ease,background-color .15s ease,border-color .15s ease}
+html.mobile body.touch .tcb:hover:not(:disabled){transform:none;filter:none;box-shadow:0 4px 13px rgba(0,0,0,.3)}
+html.mobile body.touch .tcb.dn{transform:scale(.92);background:rgba(255,213,74,.8);color:#172032}
+html.mobile body.touch .tcb svg{width:44%;height:44%;stroke-width:2.1}
+html.mobile body.touch .tcb small{font:800 9px/1 'Figtree',sans-serif;letter-spacing:0}
+html.mobile body.touch #tcR{--bs:calc(var(--pad-step)*.96);left:calc(var(--sl) + var(--pad-step));right:auto;
+  bottom:calc(var(--sb) + var(--pad-step)*3 + 8px);border-color:#ffce46}
+html.mobile body.touch #tcR.lock{background:rgba(255,213,74,.95);border-color:#fff;color:#182031}
+html.mobile body.touch #tcjR{right:var(--sr);bottom:var(--sb);border-color:rgba(230,237,250,.48);
+  background:rgba(21,30,48,.26);box-shadow:0 0 0 4px rgba(0,0,0,.08),inset 0 0 18px rgba(0,0,0,.23)}
+html.mobile body.touch #tcjR .tck{background:linear-gradient(145deg,rgba(218,230,248,.95),rgba(158,178,209,.92));border-color:#fff}
+html.mobile body.touch #tcjR .lbl{top:11%;font:700 8px 'Figtree',sans-serif;letter-spacing:.12em}
+html.mobile body.touch #tcB{right:calc(var(--sr) + var(--jr) + 10px);bottom:calc(var(--sb) + 2px)}
+html.mobile body.touch #tcE{--bs:calc(var(--u)*1.14);right:calc(var(--sr) + var(--jr) + 7px);bottom:calc(var(--sb) + var(--u) + 12px);
+  gap:0;border-color:#ffd54a;background:rgba(17,27,46,.88)}
+html.mobile body.touch #tcE .act-icon{display:flex;align-items:center;justify-content:center;width:38%;height:42%}
+html.mobile body.touch #tcE .act-icon svg{width:100%;height:100%}
+html.mobile body.touch #tcE b{font:800 10px/1 'Figtree',sans-serif;letter-spacing:0}
+html.mobile body.touch #tcG{right:calc(var(--sr) + var(--jr) + var(--u) + 17px);bottom:calc(var(--sb) + var(--u) + 15px);border-color:#ffd54a}
+html.mobile body.touch #tcF{--bs:38px;top:calc(max(10px,env(safe-area-inset-top)) + 3px);
+  right:calc(var(--sr) + var(--map-size) + 63px);border:1.5px solid rgba(255,255,255,.6)}
+html.mobile body.touch #tcF svg{width:53%;height:53%}
+html.mobile body.touch #idcard-btn{left:auto;right:calc(var(--sr) + var(--jr) + 4px);bottom:calc(var(--sb) + var(--u)*2 + 19px);
+  transform:none;width:calc(var(--u)*1.35);min-height:44px;margin:0;padding:7px 4px;
+  font-size:10px;line-height:1.15;letter-spacing:0;white-space:normal;box-shadow:0 3px 10px rgba(0,0,0,.32)}
+html.mobile body.touch #id-prompt{display:none!important}
+
+/* Transient dialogue stays in the safe gap between the two thumb zones. */
+html.mobile body.touch #dlg,html.mobile body.touch #sub{
+  left:calc(var(--sl) + var(--pad-step)*3 + 12px);right:calc(var(--sr) + var(--jr) + var(--u)*2 + 22px);
+  bottom:calc(var(--sb) + 6px);width:auto;max-width:none;transform:none;overflow:hidden;text-overflow:ellipsis;
+  font-size:12px;line-height:1.3;padding:6px 10px;
+}
+html.mobile body.touch #dlg{white-space:normal;max-height:54px;overflow:auto;touch-action:pan-y}
+
+@media (max-width:620px){html.mobile body.touch #tcF{display:none!important}}
+@media (max-height:320px){
+  html.mobile body.touch #mis #mt{-webkit-line-clamp:2}
+  html.mobile body.touch #mission-say{top:75px}
+  html.mobile body.touch #wal{top:51px!important}
+}
+
+/* ===== Controls v2: unified glass look, accents, press feedback ===== */
+html.mobile body.touch .tcb{background:radial-gradient(circle at 35% 25%,rgba(70,92,140,.72),rgba(10,16,32,.82));border:2px solid rgba(255,255,255,.55);
+  box-shadow:0 5px 14px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.22)}
+html.mobile body.touch .tcb.dn{background:radial-gradient(circle at 35% 25%,#ffe27a,#ffc42b);color:#1b1500;border-color:#fff;transform:scale(.9)}
+html.mobile body.touch #tcB{border-color:#6cc0ff}
+html.mobile body.touch #tcR{border-color:#ff9f1c}
+html.mobile body.touch #tcR.lock{background:radial-gradient(circle at 35% 25%,#ffc46b,#ff8a00);color:#1b0f00;border-color:#fff;box-shadow:0 0 18px rgba(255,159,28,.7)}
+html.mobile body.touch #tcE{border-color:#ffd54a;border-width:2.5px;animation:tcpulse 1.8s ease-out infinite}
+html.mobile body.touch #tcE.dn{animation:none}
+html.mobile body.touch #tcG{border-color:#7dff9a}
+@keyframes tcpulse{0%{box-shadow:0 5px 14px rgba(0,0,0,.38),0 0 0 0 rgba(255,213,74,.55)}80%,100%{box-shadow:0 5px 14px rgba(0,0,0,.38),0 0 0 14px rgba(255,213,74,0)}}
+@media (prefers-reduced-motion:reduce){html.mobile body.touch #tcE{animation:none}}
+/* look stick: same glass family as the move stick */
+html.mobile body.touch #tcjR{opacity:.8;background:radial-gradient(circle at 50% 38%,rgba(255,255,255,.1),rgba(11,19,36,.58) 72%);
+  border-color:rgba(235,242,255,.42);box-shadow:0 0 0 5px rgba(0,0,0,.1),inset 0 0 22px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.28)}
+html.mobile body.touch #tcjR.on{opacity:1;border-color:#6cc0ff;box-shadow:0 0 0 5px rgba(0,0,0,.1),0 0 24px rgba(108,192,255,.4),inset 0 0 22px rgba(0,0,0,.4)}
+html.mobile body.touch #tcjR::after{border-color:rgba(255,255,255,.18)}
+html.mobile body.touch #tcjR .tck{background:radial-gradient(circle at 35% 28%,#fff,#c3d2ec 55%,#8fa6d0);border-color:#fff}
+html.mobile body.touch #tcjR.on .tck{background:radial-gradient(circle at 35% 28%,#e3f3ff,#6cc0ff 58%,#2a8cff)}
+html.mobile body.touch #tcjR .lbl{top:auto;bottom:17%;font:800 9px 'Figtree',sans-serif;letter-spacing:.2em;color:rgba(255,255,255,.55)}
+
+/* mini-game pad: chunky arrow cross + one big action button */
+html.mobile body.touch #tcdp{gap:6px;grid-template:repeat(3,calc(var(--u)*1.08)) / repeat(3,calc(var(--u)*1.08))}
+html.mobile body.touch #tcdp .dp{border-radius:20px;border-color:rgba(255,255,255,.55);font-size:calc(var(--u)*.46);
+  background:linear-gradient(160deg,rgba(80,104,156,.85),rgba(12,20,40,.9));box-shadow:0 5px 0 rgba(0,0,0,.35),0 8px 16px rgba(0,0,0,.35)}
+html.mobile body.touch #tcdp .dp.dn{transform:translateY(4px) scale(.97);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+html.mobile body.touch #tcA{--bs:calc(var(--u)*2.15);border-width:3px;border-color:#ffd54a;
+  background:radial-gradient(circle at 35% 25%,rgba(255,213,74,.35),rgba(12,20,40,.9) 70%);box-shadow:0 0 0 6px rgba(255,213,74,.15),0 8px 20px rgba(0,0,0,.45)}
+html.mobile body.touch #tcA b{font:900 calc(var(--u)*.36)/1 'Figtree',sans-serif;letter-spacing:.12em;color:#ffe27a}
+html.mobile body.touch #tcA.dn b{color:#1b1500}
+
+/* Compact landscape phones: keep the top-row status and menu controls apart. */
+@media (max-height:430px) and (max-width:800px){
+  html.mobile body.touch{--u:clamp(42px,12vh,50px);--pad-step:clamp(40px,12vh,48px);--jr:clamp(88px,26vh,108px);--map-size:clamp(72px,22vh,88px)}
+  html.mobile body.touch #mis{max-width:29vw;width:29vw;padding:6px 28px 6px 9px}
+  html.mobile body.touch #mis #mt{font-size:11px;-webkit-line-clamp:2}
+  html.mobile body.touch #en{width:clamp(125px,22vw,165px);height:36px;padding:4px 7px}
+  html.mobile body.touch #wal{top:48px!important;max-width:23vw}
+  html.mobile body.touch #tcF{display:none!important}
+  html.mobile body.touch #dlg,html.mobile body.touch #sub{font-size:11px}
+  #s-levels .grid{top:28vh;bottom:10vh}
+}
+@media (max-height:390px){
+  #menu .mm-wrap .logo b{font-size:clamp(36px,12vh,54px)}
+  #menu .mm-wrap .logo i{font-size:clamp(12px,4vh,18px);margin-top:6px;padding-top:6px}
+  #menu .mm-wrap .logo{margin-bottom:12px}
+  #menu .mm-wrap .btn{padding:8px 14px;margin-bottom:7px;font-size:14px}
+  #menu .mm-wrap .btn.dl{padding:7px 14px;font-size:12px}
+  #menu .mm-wrap .who{font-size:10px}
+}
+
+/* ---- no blur on phones, ever (live blur = lag + softness) ---- */
+html.mobile *,html.mobile *::before,html.mobile *::after{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html.mobile .bg,html.mobile .bg.blur,html.mobile #menu .bg,html.mobile #s-levels .bg,html.mobile #pd .res{filter:none!important}
+html.mobile #pd .res{background:rgba(3,10,24,.94)!important}
+html.mobile .scr .bg.blur::after,html.mobile #s-levels .bg::after{content:"";position:absolute;inset:0;background:rgba(2,10,26,.45)}
