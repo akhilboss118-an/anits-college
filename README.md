@@ -10,7 +10,7 @@ low-end mobile.
 **Play in the browser:** <https://akhilboss118-an.github.io/anits-college/>
 
 **Android APK (v1.0):** [download the signed arm64 APK](https://github.com/akhilboss118-an/anits-college/releases/download/v1.0/ANITS-College-Simulation-v1.0.apk)
-(115.6 MB) — or build it locally with the command in [Build](#build).
+(121.5 MB) — or build it locally with the command in [Build](#build).
 
 ---
 
@@ -138,9 +138,9 @@ New-Item -ItemType File -Path "$PROJ\build\web\.nojekyll" -Force
 ```
 
 The shipped APK is `build/ANITS-College-Simulation-v1.0.apk`
-(115.6 MB, `com.akhilboss.anits`, version 1.0, minSdk 24, targetSdk 36,
+(121.5 MB, `com.akhilboss.anits`, version 1.0, minSdk 24, targetSdk 36,
 arm64-v8a, signed with the debug keystore). Its SHA-256 is
-`a8df4134c420767e973a006985b197415921491b4284e36eaecf5373e3da76e3`.
+`dd24585bfce190a071eb4d8750353c34c98ab11637ffc7c6f34cfe705f513dab`.
 
 ## Run and verify
 
