@@ -180,6 +180,26 @@ More in [`docs/screenshots/godot/`](docs/screenshots/godot/), including the
 full low-poly set in
 [`docs/screenshots/godot/beauty_low/`](docs/screenshots/godot/beauty_low/).
 
+## Gameplay trailer
+
+A **60-second trailer** is generated from the running game rather than edited
+from captured footage. `src/main.gd::_run_trailer()` is a timeline-driven
+director: it walks the player with the real controller, plays Day 1 dialogue,
+demonstrates the quiz and typing minigames, salutes the NCC company, flies the
+camera over campus and bookends the shot list with Godot-branded cards.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$PROJ\tools\build_trailer.ps1"
+```
+
+The script records 1,800 deterministic frames with Godot's movie writer
+(`--write-movie --fixed-fps 30 --quit-after 1800 -- --record-trailer`), then
+mixes the game's **actual voice clips, SFX and ambience** from the
+`build/trailer/timeline.json` the run writes, and encodes
+`build/trailer/ANITS-Trailer.mp4` with ffmpeg. Loopback audio capture is not
+available on this machine, so the audio is reconstructed from the same source
+MP3s the game plays, synced to the recorded game-time timeline.
+
 ## Project layout
 
 | Path | What it is |

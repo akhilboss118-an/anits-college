@@ -61,6 +61,11 @@ var _beauty_mode: bool = false
 var _menu_shot_mode: bool = false
 var _intro_shot_mode: bool = false
 var _flow_shot_mode: bool = false
+var _trailer_mode: bool = false
+var _trailer_time: float = 0.0
+var _trailer_events: Array = []
+var _trailer_card: CanvasLayer = null
+var _trailer_end: CanvasLayer = null
 var _touch_mode: bool = false
 var _mobile_gpu: bool = false
 ## Phone-class rendering profile.  True on a real phone and for the
@@ -96,6 +101,7 @@ func _ready() -> void:
 	_menu_shot_mode = args.has("--menu-shot")
 	_intro_shot_mode = args.has("--intro-shot")
 	_flow_shot_mode = args.has("--flow-shot")
+	_trailer_mode = args.has("--record-trailer")
 	# A phone browser reports neither `mobile` nor `android`, so touch input on
 	# the web build is the signal that the phone profile is needed there.
 	var touch_device := Settings.is_touch_mode() if Settings else false
@@ -107,7 +113,8 @@ func _ready() -> void:
 		or args.has("--quality-fast") or args.has("--bench-profile=mobile")
 	var force_high := args.has("--quality-high") or args.has("--bench-profile=desktop") \
 		or (_beauty_mode and not args.has("--beauty-low")) \
-		or _check_mode or _menu_shot_mode or _intro_shot_mode or _flow_shot_mode
+		or _check_mode or _menu_shot_mode or _intro_shot_mode or _flow_shot_mode \
+		or _trailer_mode
 	var fast_graphics := graphics == "fast" \
 		or (graphics == "auto" and _renderer == "forward_plus" and _is_integrated_gpu())
 	if force_high:
@@ -119,12 +126,13 @@ func _ready() -> void:
 	_cheap_sky = _phone_profile
 	# Desktop screenshots stay clean; `--touch-preview` forces the phone layout.
 	_touch_mode = Settings.is_touch_mode() if Settings else false
-	if (_check_mode or _beauty_mode) and not OS.get_cmdline_user_args().has("--touch-preview"):
+	if (_check_mode or _beauty_mode or _trailer_mode) \
+			and not OS.get_cmdline_user_args().has("--touch-preview"):
 		_touch_mode = false
 	_apply_mobile_quality()
 	# Report screenshots render at full 3D scale with MSAA so the captured
 	# frames are crisp; gameplay keeps the 60 fps quality ladder.
-	if _check_mode or _beauty_mode:
+	if _check_mode or _beauty_mode or _trailer_mode:
 		var shot_viewport := get_viewport()
 		shot_viewport.scaling_3d_scale = 1.0
 		shot_viewport.msaa_3d = Viewport.MSAA_4X
@@ -144,6 +152,8 @@ func _ready() -> void:
 		_run_intro_shots()
 	elif _flow_shot_mode:
 		_run_flow_shot()
+	elif _trailer_mode:
+		_run_trailer()
 
 
 ## Heuristic for laptop iGPUs. "auto" only applies it on the Forward+ desktop
@@ -1209,6 +1219,8 @@ func _on_notification(text: String, seconds: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if _trailer_mode:
+		_trailer_time += delta
 	if player == null or hud == null:
 		return
 	hud.update_player_marker(player.global_position)
@@ -1254,7 +1266,8 @@ func _process(delta: float) -> void:
 func _adaptive_quality(delta: float) -> void:
 	# Screenshot tours should capture the intended quality, not the transient
 	# frame time of a PNG readback, so the ladder is paused in those modes.
-	if _check_mode or _beauty_mode or _menu_shot_mode or _intro_shot_mode or _flow_shot_mode:
+	if _check_mode or _beauty_mode or _menu_shot_mode or _intro_shot_mode \
+			or _flow_shot_mode or _trailer_mode:
 		return
 	if bench_mode:
 		return
@@ -1642,6 +1655,295 @@ func _salute() -> void:
 			if hud:
 				hud.toast("The NCC company returns your salute. Jai Hind!", 3.0)
 			_update_marker()
+
+
+# ----------------------------------------------------------------- trailer mode
+
+## A 60 s gameplay trailer, driven by a real timeline rather than a video edit.
+## Run it with Godot's movie writer:
+##
+##   godot --path <project> --resolution 1280x720 \
+##     --write-movie build/trailer/raw.avi --fixed-fps 30 --quit-after 1800 \
+##     -- --record-trailer
+##
+## The director walks the player with the real controller, plays Day 1 dialogue,
+## demonstrates two minigames, salutes the NCC company and finishes with a
+## camera flyover. While it runs it writes `build/trailer/timeline.json` with
+## every voice clip, SFX and ambience change, so `tools/build_trailer.ps1` can
+## mix the game's actual audio into the final MP4.
+
+const TRAILER_FPS := 30.0
+const TRAILER_SECONDS := 60.0
+
+
+func _trailer_wait(seconds: float) -> void:
+	var until := _trailer_time + seconds
+	while _trailer_time < until:
+		await get_tree().process_frame
+
+
+func _trailer_log(kind: String, file_name: String, extra: Dictionary = {}) -> void:
+	var event: Dictionary = {
+		"t": snappedf(_trailer_time, 0.01), "kind": kind, "file": file_name}
+	for key in extra:
+		event[key] = extra[key]
+	_trailer_events.append(event)
+
+
+func _on_trailer_voice(text: String, _telugu: String) -> void:
+	## Records the clip that VoiceBank actually chose, with the playing pitch,
+	## so the offline mix uses the same recordings the player would hear.
+	if not _trailer_mode or not VoiceBank:
+		return
+	var girl := GameState.is_girl if GameState else false
+	var female := VoiceBank.is_female(Dialogue.speaker_key, girl)
+	var entry := VoiceBank.lookup(text, female)
+	var mp3 := str(entry.get("mp3", ""))
+	if mp3 == "":
+		return
+	var pitch := 1.0
+	if VoiceBank.apply_profile_pitch:
+		pitch = VoiceBank.profile_for(Dialogue.speaker_key).x
+	_trailer_log("voice", mp3.get_file(), {"pitch": snappedf(pitch, 0.02)})
+
+
+func _trailer_sfx(id: String) -> void:
+	if Audio:
+		Audio.play(id, -8.0)
+	_trailer_log("sfx", id + ".wav")
+
+
+func _trailer_ambience(kind: String) -> void:
+	if Audio:
+		Audio.set_ambience(kind)
+	_trailer_log("amb", "ambient_" + kind + ".wav")
+
+
+func _walk_to(target: Vector3, seconds: float, run: bool = false) -> void:
+	## Real movement through the player controller: feeds `touch_move` toward
+	## the target every frame, so the stride, footsteps and follow camera animate.
+	var elapsed := 0.0
+	var start_dir := target - player.global_position
+	start_dir.y = 0.0
+	var want_yaw := atan2(start_dir.x, start_dir.z)
+	while elapsed < seconds:
+		var dir := target - player.global_position
+		dir.y = 0.0
+		if dir.length() <= 1.8:
+			break
+		dir = dir.normalized()
+		player.yaw = lerp_angle(player.yaw, want_yaw, 0.10)
+		var fwd := Vector3(sin(player.yaw), 0.0, cos(player.yaw))
+		var right := Vector3(-cos(player.yaw), 0.0, sin(player.yaw))
+		player.touch_move = Vector2(dir.dot(right), -dir.dot(fwd))
+		player.touch_run = run
+		elapsed += get_process_delta_time()
+		await get_tree().process_frame
+	player.touch_move = Vector2.ZERO
+	player.touch_run = false
+
+
+func _fly_camera(from: Vector3, to: Vector3, look_at: Vector3, seconds: float) -> void:
+	player.set_physics_process(false)
+	var elapsed := 0.0
+	while elapsed < seconds:
+		var t := clampf(elapsed / seconds, 0.0, 1.0)
+		player.camera.global_position = from.lerp(to, t)
+		player.camera.look_at(look_at, Vector3.UP)
+		elapsed += get_process_delta_time()
+		await get_tree().process_frame
+
+
+func _trailer_label(text: String, size: int, colour: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_color_override("font_color", colour)
+	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	label.add_theme_constant_override("outline_size", 3)
+	return label
+
+
+func _build_trailer_card(title: String, subtitle: String) -> CanvasLayer:
+	var layer := CanvasLayer.new()
+	layer.layer = 90
+	add_child(layer)
+	# CanvasLayer has no modulate, so a full-rect Control owns the fade.
+	var fade := Control.new()
+	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade.modulate.a = 0.0
+	layer.add_child(fade)
+	var bg := ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.010, 0.020, 0.035, 0.97)
+	fade.add_child(bg)
+	var centre := CenterContainer.new()
+	centre.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fade.add_child(centre)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	centre.add_child(box)
+	box.add_child(_trailer_label("A GAME MADE IN", 30, Color(0.72, 0.80, 0.92)))
+	box.add_child(_trailer_label("GODOT ENGINE", 96, Color(1.0, 0.80, 0.32)))
+	box.add_child(_trailer_label(title, 46, Color(0.97, 0.98, 1.0)))
+	box.add_child(_trailer_label(subtitle, 24, Color(0.70, 0.78, 0.90)))
+	return layer
+
+
+func _fade_card(card: CanvasLayer, to: float, seconds: float) -> void:
+	var fade := card.get_child(0) as Control
+	if fade == null:
+		return
+	var tw := create_tween()
+	tw.tween_property(fade, "modulate:a", to, seconds)
+	await tw.finished
+
+
+func _save_trailer_timeline() -> void:
+	var dir := "res://build/trailer"
+	DirAccess.make_dir_recursive_absolute(dir)
+	var file := FileAccess.open(dir + "/timeline.json", FileAccess.WRITE)
+	if file == null:
+		push_error("trailer: could not write timeline.json")
+		return
+	file.store_string(JSON.stringify({
+		"fps": TRAILER_FPS,
+		"seconds": TRAILER_SECONDS,
+		"events": _trailer_events}, "  "))
+	file.close()
+	print("trailer: timeline saved (%d audio events)" % _trailer_events.size())
+
+
+func _run_trailer() -> void:
+	## The 60 s shot list. Times are game-time seconds; with `--fixed-fps 30`
+	## they map directly onto frames 0..1800 of the recorded movie.
+	await get_tree().process_frame
+	GameState.profile = {"name": "Mike", "char": "boy", "year": 2024}
+	if menu:
+		menu.visible = false
+	_build_campus()
+	_show_all_interiors()
+	_build_player()
+	_build_npcs()
+	_build_hud()
+	# The menu start path normally owns these; the trailer enters campus directly.
+	if minigame_overlay == null:
+		minigame_overlay = MINIGAME_SCRIPT.new()
+		add_child(minigame_overlay)
+		minigame_overlay.minigame_completed.connect(_on_minigame_completed)
+	Mission.start_day(1)
+	Mission.step_changed.connect(_on_step_changed)
+	Dialogue.line_shown.connect(_on_line)
+	Dialogue.dialogue_started.connect(_on_dialogue_started)
+	Dialogue.dialogue_ended.connect(_on_dialogue_ended)
+	VoiceBank.clip_played.connect(_on_trailer_voice)
+	_on_step_changed(0, Mission.steps.size(), str(Mission.current().get("text", "")))
+
+	# 00:00 - branded title card
+	_trailer_card = _build_trailer_card("ANITS COLLEGE SIMULATION",
+			"DAY ONE  ·  A CAMPUS LIFE SIMULATOR")
+	_trailer_sfx("ui_click")
+	await _fade_card(_trailer_card, 1.0, 0.6)
+	await _trailer_wait(2.7)
+	await _fade_card(_trailer_card, 0.0, 0.7)
+	_trailer_card.queue_free()
+
+	# 00:04 - walk from the gate toward the campus
+	_trailer_ambience("campus")
+	await _walk_to(Campus.map_to_world(Vector2(122, 396)), 4.0)
+	_trailer_sfx("step_2")
+
+	# 00:08 - the gate guard and the first mission line
+	await _walk_to(_npc_by_id("guard").global_position, 2.0)
+	await _teleport_near("guard")
+	await _trailer_wait(0.5)
+	_trailer_sfx("ui_click")
+	_interact()
+	await _trailer_wait(2.6)
+	await _await_dialogue()
+
+	# 00:13 - through the gate, into the Admin Office and the clerk
+	_teleport_plan(122, 396)
+	await _trailer_wait(0.7)
+	await _teleport_near("clerk")
+	await _trailer_wait(0.6)
+	_trailer_ambience("interior")
+	_trailer_sfx("ui_click")
+	_interact()
+	await _trailer_wait(2.2)
+	await _await_dialogue()
+	_exit_office()
+	_trailer_ambience("campus")
+
+	# 00:19 - two more NPCs on the route
+	for npc_id in ["prof", "suresh"]:
+		await _teleport_near(npc_id)
+		await _trailer_wait(0.4)
+		_trailer_sfx("ui_click")
+		_interact()
+		await _trailer_wait(2.0)
+		await _await_dialogue()
+
+	# 00:25 - canteen friend, then a campus quiz
+	await _teleport_near("arjun")
+	await _trailer_wait(0.4)
+	_interact()
+	await _trailer_wait(1.8)
+	await _await_dialogue()
+	_trailer_sfx("ui_click")
+	minigame_overlay.start_minigame({"kind": "quiz", "title": "CAMPUS QUIZ",
+		"need": 2, "qs": [["Which block is the library in?",
+		["Admin", "Central"], 1], ["What does RO stand for?",
+		["Reverse Osmosis", "Research Office"], 0]]})
+	for q in 2:
+		await _trailer_wait(2.4)
+		if minigame_overlay:
+			minigame_overlay._pick_quiz_opt(int(minigame_overlay._quiz_qs[q][2]))
+	_trailer_sfx("success")
+	await _trailer_wait(1.2)
+	if minigame_overlay:
+		minigame_overlay._close(true)
+
+	# 00:33 - the samosa typing challenge
+	_trailer_sfx("ui_click")
+	minigame_overlay.start_minigame({"kind": "typing", "title": "SAMOSA CHALLENGE",
+		"need": 2, "words": ["SAMOSA", "CHAI"], "time_per_word": 12.0})
+	await _trailer_wait(1.2)
+	for word in ["SAMOSA", "CHAI"]:
+		for c in word.length():
+			if minigame_overlay:
+				minigame_overlay._handle_type_char(word.substr(c, 1))
+			await _trailer_wait(0.22)
+		await _trailer_wait(0.6)
+	_trailer_sfx("success")
+	await _trailer_wait(1.0)
+	if minigame_overlay:
+		minigame_overlay._close(true)
+
+	# 00:41 - parade ground salute and the NCC chorus
+	await _teleport_near("colonel")
+	await _trailer_wait(0.8)
+	_trailer_sfx("whistle")
+	_salute()
+	await _trailer_wait(2.0)
+	_trailer_sfx("cheer")
+	_interact()
+	await _trailer_wait(2.2)
+	await _await_dialogue()
+
+	# 00:48 - aerial flyover of the whole campus
+	await _fly_camera(Vector3(30.0, 62.0, 165.0), Vector3(-10.0, 120.0, 40.0),
+			Vector3(0.0, 0.0, 60.0), 5.0)
+
+	# 00:53 - closing card, then hand back to --quit-after (frame 1800)
+	_trailer_end = _build_trailer_card("ANITS COLLEGE SIMULATION",
+			"10 DAYS  ·  64 NPCs  ·  5 MINIGAMES  ·  MADE WITH GODOT 4.7")
+	await _fade_card(_trailer_end, 1.0, 0.8)
+	_save_trailer_timeline()
+	await _trailer_wait(3.0)
+	_trailer_end.queue_free()
 
 
 # ------------------------------------------------------------------ check mode
