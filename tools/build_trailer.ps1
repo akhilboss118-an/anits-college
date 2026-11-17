@@ -22,11 +22,15 @@ New-Item -ItemType Directory -Force -Path $dir | Out-Null
 
 if (-not $SkipVideo) {
 	Write-Host '=== Recording 1800 frames (60 s at 30 fps) ==='
-	& $Godot --path $Project --resolution 1280x720 `
-		--write-movie "$dir\raw.avi" --fixed-fps 30 --quit-after 1800 `
-		-- --record-trailer
-	# Godot's Windows build is a GUI app: PowerShell leaves $LASTEXITCODE empty
-	# for it, so verify the two artifacts the director writes instead.
+	# Godot's Windows build is a GUI app: `&` returns before it finishes, which
+	# would let ffmpeg encode a half-written AVI. Start-Process -Wait is required.
+	$godotArgs = @('--path', $Project, '--resolution', '1280x720',
+		'--write-movie', "$dir\raw.avi", '--fixed-fps', '30',
+		'--quit-after', '1800', '--', '--record-trailer')
+	$process = Start-Process -FilePath $Godot -ArgumentList $godotArgs -Wait -PassThru
+	if ($process.ExitCode -ne 0) {
+		throw "Godot trailer recording failed (exit $($process.ExitCode))"
+	}
 	if (-not (Test-Path "$dir\raw.avi") -or -not (Test-Path "$dir\timeline.json")) {
 		throw 'Godot trailer recording did not produce raw.avi and timeline.json'
 	}

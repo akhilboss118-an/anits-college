@@ -1682,6 +1682,13 @@ func _trailer_wait(seconds: float) -> void:
 		await get_tree().process_frame
 
 
+func _trailer_wait_until(second: float) -> void:
+	## Pin a beat to an absolute time so a slow earlier beat cannot push the
+	## closing card past the end of the 1800-frame recording.
+	while _trailer_time < second:
+		await get_tree().process_frame
+
+
 func _trailer_log(kind: String, file_name: String, extra: Dictionary = {}) -> void:
 	var event: Dictionary = {
 		"t": snappedf(_trailer_time, 0.01), "kind": kind, "file": file_name}
@@ -1816,6 +1823,26 @@ func _save_trailer_timeline() -> void:
 	print("trailer: timeline saved (%d audio events)" % _trailer_events.size())
 
 
+func _trailer_bank() -> void:
+	## Walk up to the 24/7 ATM and withdraw cash; the HUD wallet pops gold.
+	var target: Vector3 = atm_kiosk.global_position
+	player.global_position = target + Vector3(0.0, 0.1, 2.2)
+	player.face_towards(target)
+	player.snap_camera()
+	await _trailer_wait(0.5)
+	_trailer_sfx("ui_click")
+	_interact()
+	await _trailer_wait(1.4)
+	_trailer_sfx("coin")
+
+
+func _trailer_court_centre() -> Vector2:
+	var zones: Dictionary = CampusDB.campus.get("zones", {})
+	var rect: Array = zones.get("basketball", [0, 0, 0, 0])
+	return Vector2((float(rect[0]) + float(rect[2])) * 0.5,
+			(float(rect[1]) + float(rect[3])) * 0.5)
+
+
 func _run_trailer() -> void:
 	## The 60 s shot list. Times are game-time seconds; with `--fixed-fps 30`
 	## they map directly onto frames 0..1800 of the recorded movie.
@@ -1858,91 +1885,120 @@ func _run_trailer() -> void:
 	# 00:08 - the gate guard and the first mission line
 	await _walk_to(_npc_by_id("guard").global_position, 2.0)
 	await _teleport_near("guard")
-	await _trailer_wait(0.5)
+	await _trailer_wait(0.4)
 	_trailer_sfx("ui_click")
 	_interact()
-	await _trailer_wait(2.6)
+	await _trailer_wait(1.5)
 	await _await_dialogue()
 
-	# 00:13 - through the gate, into the Admin Office and the clerk
+	# 00:12 - through the gate and cash from the bank ATM
 	_teleport_plan(122, 396)
-	await _trailer_wait(0.7)
-	await _teleport_near("clerk")
-	await _trailer_wait(0.6)
-	_trailer_ambience("interior")
-	_trailer_sfx("ui_click")
-	_interact()
-	await _trailer_wait(2.2)
-	await _await_dialogue()
-	_exit_office()
-	_trailer_ambience("campus")
+	await _trailer_wait(0.5)
+	await _trailer_bank()
+	await _trailer_wait(0.3)
 
-	# 00:19 - two more NPCs on the route
-	for npc_id in ["prof", "suresh"]:
-		await _teleport_near(npc_id)
-		await _trailer_wait(0.4)
+	# 00:15 - NPCs along the route (the mission advances with each talk)
+	for npc_id in ["clerk", "arjun"]:
+		if npc_id == "clerk":
+			await _teleport_near("clerk")
+			_trailer_ambience("interior")
+		else:
+			await _teleport_near(npc_id)
+		await _trailer_wait(0.3)
 		_trailer_sfx("ui_click")
 		_interact()
-		await _trailer_wait(2.0)
+		await _trailer_wait(1.6)
 		await _await_dialogue()
+		if npc_id == "clerk":
+			_exit_office()
+			_trailer_ambience("campus")
 
-	# 00:25 - canteen friend, then a campus quiz
-	await _teleport_near("arjun")
-	await _trailer_wait(0.4)
-	_interact()
-	await _trailer_wait(1.8)
-	await _await_dialogue()
+	# 00:26 - basketball shootout on the court
+	var court := _trailer_court_centre()
+	_teleport_plan(court.x, court.y)
+	await _trailer_wait(0.5)
+	_trailer_sfx("ui_click")
+	minigame_overlay.start_minigame({"kind": "shoot", "title": "BASKETBALL SHOOTOUT",
+		"shots": 2, "need": 2, "clock": 7.0, "reset_delay": 0.0})
+	for i in 2:
+		await _trailer_wait(0.5)
+		if minigame_overlay and minigame_overlay._shoot_view:
+			minigame_overlay._shoot_view.aim_at_rim()
+			_trailer_sfx("throw")
+			minigame_overlay._shoot_throw()
+		await _trailer_wait(1.1)
+	_trailer_sfx("success")
+	await _trailer_wait(0.8)
+	if minigame_overlay:
+		minigame_overlay._close(true)
+
+	# 00:31 - NCC parade: run with the cadets, then the cadence drill
+	await _walk_to(_npc_by_id("colonel").global_position, 1.6, true)
+	_trailer_sfx("ui_click")
+	minigame_overlay.start_minigame({"kind": "drill", "title": "NCC PARADE DRILL",
+		"time": 30.0})
+	for i in 25:
+		if minigame_overlay:
+			minigame_overlay._step_foot(i % 2)
+		await _trailer_wait(0.07)
+	_trailer_sfx("whistle")
+	await _trailer_wait(0.7)
+	if minigame_overlay:
+		minigame_overlay._close(true)
+
+	# 00:35 - campus quiz
 	_trailer_sfx("ui_click")
 	minigame_overlay.start_minigame({"kind": "quiz", "title": "CAMPUS QUIZ",
 		"need": 2, "qs": [["Which block is the library in?",
 		["Admin", "Central"], 1], ["What does RO stand for?",
 		["Reverse Osmosis", "Research Office"], 0]]})
 	for q in 2:
-		await _trailer_wait(2.4)
+		await _trailer_wait(1.8)
 		if minigame_overlay:
 			minigame_overlay._pick_quiz_opt(int(minigame_overlay._quiz_qs[q][2]))
-	_trailer_sfx("success")
-	await _trailer_wait(1.2)
-	if minigame_overlay:
-		minigame_overlay._close(true)
-
-	# 00:33 - the samosa typing challenge
-	_trailer_sfx("ui_click")
-	minigame_overlay.start_minigame({"kind": "typing", "title": "SAMOSA CHALLENGE",
-		"need": 2, "words": ["SAMOSA", "CHAI"], "time_per_word": 12.0})
-	await _trailer_wait(1.2)
-	for word in ["SAMOSA", "CHAI"]:
-		for c in word.length():
-			if minigame_overlay:
-				minigame_overlay._handle_type_char(word.substr(c, 1))
-			await _trailer_wait(0.22)
-		await _trailer_wait(0.6)
 	_trailer_sfx("success")
 	await _trailer_wait(1.0)
 	if minigame_overlay:
 		minigame_overlay._close(true)
 
-	# 00:41 - parade ground salute and the NCC chorus
-	await _teleport_near("colonel")
+	# 00:40 - the samosa typing challenge
+	_trailer_sfx("ui_click")
+	minigame_overlay.start_minigame({"kind": "typing", "title": "SAMOSA CHALLENGE",
+		"need": 2, "words": ["SAMOSA", "CHAI"], "time_per_word": 12.0})
+	await _trailer_wait(1.0)
+	for word in ["SAMOSA", "CHAI"]:
+		for c in word.length():
+			if minigame_overlay:
+				minigame_overlay._handle_type_char(word.substr(c, 1))
+			await _trailer_wait(0.20)
+		await _trailer_wait(0.5)
+	_trailer_sfx("success")
 	await _trailer_wait(0.8)
+	if minigame_overlay:
+		minigame_overlay._close(true)
+
+	# 00:44 - parade ground salute and the NCC chorus
+	await _teleport_near("colonel")
+	await _trailer_wait(0.6)
 	_trailer_sfx("whistle")
 	_salute()
-	await _trailer_wait(2.0)
+	await _trailer_wait(1.8)
 	_trailer_sfx("cheer")
 	_interact()
-	await _trailer_wait(2.2)
+	await _trailer_wait(1.8)
 	await _await_dialogue()
 
-	# 00:48 - aerial flyover of the whole campus
+	# 00:50 - aerial flyover of the whole campus
 	await _fly_camera(Vector3(30.0, 62.0, 165.0), Vector3(-10.0, 120.0, 40.0),
-			Vector3(0.0, 0.0, 60.0), 5.0)
+			Vector3(0.0, 0.0, 60.0), 4.0)
 
-	# 00:53 - closing card, then hand back to --quit-after (frame 1800)
+	# 00:53 - closing card, pinned before frame 1800
+	await _trailer_wait_until(53.0)
 	_trailer_end = _build_trailer_card("ANITS COLLEGE SIMULATION",
 			"10 DAYS  ·  64 NPCs  ·  5 MINIGAMES  ·  MADE WITH GODOT 4.7")
 	await _fade_card(_trailer_end, 1.0, 0.8)
 	_save_trailer_timeline()
-	await _trailer_wait(3.0)
+	await _trailer_wait(6.0)
 	_trailer_end.queue_free()
 
 
