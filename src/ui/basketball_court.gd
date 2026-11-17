@@ -122,6 +122,7 @@ func throw_ball() -> bool:
 	_result_time = 0.0
 	_flash = 0.0
 	flying = true
+	_play_sfx("throw", -10.0)
 
 	# A fixed flight time per distance keeps every shot readable: the ball
 	# always arcs high and comes down onto the aim point, exactly like a real
@@ -184,6 +185,7 @@ func _step_ball(delta: float) -> void:
 		_velocity.y *= 0.72
 		_board_hit = true
 		_flash = 1.0
+		_play_sfx("ball_bounce", -10.0, 0.88)
 
 	# The two rim ends are solid circles.  A ball that clips one bounces away.
 	for side in [-1.0, 1.0]:
@@ -194,6 +196,8 @@ func _step_ball(delta: float) -> void:
 			var normal := offset.normalized() if offset.length() > 0.01 else Vector2.UP
 			ball_pos = rim_end + normal * min_dist
 			_velocity = _velocity.bounce(normal) * 0.48
+			if not _rim_hit:
+				_play_sfx("rim", -8.0)
 			_rim_hit = true
 			_flash = 1.0
 
@@ -205,6 +209,7 @@ func _step_ball(delta: float) -> void:
 		if absf(ball_pos.x - RIM_CENTER.x) < inner:
 			scored = true
 			last_result = "SWISH!"
+			_play_sfx("success", -9.0)
 			_awaiting_result = true
 			_result_time = 0.42
 			_velocity.x *= 0.35
@@ -213,6 +218,7 @@ func _step_ball(delta: float) -> void:
 
 	if ball_pos.y > FLOOR_Y:
 		ball_pos.y = FLOOR_Y
+		_play_sfx("ball_bounce", -10.0, 0.95)
 		if scored:
 			_awaiting_result = true
 			_result_time = minf(_result_time, 0.12)
@@ -238,6 +244,14 @@ func _finish_shot() -> void:
 	if scored:
 		shots_hit += 1
 	shot_resolved.emit(scored)
+
+
+## Null-safe: the headless test runner compiles this script before the autoload
+## globals exist, so never reference the `Audio` singleton directly.
+func _play_sfx(id: String, volume_db: float = -8.0, pitch: float = 1.0) -> void:
+	var a: Node = get_node_or_null("/root/Audio")
+	if a:
+		a.play(id, volume_db, pitch)
 
 
 # ------------------------------------------------------------------ input

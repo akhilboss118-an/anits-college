@@ -33,6 +33,7 @@ func _run_all() -> void:
 	_test_minigame_wins()
 	_test_basketball()
 	_test_new_systems()
+	_test_audio_and_collection()
 
 
 # ---------------------------------------------------------------- helpers
@@ -171,6 +172,22 @@ func _test_economy_data() -> void:
 	_eq("buldak price", db.noodle_by_id("buldak").get("price"), 150)
 	_eq("buldak energy", db.noodle_by_id("buldak").get("energy"), 50)
 	_check("buldak is spicy", db.noodle_by_id("buldak").get("hot", false))
+	_check("soda restores 20 energy", is_equal_approx(db.energy_per_drink(0), 20.0))
+	_check("energy drink restores 35 energy", is_equal_approx(db.energy_per_drink(1), 35.0))
+	_check("boost lasts 30 s", is_equal_approx(db.boost_seconds(), 30.0))
+
+	# The four vending machines together must stock all ten drinks exactly
+	# once, otherwise the Canteen Collection cannot be completed.
+	var stocked: Dictionary = {}
+	for machine in db.campus.get("vending_machines", []):
+		for drink_id in (machine.get("stock", []) as Array):
+			stocked[str(drink_id)] = true
+	_eq("vending stock covers all drinks", stocked.size(), 10)
+	var stock_known := true
+	for drink_id in stocked.keys():
+		if db.drink_by_id(str(drink_id)).is_empty():
+			stock_known = false
+	_check("vending stock ids exist in economy", stock_known)
 
 	var tuning := db.economy_tuning()
 	_eq("start wallet", tuning.get("start_wallet"), 200)
@@ -468,3 +485,64 @@ func _test_new_systems() -> void:
 		gs.unlock(10)
 		_eq("unlocked day caps at 10", gs.unlocked_day, 10)
 		gs.unlocked_day = prev_unlocked
+
+
+func _test_audio_and_collection() -> void:
+	print("[audio & canteen collection]")
+	var audio: Node = root.get_node_or_null("Audio")
+	_check("Audio autoload exists", audio != null)
+	if audio:
+		_check("Audio loads every SFX + ambience stream", audio.stream_count() >= 23,
+			"-> %d" % audio.stream_count())
+		for id in ["ui_click", "ui_back", "success", "error", "item", "step_1",
+				"ball_bounce", "rim", "throw", "whistle", "coin", "cheer",
+				"unlock", "fizz", "tired", "ambient_campus", "ambient_interior"]:
+			_check("audio stream: %s" % id, audio.has_stream(id))
+
+	var gs: Node = root.get_node_or_null("GameState")
+	_check("GameState autoload exists", gs != null)
+	var eb: Node = root.get_node_or_null("EventBus")
+	var db: Node = root.get_node_or_null("CampusDB")
+	if gs:
+		var prev_energy: float = gs.energy
+		var prev_drinks: Dictionary = (gs.drinks_tried as Dictionary).duplicate()
+		var prev_items: Dictionary = (gs.items as Dictionary).duplicate()
+		var depleted := [0]
+		var on_depleted := func() -> void: depleted[0] += 1
+		eb.energy_depleted.connect(on_depleted)
+
+		gs.energy = 5.0
+		gs.drain_energy(3.0)
+		_check("sprint drain subtracts energy", is_equal_approx(gs.energy, 2.0),
+			"-> %f" % gs.energy)
+		gs.drain_energy(10.0)
+		_check("energy clamps at zero", is_equal_approx(gs.energy, 0.0),
+			"-> %f" % gs.energy)
+		gs.drain_energy(5.0)
+		_check("empty bar never goes negative", is_equal_approx(gs.energy, 0.0))
+		_eq("depletion signal fires once", depleted[0], 1)
+		gs.add_energy(20.0)
+		_check("drink refills the bar", is_equal_approx(gs.energy, 20.0))
+		eb.energy_depleted.disconnect(on_depleted)
+
+		var unlocked := [0]
+		var on_foodie := func() -> void: unlocked[0] += 1
+		eb.foodie_unlocked.connect(on_foodie)
+		gs.drinks_tried.clear()
+		for drink in db.drinks:
+			gs.try_drink(str(drink.get("id", "")))
+		_eq("all ten drinks tracked", gs.drinks_tried_count(), 10)
+		_check("ten drinks unlock the foodie badge", gs.has_item("foodie"))
+		_eq("foodie signal fires once", unlocked[0], 1)
+		eb.foodie_unlocked.disconnect(on_foodie)
+
+		# Tests must not leak the collection into the player's profile.
+		gs.energy = prev_energy
+		gs.drinks_tried = prev_drinks
+		gs.items = prev_items
+		var ss: Node = root.get_node_or_null("SaveSystem")
+		if ss and ss.has_method("save_items"):
+			ss.save_items(prev_items)
+
+	_check("player controller script present",
+		ResourceLoader.exists("res://src/actors/player.gd"))

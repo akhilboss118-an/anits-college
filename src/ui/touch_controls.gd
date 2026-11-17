@@ -18,9 +18,12 @@ extends CanvasLayer
 ## runs.
 ##
 ## Bottom-right: a RUN button (toggle run) to the left of an E button
-## (interact); both carry a caption pill underneath.  E turns gold while an
-## interaction is available.  G (salute) appears only when the Colonel or a
-## salute step is in range, and NEXT only while a dialogue is open.
+## (interact); both carry a caption pill underneath.  Every action is a white
+## glyph on a dark circular badge with a gold accent arc - the RUN badge uses
+## a right-hand arc, the action badges use the top arc from the icon sheet.
+## E follows the HUD prompt icon and turns bright gold while an interaction is
+## available.  G (salute) appears only when the Colonel or a salute step is
+## in range, and NEXT only while a dialogue is open.
 ##
 ## Anywhere else: drag to orbit the camera, tap to advance a dialogue.
 ##
@@ -87,6 +90,11 @@ class JoystickDraw:
 				Color(accent.r, accent.g, accent.b, ring_alpha), 2.6 * u, true)
 		draw_arc(center, radius * 0.62, 0.0, TAU, 48,
 				Color(1.0, 1.0, 1.0, 0.10), 1.2 * u, true)
+		# A gold arc sweeps the upper-right rim while sprinting, echoing the
+		# run button and the reference icon language.
+		if running:
+			draw_arc(center, radius * 0.99, -PI * 0.52, PI * 0.10, 28,
+					Color(1.0, 0.80, 0.32, 0.92), 3.2 * u, true)
 
 		# Four filled directional chevrons.
 		var tip_r := radius * 0.80
@@ -113,41 +121,44 @@ class JoystickDraw:
 				Color(1.0, 0.84, 0.32, 0.95) if running else Color(0.26, 0.38, 0.58, 0.55))
 
 
-class RunIcon:
+class ButtonBadge:
 	extends Control
-	## White sprinter pictogram, drawn by hand.
+	## Dark circular badge with a gold arc, shared by every touch action.
+	## The RUN button uses a right-hand arc (as in the reference shot); the
+	## action icons use the top arc from the icon reference sheet.
+	const ICONS := preload("res://src/ui/ui_icons.gd")
+	var arc_alpha: float = 0.92
+	var arc_from: float = PI * 1.06
+	var arc_to: float = TAU * 0.99
 
 	func _draw() -> void:
-		var u := minf(size.x, size.y) / 96.0
-		var fg := Color(0.96, 0.97, 1.0)
-		var lw := 6.4 * u
-		# Head.
-		draw_circle(Vector2(64.0 * u, 20.0 * u), 6.6 * u, fg)
-		# Torso: shoulder to hip.
-		var shoulder := Vector2(58.0 * u, 32.0 * u)
-		var hip := Vector2(45.0 * u, 54.0 * u)
-		_seg(shoulder, hip, lw, fg)
-		# Front leg: hip -> knee -> foot.
-		_seg(hip, Vector2(62.0 * u, 64.0 * u), lw, fg)
-		_seg(Vector2(62.0 * u, 64.0 * u), Vector2(76.0 * u, 60.0 * u), lw, fg)
-		# Back leg: hip -> knee -> foot.
-		_seg(hip, Vector2(34.0 * u, 72.0 * u), lw, fg)
-		_seg(Vector2(34.0 * u, 72.0 * u), Vector2(20.0 * u, 80.0 * u), lw, fg)
-		# Front arm: shoulder -> elbow -> hand.
-		_seg(shoulder, Vector2(74.0 * u, 40.0 * u), lw, fg)
-		_seg(Vector2(74.0 * u, 40.0 * u), Vector2(82.0 * u, 30.0 * u), lw, fg)
-		# Back arm: shoulder -> elbow -> hand.
-		_seg(shoulder, Vector2(36.0 * u, 42.0 * u), lw, fg)
-		_seg(Vector2(36.0 * u, 42.0 * u), Vector2(28.0 * u, 34.0 * u), lw, fg)
-		# Two short speed lines behind the runner.
-		var trail := Color(0.96, 0.97, 1.0, 0.45)
-		draw_line(Vector2(10.0 * u, 46.0 * u), Vector2(24.0 * u, 46.0 * u), trail, 3.0 * u, true)
-		draw_line(Vector2(6.0 * u, 56.0 * u), Vector2(18.0 * u, 56.0 * u), trail, 3.0 * u, true)
+		ICONS.badge(self, size * 0.5, minf(size.x, size.y) * 0.5 - 1.0,
+				arc_alpha, arc_from, arc_to)
 
-	func _seg(a: Vector2, b: Vector2, width: float, colour: Color) -> void:
-		draw_line(a, b, colour, width, true)
-		draw_circle(a, width * 0.5, colour)
-		draw_circle(b, width * 0.5, colour)
+	func set_alpha(value: float) -> void:
+		if is_equal_approx(arc_alpha, value):
+			return
+		arc_alpha = value
+		queue_redraw()
+
+
+class ButtonGlyph:
+	extends Control
+	## White glyph from the shared UI icon set; the action icon follows the
+	## current interaction (door, talk, cart, book, water, ...).
+	const ICONS := preload("res://src/ui/ui_icons.gd")
+	var kind: String = "hand"
+	var colour: Color = Color(0.965, 0.975, 1.0)
+
+	func _draw() -> void:
+		var pad := minf(size.x, size.y) * 0.25
+		ICONS.draw_glyph(self, kind, Rect2(Vector2.ZERO, size).grow(-pad), colour, -1.0)
+
+	func set_kind(value: String) -> void:
+		if value == kind:
+			return
+		kind = value
+		queue_redraw()
 
 
 var _root: Control
@@ -160,6 +171,10 @@ var _look_index: int = -1
 var _look_last := Vector2.ZERO
 var _look_travel := 0.0
 var _buttons: Array[Button] = []
+var _e_icon: ButtonGlyph
+var _g_icon: ButtonGlyph
+var _bag_icon: ButtonGlyph
+var _run_icon: ButtonGlyph
 var _button_e: Button
 var _button_g: Button
 var _button_bag: Button
@@ -202,21 +217,21 @@ func _ready() -> void:
 	_draw_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_draw_layer)
 
-	_button_run = _make_button("", BTN_RUN)
+	_button_run = _make_button("", BTN_RUN, "run", "right")
 	_button_run.pressed.connect(_on_run_toggled)
-	var run_icon := RunIcon.new()
-	run_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	run_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_button_run.add_child(run_icon)
+	_run_icon = _button_run.get_meta("glyph") as ButtonGlyph
 
-	_button_e = _make_button("E", BTN_E)
+	_button_e = _make_button("", BTN_E, "hand")
 	_button_e.pressed.connect(_on_interact)
-	_button_g = _make_button("G", BTN_G)
+	_e_icon = _button_e.get_meta("glyph") as ButtonGlyph
+	_button_g = _make_button("", BTN_G, "salute")
 	_button_g.pressed.connect(_on_salute)
 	_button_g.visible = false
-	_button_bag = _make_button("BAG", BTN_G)
+	_g_icon = _button_g.get_meta("glyph") as ButtonGlyph
+	_button_bag = _make_button("", BTN_G, "bag")
 	_button_bag.pressed.connect(_on_bag)
 	_button_bag.visible = true
+	_bag_icon = _button_bag.get_meta("glyph") as ButtonGlyph
 	_button_next = _make_button("NEXT", BTN_NEXT)
 	_button_next.pressed.connect(_on_next)
 	_button_next.visible = false
@@ -235,7 +250,8 @@ func _ready() -> void:
 
 # ------------------------------------------------------------------ controls
 
-func _make_button(text: String, diameter: float) -> Button:
+func _make_button(text: String, diameter: float, glyph: String = "",
+		arc_side: String = "top") -> Button:
 	var button := Button.new()
 	button.text = text
 	button.focus_mode = Control.FOCUS_NONE
@@ -249,6 +265,25 @@ func _make_button(text: String, diameter: float) -> Button:
 	button.add_theme_color_override("font_hover_color", Color(1, 1, 1, 1))
 	button.add_theme_color_override("font_pressed_color", Color(1.0, 0.9, 0.45, 1))
 	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	if glyph != "":
+		# Icon button: a dark circular badge + white glyph draws the frame,
+		# so the Button itself stays transparent.
+		var badge := ButtonBadge.new()
+		if arc_side == "right":
+			badge.arc_from = -PI * 0.50
+			badge.arc_to = PI * 0.55
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.set_anchors_preset(Control.PRESET_FULL_RECT)
+		button.add_child(badge)
+		button.set_meta("badge", badge)
+		var icon := ButtonGlyph.new()
+		icon.kind = glyph
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.set_anchors_preset(Control.PRESET_FULL_RECT)
+		button.add_child(icon)
+		button.set_meta("glyph", icon)
+		for state in ["normal", "hover", "pressed", "focus"]:
+			button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	_root.add_child(button)
 	_buttons.append(button)
 	return button
@@ -258,8 +293,8 @@ func _make_pill() -> PanelContainer:
 	var pill := PanelContainer.new()
 	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.03, 0.06, 0.12, 0.80)
-	sb.border_color = Color(1.0, 1.0, 1.0, 0.12)
+	sb.bg_color = Color(0.030, 0.045, 0.070, 0.90)
+	sb.border_color = Color(1.0, 0.80, 0.32, 0.28)
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(999)
 	sb.content_margin_left = 12.0
@@ -297,6 +332,16 @@ func _button_style(bg: Color, border: Color, width: float, radius: float) -> Sty
 
 func _apply_button_style(button: Button, state: int) -> void:
 	## state: 0 = idle, 1 = available (the action can be used), 2 = latched.
+	var badge: ButtonBadge = null
+	if button.has_meta("badge"):
+		badge = button.get_meta("badge") as ButtonBadge
+	if badge != null:
+		# Only the gold arc changes; the dark badge and white glyph stay put.
+		match state:
+			0: badge.set_alpha(0.78)
+			1: badge.set_alpha(0.98)
+			2: badge.set_alpha(1.0)
+		return
 	var diameter: float = button.size.x
 	var radius := diameter * 0.5
 	match state:
@@ -539,6 +584,14 @@ func set_dialogue_open(open: bool) -> void:
 func set_action_available(available: bool) -> void:
 	_action_override = 1 if available else 0
 	_update_action_state()
+
+
+## The E button copies the HUD prompt glyph, so the touch prompt and the
+## desktop prompt always show the same action icon (door, talk, cart, ...).
+func set_action_icon(kind: String) -> void:
+	if _e_icon == null:
+		return
+	_e_icon.set_kind(kind if kind != "" else "hand")
 
 
 ## Optional: light up (or dim) the G button by hand.

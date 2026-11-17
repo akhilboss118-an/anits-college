@@ -3,14 +3,14 @@
 ## In-game HUD - layout at a glance (mobile-game style).
 ##
 ##   +---------------------------------------------------------------+
-##   | [ (pin) MISSION 1 / 8   Talk to ...          > ]  [ (coin) 200 ][ || ] |
-##   |                                                        [ MINIMAP ]  |
-##   |                     ( toast )                              |            |
-##   |                                                              |
-##   |                [ INTERACTION PROMPT ]                        |
-##   |                [ SUBTITLE ]                                  |
-##   |                [ DIALOGUE BOX ]                              |
-##   | [ KEY HINTS - desktop only ]                                 |
+##   | [(flag) DAY 1 • MISSION 1/8 ... >] [(bolt) Energy ====40] [(coin)200][(||)]|
+##   |                                                       [ MINIMAP ]   |
+##   |                     ( toast )                                     |
+##   |                                                                   |
+##   |           [(icon) [E] | action prompt]                            |
+##   |                [ SUBTITLE ]                                       |
+##   |                [ DIALOGUE BOX ]                                   |
+##   | [ KEY HINTS - desktop only ]                                      |
 ##   +---------------------------------------------------------------+
 ##
 ## Every size is multiplied by `_ui_scale`, a single factor derived from the
@@ -22,7 +22,7 @@
 ##
 ## Public API used by src/main.gd (unchanged):
 ##   set_mission(index, total, text) / update_wallet(wallet, bank)
-##   update_energy(value) / set_prompt(text) / show_dialogue(speaker, text)
+##   update_energy(value) / set_prompt(text, icon) / show_dialogue(speaker, text)
 ##   hide_dialogue() / show_subtitle(text) / toast(text, seconds)
 ##   update_player_marker(world_pos) / property `touch_mode_override`
 ## Signals: pause_requested / resume_requested / menu_requested (pause overlay)
@@ -43,8 +43,10 @@ var subtitle_label: Label
 var wallet_label: Label
 var energy_bar: ProgressBar
 var energy_label: Label
+var energy_panel: PanelContainer
 var prompt_panel: PanelContainer
-var prompt_key: TextureRect
+var prompt_key: Label
+var prompt_icon: Control
 var prompt_label: Label
 var controls_bar: PanelContainer
 var toast_label: Label
@@ -76,6 +78,7 @@ var _bottom: VBoxContainer
 var _mission_panel: PanelContainer
 var _mission_row: HBoxContainer
 var _wallet_panel: PanelContainer
+var _energy_label_text: Label
 var _pause_button: Button
 var _pause_row: HBoxContainer
 var _objective_base: String = ""
@@ -113,7 +116,8 @@ var _mission_calls: int = 0
 
 class MinimapMarker:
 	extends Control
-	## Player arrow + objective dot drawn on top of the minimap texture.
+	const ICONS := preload("res://src/ui/ui_icons.gd")
+	## Player arrow + objective star drawn on top of the minimap texture.
 	## The arrow is rotated every frame into the player's heading.  A pulsing
 	## objective ring, a dotted bearing line and four compass ticks make the
 	## little map easier to read at a glance.
@@ -152,10 +156,11 @@ class MinimapMarker:
 					draw_circle(point + delta * t, 1.7, Color(1.0, 0.86, 0.42, 0.40))
 		if has_mission:
 			var pulse := 0.5 + 0.5 * sin(_t * 2.8)
-			draw_arc(mission_point, 6.0 + pulse * 4.2, 0.0, TAU, 24,
-					Color(0.48, 1.0, 0.55, 0.45 * (1.0 - pulse)), 1.6, true)
-			draw_circle(mission_point, 5.4, Color(0.03, 0.10, 0.05, 0.9))
-			draw_circle(mission_point, 3.4, Color(0.45, 1.0, 0.52, 0.98))
+			draw_arc(mission_point, 8.0 + pulse * 3.2, 0.0, TAU, 24,
+					Color(1.0, 0.86, 0.42, 0.42 * (1.0 - pulse)), 1.6, true)
+			# Gold star marks the objective, matching the reference minimap.
+			ICONS.draw_glyph(self, "star", Rect2(mission_point - Vector2(7.0, 7.0),
+					Vector2(14.0, 14.0)), Color(1.0, 0.78, 0.24, 0.98))
 		if not has_player:
 			return
 		var dir := Vector2(cos(heading), sin(heading))
@@ -221,78 +226,29 @@ class MapView:
 
 ## ------------------------------------------------------------ icons
 
-class PinIcon:
+class GlyphIcon:
 	extends Control
-	## Location pin in a dark disc - drawn so it stays crisp at any scale.
+	## One glyph from the shared procedural icon set (src/ui/ui_icons.gd).
+	## With `disc` it renders the reference icon language: a near-black
+	## circular badge, a thin white rim and a gold arc across the top.
+	const ICONS := preload("res://src/ui/ui_icons.gd")
+	var kind: String = "star"
+	var colour: Color = Color(0.965, 0.975, 1.0)
+	var stroke: float = -1.0
+	var disc: bool = false
+	var arc: float = 0.92
+	var arc_from: float = PI * 1.06
+	var arc_to: float = TAU * 0.99
+	var inset: float = 0.30
 
 	func _draw() -> void:
-		var u := minf(size.x, size.y) / 48.0
-		var c := Vector2(size.x * 0.5, size.y * 0.5)
-		draw_circle(c, 23.0 * u, Color(0.09, 0.16, 0.29, 0.92))
-		draw_arc(c, 22.0 * u, 0.0, TAU, 40, Color(0.38, 0.66, 1.0, 0.85), 2.2 * u, true)
-		var pc := Vector2(size.x * 0.5, size.y * 0.42)
-		var pr := 8.6 * u
-		draw_circle(pc, pr, Color(0.96, 0.97, 1.0))
-		var tail := PackedVector2Array([
-			pc + Vector2(-pr * 0.74, pr * 0.58),
-			pc + Vector2(pr * 0.74, pr * 0.58),
-			pc + Vector2(0.0, pr * 2.25)])
-		draw_colored_polygon(tail, Color(0.96, 0.97, 1.0))
-		draw_circle(pc, pr * 0.44, Color(0.09, 0.16, 0.29))
+		var r := Rect2(Vector2.ZERO, size)
+		if disc:
+			var radius := minf(size.x, size.y) * 0.5
+			ICONS.badge(self, size * 0.5, radius - 1.0, arc, arc_from, arc_to)
+			r = r.grow(-radius * inset)
+		ICONS.draw_glyph(self, kind, r, colour, stroke)
 
-class CoinIcon:
-	extends Control
-	## Stylised gold coin for the wallet pill.
-
-	func _draw() -> void:
-		var u := minf(size.x, size.y) / 44.0
-		var c := size * 0.5
-		draw_circle(c, 19.0 * u, Color(1.0, 0.83, 0.29))
-		draw_arc(c, 13.6 * u, 0.0, TAU, 40, Color(0.72, 0.50, 0.10), 3.6 * u, true)
-		draw_circle(c, 10.2 * u, Color(0.98, 0.80, 0.32))
-		draw_arc(c, 16.4 * u, PI * 1.05, PI * 1.55, 24, Color(1.0, 0.97, 0.72, 0.9), 2.4 * u, true)
-
-class BoltIcon:
-	extends Control
-	## Small green lightning bolt for the energy row.
-
-	func _draw() -> void:
-		var u := minf(size.x, size.y) / 24.0
-		var pts := PackedVector2Array([
-			Vector2(13.5, 1.5), Vector2(5.0, 13.0), Vector2(11.0, 13.0),
-			Vector2(9.0, 22.5), Vector2(19.0, 10.0), Vector2(13.0, 10.0)])
-		var scaled := PackedVector2Array()
-		for p in pts:
-			scaled.append(p * u)
-		draw_colored_polygon(scaled, Color(0.55, 0.95, 0.55, 0.95))
-
-class ChevronIcon:
-	extends Control
-	## ">" affordance shown on the right edge of the mission pill.
-
-	func _draw() -> void:
-		var u := minf(size.x, size.y)
-		var p := PackedVector2Array([
-			Vector2(0.32 * size.x, 0.22 * size.y),
-			Vector2(0.66 * size.x, 0.50 * size.y),
-			Vector2(0.32 * size.x, 0.78 * size.y)])
-		draw_polyline(p, Color(0.55, 0.76, 1.0, 0.95), maxf(2.0, u * 0.085), true)
-
-
-class SparkIcon:
-	extends Control
-	## Small gold four-point sparkle used by the toast pill.
-
-	func _draw() -> void:
-		var u := minf(size.x, size.y) / 24.0
-		var c := size * 0.5
-		var pts := PackedVector2Array()
-		for i in 8:
-			var ang := -PI * 0.5 + float(i) * TAU / 8.0
-			var r := (9.5 if i % 2 == 0 else 3.4) * u
-			pts.append(c + Vector2(cos(ang), sin(ang)) * r)
-		draw_colored_polygon(pts, Color(1.0, 0.85, 0.34, 0.98))
-		draw_circle(c, 2.2 * u, Color(1.0, 0.97, 0.80, 1.0))
 
 
 class StepPips:
@@ -320,21 +276,6 @@ class StepPips:
 				draw_circle(c, d * 0.46, Color(1.0, 0.92, 0.62, 1.0))
 			else:
 				draw_circle(c, d * 0.34, Color(0.82, 0.88, 1.0, 0.24))
-
-
-class PauseGlyph:
-	extends Control
-	## Two white bars - the pause affordance.
-
-	func _draw() -> void:
-		var u := minf(size.x, size.y) / 44.0
-		var w := 5.4 * u
-		var h := 19.0 * u
-		var y := (size.y - h) * 0.5
-		var gap := 6.6 * u
-		var x0 := (size.x - (2.0 * w + gap)) * 0.5
-		draw_rect(Rect2(x0, y, w, h), Color(0.96, 0.97, 1.0))
-		draw_rect(Rect2(x0 + w + gap, y, w, h), Color(0.96, 0.97, 1.0))
 
 
 class DialogueArt:
@@ -495,9 +436,18 @@ func _build() -> void:
 	_mission_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_mission_row.add_theme_constant_override("separation", 12)
 	_mission_panel.add_child(_mission_row)
-	var pin := PinIcon.new()
+	# Gold accent rule on the left edge, as in the reference mission card.
+	var accent := ColorRect.new()
+	accent.color = Color(1.0, 0.80, 0.32, 0.95)
+	accent.custom_minimum_size = Vector2(5, 46)
+	accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	accent.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_mission_row.add_child(accent)
+	var pin := GlyphIcon.new()
+	pin.kind = "flag"
+	pin.colour = Color(1.0, 0.94, 0.78)
 	pin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pin.custom_minimum_size = Vector2(46, 46)
+	pin.custom_minimum_size = Vector2(38, 38)
 	pin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_mission_row.add_child(pin)
 	var text_col := VBoxContainer.new()
@@ -536,13 +486,59 @@ func _build() -> void:
 	_pips.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pips.custom_minimum_size = Vector2(0, 10)
 	text_col.add_child(_pips)
-	var chevron := ChevronIcon.new()
+	var chevron := GlyphIcon.new()
+	chevron.kind = "chevron"
+	chevron.colour = Color(1.0, 0.88, 0.55, 0.90)
 	chevron.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chevron.custom_minimum_size = Vector2(30, 46)
 	chevron.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_mission_row.add_child(chevron)
 
-	# --- wallet + energy (top right) ---
+	# --- energy pill (top centre, like the reference HUD) ---
+	energy_panel = PanelContainer.new()
+	energy_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	energy_panel.anchor_left = 0.5
+	energy_panel.anchor_right = 0.5
+	energy_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	energy_panel.grow_vertical = Control.GROW_DIRECTION_END
+	_root.add_child(energy_panel)
+	var energy_row := HBoxContainer.new()
+	energy_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	energy_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	energy_row.add_theme_constant_override("separation", 10)
+	energy_panel.add_child(energy_row)
+	var bolt := GlyphIcon.new()
+	bolt.kind = "bolt"
+	bolt.colour = Color(1.0, 0.80, 0.32)
+	bolt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bolt.custom_minimum_size = Vector2(22, 22)
+	bolt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	energy_row.add_child(bolt)
+	_energy_label_text = Label.new()
+	_energy_label_text.text = "Energy"
+	_energy_label_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_energy_label_text.add_theme_color_override("font_color", Color(0.97, 0.98, 1.0, 0.97))
+	_energy_label_text.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.35))
+	_energy_label_text.add_theme_constant_override("outline_size", 2)
+	energy_row.add_child(_energy_label_text)
+	energy_bar = ProgressBar.new()
+	energy_bar.custom_minimum_size = Vector2(120, 14)
+	energy_bar.max_value = 100
+	energy_bar.value = 40
+	energy_bar.show_percentage = false
+	energy_bar.add_theme_stylebox_override("background",
+			_bar_style(Color(0.015, 0.025, 0.045, 0.92), Color(1.0, 0.82, 0.36, 0.28)))
+	energy_bar.add_theme_stylebox_override("fill", _bar_style(Color(1.0, 0.72, 0.22, 0.98)))
+	energy_row.add_child(energy_bar)
+	energy_label = Label.new()
+	energy_label.text = "40"
+	energy_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	energy_label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.98))
+	energy_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
+	energy_label.add_theme_constant_override("outline_size", 3)
+	energy_row.add_child(energy_label)
+
+	# --- wallet pill (top right, left of pause) ---
 	_wallet_panel = PanelContainer.new()
 	_wallet_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_wallet_panel.anchor_left = 1.0
@@ -550,18 +546,15 @@ func _build() -> void:
 	_wallet_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_wallet_panel.grow_vertical = Control.GROW_DIRECTION_END
 	_root.add_child(_wallet_panel)
-	var right := VBoxContainer.new()
-	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	right.add_theme_constant_override("separation", 4)
-	_wallet_panel.add_child(right)
 	var coin_row := HBoxContainer.new()
 	coin_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	coin_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	coin_row.add_theme_constant_override("separation", 8)
-	right.add_child(coin_row)
-	var coin := CoinIcon.new()
+	_wallet_panel.add_child(coin_row)
+	var coin := GlyphIcon.new()
+	coin.kind = "coin"
 	coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	coin.custom_minimum_size = Vector2(30, 30)
+	coin.custom_minimum_size = Vector2(28, 28)
 	coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	coin_row.add_child(coin)
 	wallet_label = Label.new()
@@ -571,29 +564,6 @@ func _build() -> void:
 	wallet_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.35))
 	wallet_label.add_theme_constant_override("outline_size", 3)
 	coin_row.add_child(wallet_label)
-	var energy_row := HBoxContainer.new()
-	energy_row.alignment = BoxContainer.ALIGNMENT_END
-	energy_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	energy_row.add_theme_constant_override("separation", 6)
-	right.add_child(energy_row)
-	var bolt := BoltIcon.new()
-	bolt.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bolt.custom_minimum_size = Vector2(18, 18)
-	bolt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	energy_row.add_child(bolt)
-	energy_label = Label.new()
-	energy_label.text = "40"
-	energy_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.55))
-	energy_label.add_theme_constant_override("outline_size", 4)
-	energy_row.add_child(energy_label)
-	energy_bar = ProgressBar.new()
-	energy_bar.custom_minimum_size = Vector2(120, 14)
-	energy_bar.max_value = 100
-	energy_bar.value = 40
-	energy_bar.show_percentage = false
-	energy_bar.add_theme_stylebox_override("background", _bar_style(Color(0.05, 0.09, 0.17, 0.85)))
-	energy_bar.add_theme_stylebox_override("fill", _bar_style(Color(0.34, 0.84, 0.44, 0.95)))
-	energy_row.add_child(energy_bar)
 
 	# --- pause button (top right corner) ---
 	_pause_button = Button.new()
@@ -607,7 +577,10 @@ func _build() -> void:
 	_pause_button.pressed.connect(_on_pause_pressed)
 	_root.add_child(_pause_button)
 	_add_button_juice(_pause_button)
-	var pause_glyph := PauseGlyph.new()
+	var pause_glyph := GlyphIcon.new()
+	pause_glyph.kind = "pause"
+	pause_glyph.disc = true
+	pause_glyph.arc = 0.0
 	pause_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pause_glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_pause_button.add_child(pause_glyph)
@@ -625,7 +598,8 @@ func _build() -> void:
 	toast_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_row.add_theme_constant_override("separation", 8)
 	_toast_panel.add_child(toast_row)
-	var spark := SparkIcon.new()
+	var spark := GlyphIcon.new()
+	spark.kind = "spark"
 	spark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	spark.custom_minimum_size = Vector2(20, 20)
 	spark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -664,13 +638,29 @@ func _build() -> void:
 	prompt_row_inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	prompt_row_inner.add_theme_constant_override("separation", 8)
 	prompt_panel.add_child(prompt_row_inner)
-	prompt_key = _key_texture("e")
+	# Circular action icon, then a cream keycap, a divider and the label.
+	prompt_icon = GlyphIcon.new()
+	prompt_icon.kind = "hand"
+	prompt_icon.disc = true
+	prompt_icon.arc = 0.85
+	prompt_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	prompt_icon.custom_minimum_size = Vector2(34, 34)
+	prompt_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	prompt_row_inner.add_child(prompt_icon)
+	prompt_key = _key_label("E")
 	prompt_key.visible = not _touch
 	prompt_row_inner.add_child(prompt_key)
+	var divider := ColorRect.new()
+	divider.color = Color(1.0, 1.0, 1.0, 0.26)
+	divider.custom_minimum_size = Vector2(1, 22)
+	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	divider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	divider.visible = not _touch
+	prompt_row_inner.add_child(divider)
 	prompt_label = Label.new()
 	prompt_label.text = ""
 	prompt_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	prompt_label.add_theme_color_override("font_color", Color(1, 0.84, 0.3))
+	prompt_label.add_theme_color_override("font_color", Color(0.98, 0.98, 1.0, 0.98))
 	prompt_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.75))
 	prompt_label.add_theme_constant_override("outline_size", 4)
 	prompt_row_inner.add_child(prompt_label)
@@ -781,7 +771,7 @@ shader_type canvas_item;
 uniform float aspect = 0.83;
 uniform float radius = 0.085;
 uniform float border_w = 0.022;
-uniform vec4 border_color = vec4(0.42, 0.66, 1.0, 0.95);
+uniform vec4 border_color = vec4(1.0, 0.82, 0.36, 0.95);
 void fragment() {
 	vec2 p = UV - 0.5;
 	p.x *= aspect;
@@ -814,8 +804,8 @@ void fragment() {
 	n_badge.name = "NorthBadge"
 	n_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var n_style := StyleBoxFlat.new()
-	n_style.bg_color = Color(0.07, 0.13, 0.24, 0.96)
-	n_style.border_color = Color(0.42, 0.66, 1.0, 0.95)
+	n_style.bg_color = Color(0.030, 0.045, 0.070, 0.96)
+	n_style.border_color = Color(1.0, 0.80, 0.32, 0.95)
 	n_style.set_border_width_all(2)
 	n_style.set_corner_radius_all(14)
 	n_badge.add_theme_stylebox_override("panel", n_style)
@@ -823,7 +813,7 @@ void fragment() {
 	n_label.text = "N"
 	n_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	n_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	n_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.42))
+	n_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.48))
 	n_badge.add_child(n_label)
 	n_badge.custom_minimum_size = Vector2(28, 28)
 	n_badge.size = Vector2(28, 28)
@@ -953,6 +943,7 @@ func _relayout() -> void:
 	_font_size(mission_label, 15)
 	_font_size(mission_distance, 16)
 	_font_size(wallet_label, 19)
+	_font_size(_energy_label_text, 16)
 	_font_size(energy_label, 16)
 	_font_size(toast_label, 18)
 	_font_size(prompt_label, 20)
@@ -967,11 +958,11 @@ func _relayout() -> void:
 		_pips.custom_minimum_size = Vector2(0, maxf(8.0, 10.0 * s))
 		_pips.queue_redraw()
 
-	# --- mission banner (top left pill) ---
-	var wallet_w := minf(240.0 * s, view.x * 0.32)
+	# --- mission banner (top left card with a gold accent rule) ---
+	var wallet_w := minf(120.0 * s, view.x * 0.20)
 	var pause_d := 46.0 * s
 	var banner_w := minf((340.0 if _touch else 470.0) * s,
-			maxf(160.0 * s, view.x - _safe.x - _safe.z - wallet_w - pause_d - 34.0 * s))
+			maxf(160.0 * s, view.x * 0.34))
 	var banner_x := _safe.x + 14.0 * s
 	var banner_y := _safe.y + 12.0 * s
 	_mission_panel.offset_left = banner_x
@@ -981,17 +972,29 @@ func _relayout() -> void:
 	_mission_panel.custom_minimum_size = Vector2(banner_w, 0)
 	_mission_panel.pivot_offset = Vector2.ZERO
 	_mission_panel.add_theme_stylebox_override("panel",
-			_panel_style(Color(0.055, 0.095, 0.185, 0.97), Color(0.30, 0.56, 0.95, 0.85), s, 340))
-	mission_label.custom_minimum_size = Vector2(maxf(60.0 * s, banner_w - 100.0 * s), 0)
+			_panel_style(Color(0.035, 0.055, 0.085, 0.93), Color(1.0, 0.80, 0.32, 0.45), s, 18))
+	mission_label.custom_minimum_size = Vector2(maxf(60.0 * s, banner_w - 130.0 * s), 0)
 
-	# --- wallet + energy (top right, left of the pause button) ---
+	# --- energy pill (top centre) ---
+	var energy_w := minf(300.0 * s, view.x * 0.28)
+	energy_panel.offset_left = -energy_w * 0.5
+	energy_panel.offset_right = energy_w * 0.5
+	energy_panel.offset_top = _safe.y + 12.0 * s
+	energy_panel.offset_bottom = _safe.y + 12.0 * s
+	energy_panel.custom_minimum_size = Vector2(energy_w, 0)
+	energy_panel.add_theme_stylebox_override("panel",
+			_panel_style(Color(0.030, 0.048, 0.075, 0.93), Color(1.0, 0.80, 0.32, 0.35), s, 999))
+	_energy_label_text.visible = energy_w > 220.0 * s
+	energy_bar.custom_minimum_size = Vector2(clampf(112.0 * s, 50.0 * s, energy_w * 0.42),
+			maxf(10.0, 14.0 * s))
+
+	# --- wallet pill (top right, left of pause) ---
 	_wallet_panel.offset_left = -wallet_w - (_safe.z + 14.0 * s + pause_d + 10.0 * s)
 	_wallet_panel.offset_right = -(_safe.z + 14.0 * s + pause_d + 10.0 * s)
 	_wallet_panel.offset_top = _safe.y + 12.0 * s
 	_wallet_panel.offset_bottom = _safe.y + 12.0 * s
 	_wallet_panel.add_theme_stylebox_override("panel",
-			_panel_style(Color(0.055, 0.095, 0.185, 0.97), Color(1.0, 0.84, 0.3, 0.45), s, 340))
-	energy_bar.custom_minimum_size = Vector2(120.0 * s, maxf(10.0, 14.0 * s))
+			_panel_style(Color(0.030, 0.048, 0.075, 0.93), Color(1.0, 0.80, 0.32, 0.30), s, 999))
 
 	# --- pause button (top right corner) ---
 	_pause_button.offset_left = -pause_d - (_safe.z + 14.0 * s)
@@ -1000,12 +1003,11 @@ func _relayout() -> void:
 	_pause_button.offset_bottom = _safe.y + 12.0 * s + pause_d
 	_pause_button.size = Vector2(pause_d, pause_d)
 	_pause_button.pivot_offset = Vector2(pause_d, pause_d) * 0.5
-	_pause_button.add_theme_stylebox_override("normal",
-			_pause_style(Color(0.055, 0.095, 0.185, 0.88), Color(0.30, 0.56, 0.95, 0.85), s))
-	_pause_button.add_theme_stylebox_override("hover",
-			_pause_style(Color(0.10, 0.17, 0.30, 0.95), Color(0.45, 0.72, 1.0, 0.95), s))
-	_pause_button.add_theme_stylebox_override("pressed",
-			_pause_style(Color(0.16, 0.27, 0.45, 1.0), Color(1.0, 0.86, 0.34, 0.95), s))
+	# The badge glyph draws the circular dark plate and white bars; the
+	# button itself stays transparent so it does not double up the frame.
+	_pause_button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
+	_pause_button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
+	_pause_button.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
 	_pause_button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 
 	# --- toast (top centre, under the banner band) ---
@@ -1013,7 +1015,8 @@ func _relayout() -> void:
 	_toast_panel.offset_left = -toast_half
 	_toast_panel.offset_right = toast_half
 	var band := maxf(_mission_panel.get_combined_minimum_size().y,
-			_wallet_panel.get_combined_minimum_size().y)
+			maxf(_wallet_panel.get_combined_minimum_size().y,
+			energy_panel.get_combined_minimum_size().y))
 	var toast_top := _safe.y + 12.0 * s + band + 10.0 * s
 	_toast_panel.offset_top = toast_top
 	_toast_panel.offset_bottom = toast_top + 44.0 * s
@@ -1064,18 +1067,24 @@ func _relayout() -> void:
 	_dialogue_art.slash_x = port + 24.0 * s
 	_dialogue_art.queue_redraw()
 	var pstyle := StyleBoxFlat.new()
-	pstyle.bg_color = Color(0.04, 0.08, 0.16, 0.94)
-	pstyle.border_color = Color(0.28, 0.72, 1.0, 0.95)
-	pstyle.set_border_width_all(int(round(2.0 * s)))
-	pstyle.set_corner_radius_all(int(round(18.0 * s)))
-	pstyle.content_margin_left = 16.0 * s
+	pstyle.bg_color = Color(0.030, 0.045, 0.070, 0.94)
+	pstyle.border_color = Color(1.0, 0.82, 0.36, 0.42)
+	pstyle.set_border_width_all(maxi(1, int(round(1.5 * s))))
+	pstyle.set_corner_radius_all(999)
+	pstyle.content_margin_left = 10.0 * s
 	pstyle.content_margin_right = 18.0 * s
-	pstyle.content_margin_top = 8.0 * s
-	pstyle.content_margin_bottom = 8.0 * s
+	pstyle.content_margin_top = 5.0 * s
+	pstyle.content_margin_bottom = 5.0 * s
 	pstyle.shadow_color = Color(0.0, 0.0, 0.0, 0.45)
-	pstyle.shadow_size = int(round(6.0 * s))
+	pstyle.shadow_size = int(round(8.0 * s))
+	pstyle.shadow_offset = Vector2(0, 3.0 * s)
 	prompt_panel.add_theme_stylebox_override("panel", pstyle)
-	prompt_label.add_theme_font_size_override("font_size", int(round(15.0 * s)))
+	prompt_label.add_theme_font_size_override("font_size", int(round(16.0 * s)))
+	if prompt_icon:
+		prompt_icon.custom_minimum_size = Vector2(34.0 * s, 34.0 * s)
+	if prompt_key:
+		prompt_key.custom_minimum_size = Vector2(28.0 * s, 28.0 * s)
+		prompt_key.add_theme_font_size_override("font_size", int(round(15.0 * s)))
 
 	# --- minimap (always top right, below the pills) ---
 	var map_long := clampf(BASE_MINIMAP * s, 96.0, view.x * 0.26)
@@ -1140,10 +1149,13 @@ func _panel_style(bg: Color, border: Color, s: float = 1.0, corner: float = -1.0
 	return sb
 
 
-func _bar_style(colour: Color) -> StyleBoxFlat:
+func _bar_style(colour: Color, border: Color = Color(0, 0, 0, 0)) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = colour
-	sb.set_corner_radius_all(6)
+	sb.set_corner_radius_all(8)
+	if border.a > 0.0:
+		sb.border_color = border
+		sb.set_border_width_all(1)
 	# A soft matching halo makes the fill read as a lit energy cell.
 	sb.shadow_color = Color(colour.r, colour.g, colour.b, 0.35)
 	sb.shadow_size = 3
@@ -1226,6 +1238,9 @@ func _play_entrance() -> void:
 	_mission_panel.scale = Vector2(0.95, 0.95)
 	_wallet_panel.modulate.a = 0.0
 	_wallet_panel.scale = Vector2(0.95, 0.95)
+	energy_panel.pivot_offset = energy_panel.size * 0.5
+	energy_panel.modulate.a = 0.0
+	energy_panel.scale = Vector2(0.92, 0.92)
 	minimap.modulate.a = 0.0
 	minimap.scale = Vector2(0.90, 0.90)
 	_pause_button.modulate.a = 0.0
@@ -1240,6 +1255,9 @@ func _play_entrance() -> void:
 	tw.tween_property(_wallet_panel, "modulate:a", 1.0, 0.42).set_delay(0.12)
 	tw.tween_property(_wallet_panel, "scale", Vector2.ONE, 0.50)\
 		.set_delay(0.12).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(energy_panel, "modulate:a", 1.0, 0.42).set_delay(0.08)
+	tw.tween_property(energy_panel, "scale", Vector2.ONE, 0.50)\
+		.set_delay(0.08).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(_pause_button, "modulate:a", 1.0, 0.30).set_delay(0.20)
 	tw.tween_property(_pause_button, "scale", Vector2.ONE, 0.42)\
 		.set_delay(0.20).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -1277,6 +1295,35 @@ func set_paused_visible(on: bool) -> void:
 	if _pause_card:
 		tw.tween_property(_pause_card, "scale", Vector2.ONE, 0.28)\
 			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+func _key_label(text: String) -> Label:
+	## Cream keycap with a dark lip - the reference uses a white [E] cap for
+	## keyboard prompts. Drawn as a styled Label so it needs no icon asset.
+	var key := Label.new()
+	key.text = text
+	key.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	key.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	key.add_theme_color_override("font_color", Color(0.07, 0.09, 0.13, 0.96))
+	key.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0))
+	key.add_theme_constant_override("outline_size", 0)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.94, 0.93, 0.90, 0.98)
+	sb.border_color = Color(0.10, 0.12, 0.16, 0.85)
+	sb.set_border_width_all(1)
+	sb.border_width_bottom = 3
+	sb.set_corner_radius_all(7)
+	sb.shadow_color = Color(0.0, 0.0, 0.0, 0.38)
+	sb.shadow_size = 3
+	sb.shadow_offset = Vector2(0, 2)
+	sb.content_margin_left = 7.0
+	sb.content_margin_right = 7.0
+	sb.content_margin_top = 1.0
+	sb.content_margin_bottom = 1.0
+	key.add_theme_stylebox_override("normal", sb)
+	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	key.custom_minimum_size = Vector2(28, 28)
+	return key
 
 
 func _key_texture(key_name: String) -> TextureRect:
@@ -1503,7 +1550,8 @@ func _player_node() -> Node:
 
 func set_mission(index: int, total: int, text: String) -> void:
 	var changed := _pips != null and (_pips.index != index or _pips.total != total)
-	mission_title.text = "MISSION %d / %d" % [index + 1, total]
+	var day := int(Mission.day) if Mission else 1
+	mission_title.text = "DAY %d  •  MISSION %d / %d" % [day, index + 1, total]
 	_objective_base = text
 	_distance_text = ""
 	mission_label.text = text
@@ -1591,9 +1639,14 @@ func _find_npc(npc_id: String) -> Node3D:
 	return null
 
 
-func set_prompt(text: String) -> void:
+func set_prompt(text: String, icon: String = "") -> void:
 	if prompt_panel == null:
 		return
+	# The icon follows the action (door, talk, cart, book, water, ...), so the
+	# prompt always uses the same glyph as the interaction reference card.
+	if icon != "" and prompt_icon != null:
+		prompt_icon.kind = icon
+		prompt_icon.queue_redraw()
 	var trimmed := text.strip_edges()
 	var shown := trimmed != ""
 	if not shown:
@@ -1733,8 +1786,8 @@ func update_energy(value: float) -> void:
 	if _energy_bucket < 0:
 		energy_bar.value = target
 	if bucket != _energy_bucket:
-		var colours := [Color(0.95, 0.35, 0.28, 0.96),
-			Color(1.0, 0.72, 0.22, 0.96), Color(0.34, 0.84, 0.44, 0.96)]
+		var colours := [Color(0.92, 0.32, 0.24, 0.96),
+			Color(1.0, 0.62, 0.18, 0.96), Color(1.0, 0.78, 0.26, 0.98)]
 		energy_bar.add_theme_stylebox_override("fill", _bar_style(colours[bucket]))
 	_energy_bucket = bucket
 	if _energy_tween and _energy_tween.is_valid():

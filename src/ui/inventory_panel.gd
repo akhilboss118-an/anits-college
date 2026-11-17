@@ -20,6 +20,8 @@ var _card_grid: HBoxContainer
 var _title_lbl: Label
 var _sub_lbl: Label
 var _close_btn: Button
+var _drinks_title: Label
+var _drinks_grid: GridContainer
 
 
 func has_item(item_id: String) -> bool:
@@ -64,7 +66,7 @@ func _build_ui() -> void:
 	root.add_child(center)
 
 	_panel = PanelContainer.new()
-	_panel.custom_minimum_size = Vector2(820, 380)
+	_panel.custom_minimum_size = Vector2(880, 540)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.03, 0.10, 0.22, 0.98)
 	sb.border_width_left = 2
@@ -112,6 +114,20 @@ func _build_ui() -> void:
 	_card_grid.custom_minimum_size = Vector2(760, 210)
 	vbox.add_child(_card_grid)
 
+	# Canteen collection: all 10 drinks from the original DR table, with the
+	# Campus Foodie badge shown once every one has been tried.
+	_drinks_title = Label.new()
+	_drinks_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_drinks_title.add_theme_font_size_override("font_size", 15)
+	_drinks_title.add_theme_color_override("font_color", Color("#ffd54a"))
+	vbox.add_child(_drinks_title)
+
+	_drinks_grid = GridContainer.new()
+	_drinks_grid.columns = 5
+	_drinks_grid.add_theme_constant_override("h_separation", 8)
+	_drinks_grid.add_theme_constant_override("v_separation", 8)
+	vbox.add_child(_drinks_grid)
+
 	var foot := HBoxContainer.new()
 	foot.alignment = BoxContainer.ALIGNMENT_END
 	vbox.add_child(foot)
@@ -142,12 +158,22 @@ func open(for_check: bool = false) -> void:
 	ask_mode = for_check
 	is_open = true
 	visible = true
+	_play_ui_sfx("ui_click", -14.0)
 	_render_cards()
 
 
 func close() -> void:
 	is_open = false
 	visible = false
+	_play_ui_sfx("ui_back", -16.0)
+
+
+## Null-safe: the headless test runner compiles this script before the autoload
+## globals exist, so never reference the `Audio` singleton directly.
+func _play_ui_sfx(id: String, volume_db: float = -14.0) -> void:
+	var a: Node = get_node_or_null("/root/Audio")
+	if a:
+		a.play_ui(id, volume_db)
 
 
 func _render_cards() -> void:
@@ -158,7 +184,7 @@ func _render_cards() -> void:
 		_sub_lbl.text = "Security Bajirao: \"Show me your ID card, please.\" Click SHOW on your card."
 		_sub_lbl.add_theme_color_override("font_color", Color("#ffd54a"))
 	else:
-		_sub_lbl.text = "Your ANITS documents. Security checks your ID card at the gate every day."
+		_sub_lbl.text = "Your ANITS documents, and the 10-drink Canteen Collection."
 		_sub_lbl.add_theme_color_override("font_color", Color(1, 1, 1, 0.8))
 
 	var gs: Node = get_node_or_null("/root/GameState") if is_inside_tree() else null
@@ -184,6 +210,59 @@ func _render_cards() -> void:
 	_add_card_slot("Library Card", has_lib, func(card_panel):
 		_build_lib_card(card_panel, p_name, roll)
 	)
+
+	_render_drinks(gs)
+
+
+func _render_drinks(gs: Node) -> void:
+	if _drinks_grid == null:
+		return
+	for child in _drinks_grid.get_children():
+		child.queue_free()
+
+	var tried: Dictionary = {}
+	var count := 0
+	if gs:
+		tried = gs.drinks_tried
+		count = gs.drinks_tried_count()
+	var db: Node = get_node_or_null("/root/CampusDB") if is_inside_tree() else null
+	var drinks: Array = db.drinks if db else []
+	var total := drinks.size() if drinks.size() > 0 else 10
+	var badge := ""
+	if gs and gs.has_item("foodie"):
+		badge = "   •   CAMPUS FOODIE BADGE UNLOCKED"
+	_drinks_title.text = "CANTEEN COLLECTION — %d / %d%s" % [count, total, badge]
+	_drinks_title.add_theme_color_override("font_color",
+		Color("#6dff9f") if count >= total else Color("#ffd54a"))
+
+	for drink in drinks:
+		var drink_id := str(drink.get("id", ""))
+		var got := tried.has(drink_id)
+		var chip := PanelContainer.new()
+		chip.custom_minimum_size = Vector2(158, 40)
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(0.06, 0.22, 0.15, 0.95) if got else Color(0.05, 0.09, 0.16, 0.8)
+		sb.border_width_left = 1
+		sb.border_width_top = 1
+		sb.border_width_right = 1
+		sb.border_width_bottom = 1
+		sb.border_color = Color("#2fd36b") if got else Color(0.35, 0.48, 0.62, 0.35)
+		sb.corner_radius_top_left = 8
+		sb.corner_radius_top_right = 8
+		sb.corner_radius_bottom_left = 8
+		sb.corner_radius_bottom_right = 8
+		chip.add_theme_stylebox_override("panel", sb)
+		_drinks_grid.add_child(chip)
+
+		var lbl := Label.new()
+		lbl.text = ("✓ " if got else "· ") + str(drink.get("name", drink_id))
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		lbl.clip_text = true
+		lbl.add_theme_font_size_override("font_size", 11)
+		lbl.add_theme_color_override("font_color",
+			Color("#d9ffe6") if got else Color(1, 1, 1, 0.45))
+		chip.add_child(lbl)
 
 
 func _add_card_slot(title: String, has_it: bool, build_card_func: Callable) -> void:

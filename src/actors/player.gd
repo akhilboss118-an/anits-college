@@ -8,6 +8,12 @@ extends CharacterBody3D
 
 @onready var camera: Camera3D = $Camera3D
 
+## Sprinting burns energy (per second); at zero the player is forced to walk
+## until a drink or the water cooler refills the bar.
+const SPRINT_DRAIN := 2.4
+const STRIDE_WALK := 1.85
+const STRIDE_RUN := 2.30
+
 var tuning: Dictionary = {}
 var yaw: float = PI
 var pitch: float = 0.3
@@ -29,6 +35,7 @@ var _interact_cache: Array[Node3D] = []
 var _cache_timer: float = 0.0
 var _boom_distance: float = -1.0
 var _boom_timer: float = 0.0
+var _stride: float = 0.0
 
 
 func _ready() -> void:
@@ -136,6 +143,7 @@ func _read_input(delta: float) -> void:
 		if not is_on_floor():
 			velocity.y -= 19.6 * delta
 		move_and_slide()
+		_stride = 0.0
 		_update_visual(delta)
 		return
 
@@ -152,7 +160,9 @@ func _read_input(delta: float) -> void:
 	# Virtual joystick: +x is right, -y is forward.
 	forward += -touch_move.y
 	strafe += touch_move.x
-	var run := Input.is_key_pressed(KEY_SHIFT) or touch_run
+	# A flat energy bar forces a walk: sprinting is a resource, not a toggle.
+	var wants_run := Input.is_key_pressed(KEY_SHIFT) or touch_run
+	var run := wants_run and not _is_exhausted()
 	if Input.is_key_pressed(KEY_Q):
 		yaw += delta * float(tuning.get("key_rotate", 1.8))
 	if Input.is_key_pressed(KEY_Z):
@@ -160,6 +170,11 @@ func _read_input(delta: float) -> void:
 	var wish := Vector3(sin(yaw) * forward - cos(yaw) * strafe, 0.0, cos(yaw) * forward + sin(yaw) * strafe)
 	if wish.length() > 0.001:
 		wish = wish.normalized()
+	var moving := wish.length() > 0.001
+	# Drain only for real sprinting on the ground, so holding Shift in mid-air
+	# or against a wall does not burn the bar.
+	if wants_run and moving and is_on_floor() and GameState:
+		GameState.drain_energy(SPRINT_DRAIN * delta)
 	var boost := 1.0
 	if GameState and GameState.boost_seconds > 0.0:
 		boost = float(tuning.get("boost_multiplier", 1.3))
@@ -182,7 +197,26 @@ func _read_input(delta: float) -> void:
 
 	move_and_slide()
 	_find_nearby()
+	_update_footsteps(delta)
 	_update_visual(delta)
+
+
+func _is_exhausted() -> bool:
+	return GameState != null and GameState.energy <= 0.001
+
+
+## Footsteps follow distance travelled, not a timer, so they stay in step at
+## walk, run and boost speeds without any extra bookkeeping.
+func _update_footsteps(delta: float) -> void:
+	if not is_on_floor() or speed < 0.25:
+		_stride = 0.0
+		return
+	_stride += speed * delta
+	var running := speed > 3.2
+	if _stride >= (STRIDE_RUN if running else STRIDE_WALK):
+		_stride = 0.0
+		if Audio:
+			Audio.footstep(running)
 
 
 func _update_visual(delta: float) -> void:

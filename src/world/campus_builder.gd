@@ -1863,6 +1863,10 @@ func _build_vending_machines() -> void:
 		var colour := Color(str(v.get("color", "#c62828")))
 		var body := box(self, Vector3(1.1, 2.0, 0.8), Vector3(w.x, 1.0, w.z), mat(colour), "VendingMachine")
 		body.add_to_group("interactables")
+		# The stock is the original DR table slice for this machine; main.gd
+		# offers the first drink the player has not tried yet.
+		body.set_meta("drink_stock", v.get("stock", []))
+		body.set_meta("vending_label", str(v.get("label", "Cold Drinks")))
 		add_collider(self, Vector3(1.1, 2.0, 0.8), Vector3(w.x, 0.0, w.z), "VendingCol")
 		var glass := box(self, Vector3(0.9, 1.3, 0.84), Vector3(w.x, 1.25, w.z), mat(Color.html("#304050")), "VendingGlass")
 		glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

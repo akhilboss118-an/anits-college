@@ -45,6 +45,7 @@ var _shoot_throw_btn: Button
 var _shoot_score_lbl: Label
 var _shoot_clock_lbl: Label
 var _shoot_reset_token: int = 0
+var _shoot_last_tick: int = -1
 
 # cmd (QTE)
 var _cmd_seq: Array = []
@@ -267,6 +268,11 @@ func _process(delta: float) -> void:
 			if _shoot_view != null and not _shoot_busy and not _result_box.visible:
 				if _shoot_clock > 0.0:
 					_shoot_clock -= delta
+					if _shoot_clock <= 3.0:
+						var sec := int(ceil(_shoot_clock))
+						if sec != _shoot_last_tick:
+							_shoot_last_tick = sec
+							_play_ui_sfx("tick", -15.0)
 					if _shoot_clock <= 0.0:
 						_shoot_clock = 0.0
 						_register_shot(false)
@@ -389,6 +395,7 @@ func _start_shoot() -> void:
 	_shoot_reset_delay = maxf(0.0, float(_config.get("reset_delay", 0.8)))
 	_shoot_busy = false
 	_shoot_reset_token += 1
+	_shoot_last_tick = -1
 	_anim_time = 0.0
 	_shoot_dots.clear()
 
@@ -509,6 +516,7 @@ func _reset_after_shot() -> void:
 	if _shoot_view != null:
 		_shoot_view.reset_ball()
 	_shoot_clock = _shoot_clock_max
+	_shoot_last_tick = -1
 	if _shoot_clock_lbl != null:
 		_shoot_clock_lbl.text = "SHOT CLOCK  %.1fs" % _shoot_clock
 	if _shoot_throw_btn != null:
@@ -705,6 +713,7 @@ func _pick_quiz_opt(index: int) -> void:
 	var correct: int = int(q_data[2])
 	if index == correct:
 		_quiz_ok += 1
+	_play_sfx("success" if index == correct else "error", -14.0)
 
 	_quiz_idx += 1
 	_show_quiz_question()
@@ -715,6 +724,7 @@ func _pick_quiz_opt(index: int) -> void:
 func _end_game(won: bool) -> void:
 	_content_box.visible = false
 	_result_box.visible = true
+	_play_sfx("success" if won else "error", -8.0)
 
 	if won:
 		_result_lbl.text = "MISSION COMPLETE!"
@@ -732,6 +742,7 @@ func _end_game(won: bool) -> void:
 
 
 func _on_retry() -> void:
+	_play_ui_sfx("ui_click", -12.0)
 	_result_box.visible = false
 	_content_box.visible = true
 	_clear_content()
@@ -848,15 +859,18 @@ func _handle_type_char(c: String) -> void:
 	if expected_idx < _type_current_word.length():
 		if _type_current_word.substr(expected_idx, 1) == c:
 			_type_input += c
+			_play_sfx("type", -13.0)
 			_update_typing_display()
 			if _type_input == _type_current_word:
 				_type_eaten += 1
 				_type_idx += 1
+				_play_sfx("success", -15.0)
 				_show_typing_word()
 
 
 func _on_typing_timeout() -> void:
 	_type_idx += 1
+	_play_sfx("error", -18.0)
 	_show_typing_word()
 
 
@@ -911,11 +925,13 @@ func _step_foot(which: int) -> void:
 	if which == _drill_cadence_step:
 		_drill_dist += 5.5
 		_drill_cadence_step = 1 - _drill_cadence_step
+		_play_footstep(true)
 		_drill_cadence_lbl.text = "NEXT: " + ("👟 LEFT FOOT!" if _drill_cadence_step == 0 else "👟 RIGHT FOOT!")
 		_drill_dist_bar.value = minf(100.0, _drill_dist)
 		if _drill_dist >= _drill_target:
 			_end_game(true)
 	else:
+		_play_sfx("error", -18.0)
 		_drill_cadence_lbl.text = "⚠️ STUMBLE! Match the march cadence!"
 
 
@@ -992,6 +1008,7 @@ func _hit_dance_move(move_idx: int) -> void:
 		return
 	if move_idx == _dance_target_move:
 		_dance_hype = minf(100.0, _dance_hype + 14.0)
+		_play_sfx("success", -15.0)
 		if _dance_hype_bar:
 			_dance_hype_bar.value = _dance_hype
 		if _dance_prompt_lbl:
@@ -1001,6 +1018,7 @@ func _hit_dance_move(move_idx: int) -> void:
 			_end_game(true)
 	else:
 		_dance_hype = maxf(0.0, _dance_hype - 4.0)
+		_play_sfx("error", -19.0)
 		if _dance_hype_bar:
 			_dance_hype_bar.value = _dance_hype
 
@@ -1011,3 +1029,25 @@ func _close(won: bool) -> void:
 	minigame_completed.emit(won)
 	if _callback.is_valid():
 		_callback.call(won)
+
+
+# ------------------------------------------------------------------ audio
+
+## Null-safe wrappers: the headless test runner compiles this script before the
+## autoload globals exist, so never reference the `Audio` singleton directly.
+func _play_sfx(id: String, volume_db: float = -8.0, pitch: float = 1.0) -> void:
+	var a: Node = get_node_or_null("/root/Audio")
+	if a:
+		a.play(id, volume_db, pitch)
+
+
+func _play_ui_sfx(id: String, volume_db: float = -14.0) -> void:
+	var a: Node = get_node_or_null("/root/Audio")
+	if a:
+		a.play_ui(id, volume_db)
+
+
+func _play_footstep(running: bool) -> void:
+	var a: Node = get_node_or_null("/root/Audio")
+	if a:
+		a.footstep(running)

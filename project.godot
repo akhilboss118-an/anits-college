@@ -26,6 +26,7 @@ CampusDB="*res://src/autoload/campus_db.gd"
 Mission="*res://src/autoload/mission_runner.gd"
 Dialogue="*res://src/autoload/dialogue_service.gd"
 VoiceBank="*res://src/autoload/voice_bank.gd"
+Audio="*res://src/autoload/audio_fx.gd"
 
 [display]
 

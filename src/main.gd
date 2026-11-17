@@ -480,6 +480,9 @@ func _on_start(profile: Dictionary) -> void:
 	_sync_special_npcs_for_day()
 	Mission.start_day(GameState.current_day)
 	_on_step_changed(0, Mission.steps.size(), str(Mission.current().get("text", "")))
+	# Campus ambience runs under the voice lines for the whole outdoor day.
+	if Audio:
+		Audio.set_ambience("campus")
 	# The menu kept its loading screen up while the campus was built; fade it
 	# out now that the first gameplay frame is ready.
 	if menu and menu.has_method("dismiss_loading"):
@@ -510,12 +513,16 @@ func _on_minigame_completed(won: bool) -> void:
 func _on_id_shown() -> void:
 	if Mission.current().get("type") == "idcheck":
 		Mission.advance()
+		if Audio:
+			Audio.play("unlock", -10.0)
 		if hud:
 			hud.toast("Bajirao: \"ID verified! Welcome to ANITS.\" Gate opened.", 3.0)
 		_update_marker()
 
 
 func _on_mission_completed(d: int) -> void:
+	if Audio:
+		Audio.play("cheer", -9.0)
 	if level_complete_dialog:
 		level_complete_dialog.show_day_completed(d)
 
@@ -890,6 +897,8 @@ func _skip_dialogue() -> void:
 func _on_step_changed(index: int, total: int, text: String) -> void:
 	if hud:
 		hud.set_mission(index, total, text)
+	if index > 0 and not _check_mode and Audio:
+		Audio.play("success", -17.0)
 	if campus and campus.has_method("set_gate_open"):
 		## The gate swings open once the guard has been spoken to (step 1+).
 		campus.set_gate_open(index >= 1)
@@ -974,6 +983,9 @@ func _enter_office() -> void:
 		return
 	current_interior = "admin_office"
 	in_office = true
+	if Audio:
+		Audio.set_ambience("interior")
+		Audio.play_ui("ui_back", -16.0)
 	_set_room_visible(admin_room, true)
 	player.global_position = admin_office.entry_pos
 	player.velocity = Vector3.ZERO
@@ -994,6 +1006,9 @@ func _exit_office() -> void:
 	current_interior = ""
 	in_office = false
 	_set_room_visible(admin_room, false)
+	if Audio:
+		Audio.set_ambience("campus")
+		Audio.play_ui("ui_back", -16.0)
 	player.global_position = admin_office.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = PI * 0.5
@@ -1008,6 +1023,9 @@ func _enter_library() -> void:
 		return
 	current_interior = "library"
 	in_office = false
+	if Audio:
+		Audio.set_ambience("interior")
+		Audio.play_ui("ui_back", -16.0)
 	_set_room_visible(library_room, true)
 	player.global_position = library_interior.entry_pos
 	player.velocity = Vector3.ZERO
@@ -1026,6 +1044,9 @@ func _exit_library() -> void:
 	current_interior = ""
 	in_office = false
 	_set_room_visible(library_room, false)
+	if Audio:
+		Audio.set_ambience("campus")
+		Audio.play_ui("ui_back", -16.0)
 	player.global_position = library_interior.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = -PI * 0.5
@@ -1040,6 +1061,9 @@ func _enter_classroom() -> void:
 		return
 	current_interior = "classroom"
 	in_office = false
+	if Audio:
+		Audio.set_ambience("interior")
+		Audio.play_ui("ui_back", -16.0)
 	_set_room_visible(classroom_room, true)
 	player.global_position = classroom_interior.entry_pos
 	player.velocity = Vector3.ZERO
@@ -1058,6 +1082,9 @@ func _exit_classroom() -> void:
 	current_interior = ""
 	in_office = false
 	_set_room_visible(classroom_room, false)
+	if Audio:
+		Audio.set_ambience("campus")
+		Audio.play_ui("ui_back", -16.0)
 	player.global_position = classroom_interior.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = PI * 0.5
@@ -1072,6 +1099,9 @@ func _enter_canteen() -> void:
 		return
 	current_interior = "canteen"
 	in_office = false
+	if Audio:
+		Audio.set_ambience("interior")
+		Audio.play_ui("ui_back", -16.0)
 	_set_room_visible(canteen_room, true)
 	player.global_position = canteen_interior.entry_pos
 	player.velocity = Vector3.ZERO
@@ -1090,6 +1120,9 @@ func _exit_canteen() -> void:
 	current_interior = ""
 	in_office = false
 	_set_room_visible(canteen_room, false)
+	if Audio:
+		Audio.set_ambience("campus")
+		Audio.play_ui("ui_back", -16.0)
 	player.global_position = canteen_interior.hall_return_pos
 	player.velocity = Vector3.ZERO
 	player.yaw = -PI * 0.5
@@ -1265,66 +1298,133 @@ func _degrade_quality() -> void:
 			print("  [quality] stepped down to level 3 (fps safety)")
 
 
+## The next drink a vending machine offers: the first drink in its authored
+## stock the player has not tried yet, so a machine never repeats while it
+## still has something new. Once the stock is exhausted it repeats the first.
+func _vending_offer(machine: Node) -> Dictionary:
+	var stock: Array = machine.get_meta("drink_stock", [])
+	var fallback: Dictionary = {}
+	for raw_id in stock:
+		var drink: Dictionary = CampusDB.drink_by_id(str(raw_id))
+		if drink.is_empty():
+			continue
+		if fallback.is_empty():
+			fallback = drink
+		if not GameState.drinks_tried.has(str(drink.get("id", ""))):
+			return drink
+	if not fallback.is_empty():
+		return fallback
+	return {"id": "happy", "name": "Happy Faces Soda", "price": 20,
+		"energy_type": 0, "desc": "Sweet strawberry fizz. Instant smile."}
+
+
+func _buy_vending_drink(machine: Node) -> void:
+	var drink := _vending_offer(machine)
+	var drink_id := str(drink.get("id", ""))
+	var drink_name := str(drink.get("name", "Cold Drink"))
+	var price := int(drink.get("price", 20))
+	if not GameState.can_afford(price):
+		if Audio:
+			Audio.play_ui("error", -10.0)
+		if hud:
+			hud.toast("Not enough cash! %s costs Rs. %d." % [drink_name, price], 3.0)
+		return
+	var is_new := not GameState.drinks_tried.has(drink_id)
+	var energy_type := int(drink.get("energy_type", 0))
+	GameState.spend(price)
+	GameState.add_energy(CampusDB.energy_per_drink(energy_type))
+	if energy_type == 1:
+		GameState.start_boost(CampusDB.boost_seconds())
+	GameState.try_drink(drink_id)
+	if Audio:
+		Audio.play("fizz", -8.0)
+		Audio.play("coin", -12.0)
+	var total := GameState.drinks_tried_count()
+	if is_new and total >= 10:
+		if hud:
+			hud.toast("CAMPUS FOODIE! All 10 drinks tried. Badge added to your bag.", 5.0)
+	elif hud:
+		var extra := ""
+		if is_new:
+			extra += "  •  NEW %d/10" % total
+		if energy_type == 1:
+			extra += "  •  Speed boost %.0fs" % CampusDB.boost_seconds()
+		hud.toast("%s%s\n%s" % [drink_name, extra, str(drink.get("desc", ""))], 4.0)
+	if total >= 2:
+		Mission.notify_check("drinks")
+
+
 func _update_prompt() -> void:
 	if player == null or hud == null:
 		return
+	# Work out the text and the matching icon first, then hand both to the HUD
+	# and the touch pad once. The icon vocabulary is the reference icon set:
+	# door, machine, box, cart, bed, talk, loot, wrench, fuel, star.
+	var text := ""
+	var icon := ""
 	if Dialogue.active:
-		hud.set_prompt("")
-		return
+		pass
 	# Leaving interiors
-	if in_office and admin_office and player.global_position.distance_to(admin_office.exit_pos) < 2.4:
-		hud.set_prompt("Leave the Admin Office")
-		return
-	if current_interior == "library" and library_interior and player.global_position.distance_to(library_interior.exit_pos) < 2.4:
-		hud.set_prompt("Leave Central Library")
-		return
-	if current_interior == "classroom" and classroom_interior and player.global_position.distance_to(classroom_interior.exit_pos) < 2.4:
-		hud.set_prompt("Leave Room 204")
-		return
-	if current_interior == "canteen" and canteen_interior and player.global_position.distance_to(canteen_interior.exit_pos) < 2.4:
-		hud.set_prompt("Leave the Canteen")
-		return
-
+	elif in_office and admin_office \
+			and player.global_position.distance_to(admin_office.exit_pos) < 2.4:
+		text = "Leave the Admin Office"
+		icon = "door"
+	elif current_interior == "library" and library_interior \
+			and player.global_position.distance_to(library_interior.exit_pos) < 2.4:
+		text = "Leave Central Library"
+		icon = "door"
+	elif current_interior == "classroom" and classroom_interior \
+			and player.global_position.distance_to(classroom_interior.exit_pos) < 2.4:
+		text = "Leave Room 204"
+		icon = "door"
+	elif current_interior == "canteen" and canteen_interior \
+			and player.global_position.distance_to(canteen_interior.exit_pos) < 2.4:
+		text = "Leave the Canteen"
+		icon = "door"
 	# Entering interiors from campus
-	if player.interact_target != null:
-		if player.interact_target.is_in_group("admin_office_door"):
-			hud.set_prompt("Enter the Admin Office")
-			return
-		if player.interact_target.is_in_group("library_door"):
-			hud.set_prompt("Enter Central Library")
-			return
-		if player.interact_target.is_in_group("classroom_door"):
-			hud.set_prompt("Enter Room 204 (CSE)")
-			return
-		if player.interact_target.is_in_group("canteen_door"):
-			hud.set_prompt("Enter the Canteen")
-			return
-		if player.interact_target.is_in_group("classroom_seat"):
-			hud.set_prompt("Sit at Desk (Room 204)")
-			return
-		if player.interact_target.is_in_group("atm"):
-			hud.set_prompt("Withdraw Rs. 250 (Bank ATM)")
-			return
-		if player.interact_target.name.begins_with("Vending"):
-			hud.set_prompt("Buy Cold Drink (Rs. 20)")
-			return
-		if player.interact_target.is_in_group("notice_board"):
-			var title: String = str(player.interact_target.get_meta("board_title", "Notice Board"))
-			hud.set_prompt("Read %s" % title)
-			return
-		if player.interact_target.is_in_group("water_cooler"):
-			hud.set_prompt("Drink Fresh RO Water (ANITS)")
-			return
-
-	if Mission.current().get("type") == "idcheck" and player.dialogue_nearby != null:
-		hud.set_prompt("Show your ID card (press B)")
-		return
-	if player.dialogue_nearby != null:
-		hud.set_prompt("Talk to %s" % str(player.dialogue_nearby.get("display_name")))
 	elif player.interact_target != null:
-		hud.set_prompt("Interact")
-	else:
-		hud.set_prompt("")
+		var target: Node = player.interact_target
+		if target.is_in_group("admin_office_door"):
+			text = "Enter the Admin Office"
+			icon = "door"
+		elif target.is_in_group("library_door"):
+			text = "Enter Central Library"
+			icon = "door"
+		elif target.is_in_group("classroom_door"):
+			text = "Enter Room 204 (CSE)"
+			icon = "door"
+		elif target.is_in_group("canteen_door"):
+			text = "Enter the Canteen"
+			icon = "door"
+		elif target.is_in_group("classroom_seat"):
+			text = "Sit at Desk (Room 204)"
+			icon = "bed"
+		elif target.is_in_group("atm"):
+			text = "Withdraw Rs. 250 (Bank ATM)"
+			icon = "loot"
+		elif target.name.begins_with("Vending"):
+			var offer := _vending_offer(target)
+			text = "Buy %s (Rs. %d)" % [str(offer.get("name", "Cold Drink")), int(offer.get("price", 20))]
+			icon = "cart"
+		elif target.is_in_group("notice_board"):
+			var title: String = str(target.get_meta("board_title", "Notice Board"))
+			text = "Read %s" % title
+			icon = "book"
+		elif target.is_in_group("water_cooler"):
+			text = "Drink Fresh RO Water (ANITS)"
+			icon = "water"
+		else:
+			text = "Interact"
+			icon = "gear"
+	elif Mission.current().get("type") == "idcheck" and player.dialogue_nearby != null:
+		text = "Show your ID card (press B)"
+		icon = "person"
+	elif player.dialogue_nearby != null:
+		text = "Talk to %s" % str(player.dialogue_nearby.get("display_name"))
+		icon = "talk"
+	hud.set_prompt(text, icon)
+	if touch_controls and touch_controls.has_method("set_action_icon"):
+		touch_controls.set_action_icon(icon)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -1362,6 +1462,8 @@ func _pause_game() -> void:
 	if get_tree().paused:
 		return
 	get_tree().paused = true
+	if Audio:
+		Audio.play_ui("ui_click", -12.0)
 	if player:
 		player.input_enabled = false
 	if hud:
@@ -1374,6 +1476,8 @@ func _resume_game() -> void:
 	if not get_tree().paused:
 		return
 	get_tree().paused = false
+	if Audio:
+		Audio.play_ui("ui_click", -12.0)
 	if player:
 		player.input_enabled = true
 	if hud:
@@ -1384,6 +1488,9 @@ func _resume_game() -> void:
 
 func _to_main_menu() -> void:
 	get_tree().paused = false
+	if Audio:
+		Audio.stop_ambience()
+		Audio.play_ui("ui_back", -12.0)
 	if hud:
 		hud.set_paused_visible(false)
 		hud.visible = false
@@ -1448,34 +1555,34 @@ func _interact() -> void:
 				hud.toast("Seated in Room 204. Ready for class lecture!", 3.0)
 			return
 		if player.interact_target.is_in_group("atm"):
-			GameState.deposit(250)
-			if hud:
-				hud.toast("Withdrew Rs. 250 from ATM. Wallet: Rs. %d" % GameState.wallet, 3.0)
-			Mission.notify_check("bank")
+			if GameState.deposit(250):
+				if Audio:
+					Audio.play("coin", -9.0)
+				if hud:
+					hud.toast("Withdrew Rs. 250 from ATM. Wallet: Rs. %d" % GameState.wallet, 3.0)
+				Mission.notify_check("bank")
+			else:
+				if Audio:
+					Audio.play_ui("error", -10.0)
+				if hud:
+					hud.toast("Your bank balance is empty.", 3.0)
 			return
-		if player.interact_target.name.begins_with("Vending") or player.interact_target.is_in_group("interactables"):
-			if player.interact_target.name.begins_with("Vending"):
-				if GameState.can_afford(20):
-					GameState.spend(20)
-					GameState.add_energy(25)
-					var d_num := GameState.drinks_tried_count() + 1
-					GameState.try_drink("drink_%d" % d_num)
-					if hud:
-						hud.toast("Cold drink enjoyed! Energy restored (+25).", 3.0)
-					if GameState.drinks_tried_count() >= 2:
-						Mission.notify_check("drinks")
-				else:
-					if hud:
-						hud.toast("Not enough cash! Drinks cost Rs. 20.", 3.0)
-				return
+		if player.interact_target.name.begins_with("Vending"):
+			_buy_vending_drink(player.interact_target)
+			return
+		if player.interact_target.is_in_group("interactables"):
 			if player.interact_target.is_in_group("notice_board"):
 				var title: String = str(player.interact_target.get_meta("board_title", "Campus Notice"))
 				var desc: String = str(player.interact_target.get_meta("board_desc", ""))
+				if Audio:
+					Audio.play_ui("ui_click", -12.0)
 				if hud:
 					hud.toast("📋 [%s]\n%s" % [title, desc], 5.0)
 				return
 			if player.interact_target.is_in_group("water_cooler"):
-				GameState.add_energy(20)
+				GameState.add_energy(20.0)
+				if Audio:
+					Audio.play("fizz", -11.0)
 				if hud:
 					hud.toast("💧 Chilled RO Water! Rehydrated and restored +20 Energy.", 3.5)
 				return

@@ -202,6 +202,17 @@ func drink_by_id(id: String) -> Dictionary:
 	return {}
 
 
+## Energy restored by a drink: energy_type 1 = energy drink, 0 = soda.
+func energy_per_drink(energy_type: int) -> float:
+	var table: Dictionary = economy.get("energy_per_drink", {})
+	var key := "energy" if energy_type == 1 else "soda"
+	return float(table.get(key, 35.0 if energy_type == 1 else 20.0))
+
+
+func boost_seconds() -> float:
+	return float(economy.get("boost_seconds", 30))
+
+
 func noodle_by_id(id: String) -> Dictionary:
 	for noodle in noodles:
 		if noodle.get("id", "") == id:

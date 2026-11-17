@@ -21,9 +21,11 @@ audible — there is no background music track in the original
 | `src/autoload/mission_runner.gd` | caches the player position and fires the NCC chorus on the salute |
 | `src/autoload/settings.gd` | voice volume / sfx volume / mute (persisted in `user://settings.cfg`) |
 | `src/audio/chorus_player.gd` | the small pool of `AudioStreamPlayer`s the chorus uses |
+| `src/autoload/audio_fx.gd` | **the `Audio` autoload** — pooled procedural SFX, loops, footsteps and volume policy |
+| `tools/build_sfx.gd` | deterministic generator for the 23 WAVs under `assets/audio/sfx/` |
 
-Autoload names (unchanged): `EventBus`, `GameState`, `Settings`, `SaveSystem`,
-`CampusDB`, `Mission`, `Dialogue`, `VoiceBank`.
+Autoload names: `EventBus`, `GameState`, `Settings`, `SaveSystem`, `CampusDB`,
+`Mission`, `Dialogue`, `VoiceBank`, **`Audio`** (new).
 
 ---
 
@@ -123,9 +125,9 @@ frame.
 |---|---|---|
 | `Master` | everything | mute only |
 | `Voice` | the dialogue recordings | `Settings.voice_volume` |
-| `SFX` | the NCC chorus | `Settings.sfx_volume` |
-| `UI` | menu sounds (none yet) | `Settings.sfx_volume` |
-| `Music` | **empty — and muted** | – |
+| `SFX` | the NCC chorus + procedural game SFX + looping ambience | `Settings.sfx_volume` |
+| `UI` | button hover / click / back, prompts and success chimes | `Settings.sfx_volume` |
+| `Music` | **empty — and muted** (no music bed, as in the original) | – |
 
 The buses are created at runtime by `VoiceBank._ensure_buses()` (the same
 approach as before, so no `default_bus_layout.tres` is needed).
@@ -258,3 +260,46 @@ unchanged** (`notify_position()` now also caches the player position).
 `set_sfx_volume()`, `set_look_sensitivity()`, `set_subtitle_language()`,
 `is_telugu()`, `is_touch_mode()` — **all unchanged**. New: `muted`,
 `set_muted()`, `is_muted()`, `audio_settings_changed`.
+
+---
+
+## 11. Procedural SFX and ambience (the `Audio` autoload)
+
+The project ships no third-party sound effects, so every one-shot is
+synthesised offline by `tools/build_sfx.gd` into `assets/audio/sfx/*.wav`.
+The generator is deterministic and the levels are checked for clipping; the
+WAVs are imported into the project and loaded as normal resources.
+
+| Group | Ids |
+|---|---|
+| UI | `ui_click`, `ui_hover`, `ui_back`, `success`, `error`, `item`, `type` |
+| Movement | `step_1` … `step_4`, `tired` |
+| Campus | `ball_bounce`, `rim`, `throw`, `whistle`, `tick`, `coin`, `cheer`, `unlock`, `fizz` |
+| Ambience (looped) | `ambient_campus` (12 s), `ambient_interior` (8 s) |
+
+`Audio` owns a pool of 16 SFX voices and 6 UI voices so bursts (a chorus of
+footsteps or rapid menu clicks) never starve a new sound. `play(id)` picks a
+free player; `play_2d(id, volume, pitch)` varies volume/pitch; ambience uses
+two dedicated looping players. Both buses follow `Settings.sfx_volume`, and
+ambience is mixed 16 dB below SFX (`AMB_VOLUME = -16.0`) so it reads as a bed.
+
+* **Footsteps** are distance-based: `player.gd` asks `Audio` for a step when
+  the stride accumulator passes a threshold, so the rate follows the real
+  walk/run speed instead of a timer.
+* **Ambience** switches to `ambient_interior` when the player enters the Admin
+  Office, Central Library, Room 204 or the Canteen; leaving returns to the
+  campus loop.
+* **Menus and minigames** use the UI/one-shot ids (button hover and click,
+  quiz tick, typing, drill whistle, dance beat, basketball bounce/rim/swish,
+  win/lose stingers).
+* **No music.** The `Music` bus stays muted; ambience is environmental only.
+
+### Economy / collection hookups
+
+Sprinting drains energy via `GameState.drain_energy()`; an integer bucket gate
+keeps HUD updates cheap. Drinks restore energy from `economy.json`
+(`energy_per_drink`, `boost_seconds`), and the water cooler grants +20. Each
+vending machine offers the first untried drink from its authored `stock`
+array, then repeats. Trying all ten distinct drinks grants the permanent
+`foodie` bag badge and emits `EventBus.foodie_unlocked`.
+

@@ -9,6 +9,7 @@ const START_BANK := 2000
 const START_ENERGY := 40
 const MAX_ENERGY := 100
 const FEE := 250
+const FOODIE_ITEM := "foodie"
 
 var profile: Dictionary = {}          ## {name, char, year}
 var unlocked_day: int = 1
@@ -72,8 +73,14 @@ func has_item(item_id: String) -> bool:
 
 
 func try_drink(drink_id: String) -> void:
+	var is_new := not drinks_tried.has(drink_id)
 	drinks_tried[drink_id] = true
 	EventBus.drinks_tried_changed.emit(drinks_tried.size(), 10)
+	# Ten distinct drinks is the canteen collection: the reward is a permanent
+	# badge in the student bag, not a stat change, so balance is untouched.
+	if is_new and drinks_tried.size() >= 10 and not items.has(FOODIE_ITEM):
+		give_item(FOODIE_ITEM)
+		EventBus.foodie_unlocked.emit()
 
 
 func drinks_tried_count() -> int:
@@ -104,6 +111,22 @@ func deposit(amount: int) -> bool:
 func add_energy(amount: float) -> void:
 	energy = clampf(energy + amount, 0.0, float(MAX_ENERGY))
 	EventBus.energy_changed.emit(energy)
+
+
+## Sprinting burns energy. Emits `energy_depleted` only on the crossing to
+## zero, so the HUD can react once rather than every frame.
+func drain_energy(amount: float) -> void:
+	if amount <= 0.0:
+		return
+	var before := energy
+	var shown_before := int(round(energy))
+	energy = maxf(0.0, energy - amount)
+	# Sprinting drains every physics frame; only tell the HUD when the whole
+	# number changes, so it does not restart its bar tween 60 times a second.
+	if int(round(energy)) != shown_before:
+		EventBus.energy_changed.emit(energy)
+	if before > 0.0 and energy <= 0.0:
+		EventBus.energy_depleted.emit()
 
 
 func start_boost(seconds: float) -> void:

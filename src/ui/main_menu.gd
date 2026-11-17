@@ -2052,6 +2052,14 @@ func _juice(b: Button, lift: float) -> void:
 	b.focus_exited.connect(_pop.bind(b, 1.0, 0.20))
 	b.button_down.connect(_pop.bind(b, 0.96, 0.08))
 	b.button_up.connect(func() -> void: _pop(b, lift if b.is_hovered() else 1.0, 0.14))
+	b.mouse_entered.connect(func() -> void:
+		if Audio:
+			Audio.play_ui("ui_hover", -24.0)
+	)
+	b.button_down.connect(func() -> void:
+		if Audio:
+			Audio.play_ui("ui_click", -14.0)
+	)
 
 
 func _pop(b: Button, target: float, dur: float) -> void:

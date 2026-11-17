@@ -22,10 +22,10 @@ low-end mobile.
 | People | 64 NPCs with name labels, routes and the original dialogue (62 animated rigs), plus the player (Mike / Amy) |
 | Story | All 10 days play from start to finish. Day 1 tutorial; fees, bank ATM and Room 204 on Day 3; library quiz, basketball, NCC drill and fest; lab-manual run; canteen challenge; final first-class quiz. Each day unlocks the next. |
 | Minigames | Basketball shootout with mouse/touch aim and a THROW button (gravity arc, rim and backboard collisions, 7 s shot clock, 5 shots / 3 hits), NCC cadence drill, samosa typing, fest dance battle, quiz engine, plus mash and command QTE variants — all with keyboard and touch input |
-| Inventory | Student bag on `B` / touch **Bag**: ID card, stamped fee receipt, library card and signed lab manual; **SHOW ID** clears the gate check on every day |
+| Inventory | Student bag on `B` / touch **Bag**: ID card, stamped fee receipt, library card and signed lab manual; **SHOW ID** clears the gate check on every day. Canteen Collection tracks all 10 drinks and awards the Campus Foodie badge. |
 | Front end | Year select (2023–2025 uniforms), character select with live 3D previews, name entry, photo main menu, 10-card level grid, loading screen |
-| UI | Anchored HUD (mission, wallet, energy, minimap, prompts, subtitles, toasts), pause menu, settings (voice, look, graphics profile), touch layout with a virtual stick |
-| Audio | The web build's original voice clips; **no music** |
+| UI | Anchored HUD (flag mission card, top-centre energy pill, gold-framed minimap, circular pause, keycap action prompts, subtitles, toasts), pause menu, settings, touch layout with a virtual stick. All icons are procedural white glyphs on dark circular badges with gold arcs (`src/ui/ui_icons.gd`), so the UI stays crisp at any resolution with no image assets. |
+| Audio | The web build's original 632 voice clips, procedural SFX and looping campus/interior ambience; **no music bed** (see [`src/autoload/AUDIO_NOTES.md`](src/autoload/AUDIO_NOTES.md)) |
 | Modes | `--check` scripted tour, `--beauty` / `--beauty-low` screenshot passes, `--touch-preview` phone layout, `--menu-shot` menu captures, `--low-poly` / `--quality-fast` fast profile, `--quality-high` high profile, `--dev` / `--unlock-all` developer mode |
 
 ## Controls
@@ -48,7 +48,10 @@ low-end mobile.
 ### Touch
 
 Left thumb stick to move, drag anywhere on the right to look, and the on-screen
-`E`, `G`, `RUN` and `BAG` buttons. The touch layer only appears on touch devices
+action buttons: a contextual glyph (door, talk, cart, book, water …) that mirrors
+the desktop prompt, `G` salute, `RUN` and `BAG`. Each is a white glyph on a dark
+circular badge with a gold arc; the RUN badge uses a right-hand arc. The touch
+layer only appears on touch devices
 (or with `-- --touch-preview`), and only once a level has started — the menus and
 level grid stay clean. In the basketball shootout, drag to aim and tap the
 **THROW** button.
@@ -145,7 +148,7 @@ arm64-v8a, signed with the debug keystore). Its SHA-256 is
 # play from source
 & $GODOT --path $PROJ
 
-# headless gate: import, 148 unit checks, smoke run, scripted tour
+# headless gate: import, 182 unit checks, smoke run, scripted tour
 powershell -ExecutionPolicy Bypass -File "$PROJ\verify.ps1"
 
 # benchmark
@@ -153,11 +156,12 @@ powershell -ExecutionPolicy Bypass -File "$PROJ\verify.ps1"
     --bench-profile=desktop --bench-spot=spawn --bench-warmup=14 --bench-seconds=5
 ```
 
-`verify.ps1` currently reports **148 checks, 0 failures**. The suite walks every
+`verify.ps1` currently reports **182 checks, 0 failures**. The suite walks every
 day's real mission step machine (gate ID checks, NPC talks, plan and world-space
 objectives, salutes, checks, minigame wins), drives each minigame's win path and
-checks the interiors, inventory and persistence. The tour walks the whole Day 1
-route while writing the screenshots in `docs/screenshots/godot/`.
+checks the interiors, economy, audio streams, drink collection and persistence.
+The tour walks the whole Day 1 route while writing the screenshots in
+`docs/screenshots/godot/`.
 
 ## Screenshots
 
@@ -184,7 +188,7 @@ full low-poly set in
 | `src/autoload/` | `game_state`, `mission_runner`, `dialogue_service`, `voice_bank`, `settings`, `campus_db`, `event_bus`, `save_system` |
 | `src/world/` | campus geometry, props and materials, character rigs, original model loader, four interiors |
 | `src/actors/` | player controller + camera boom, NPC rigs and routes |
-| `src/ui/` | HUD, touch controls, minigames, inventory, main menu and level grid |
+| `src/ui/` | HUD, touch controls, procedural icon set (`ui_icons.gd`), minigames, inventory, main menu and level grid |
 | `src/data/` | campus layout, NPC tables, economy (ported from the web build) |
 | `third_party/anits_original/` | the original models, textures and 632 voice clips |
 | `tests/` | `run_tests.gd`, `bench.gd`, `PERFORMANCE.md` |
