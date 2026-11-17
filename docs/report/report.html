@@ -494,7 +494,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><th>Source build</th><td><code>ANITS-WEB GAME/</code> — <code>js/game.js</code> (1.85 MB), <code>js/levels.js</code>, <code>js/menu.js</code>, <code>js/voice.js</code>, <code>index.html</code>, <code>css/</code></td></tr>
         <tr><th>Target project</th><td><code>new-game-project/</code> — <code>project.godot</code>, main scene <code>res://src/main.tscn</code></td></tr>
         <tr><th>Engine / renderer</th><td>Godot 4.7.2 stable · Forward+ · D3D12 (Windows) · Jolt Physics</td></tr>
-        <tr><th>Report version</th><td>1.0 — issued 15 November 2026</td></tr>
+        <tr><th>Report version</th><td>1.0 — revised 17 November 2026</td></tr>
         <tr><th>Scope</th><td>Front end, campus world, the complete 10-day mission campaign, four walk-in interiors, five minigames, inventory, HUD, touch controls, voice and dialogue, test and build pipeline</td></tr>
         <tr><th>Status</th><td>Day&nbsp;1 plays end to end; Days&nbsp;2–10 are stubbed; no music track is implemented (see §10)</td></tr>
       </tbody>
@@ -541,7 +541,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td class="toc-n">08</td><td>Admin Office interior</td><td class="toc-s">The sealed waiting room, the desk, the glass doors</td><td class="toc-p">24</td></tr>
         <tr><td class="toc-n">09</td><td>Characters, voice &amp; dialogue</td><td class="toc-s">64 NPCs, 632 recordings, per-character voice profiles, no music</td><td class="toc-p">25</td></tr>
         <tr><td class="toc-n">10</td><td>Rendering &amp; the 60&nbsp;fps strategy</td><td class="toc-s">Desktop pipeline, phone profile, eight measured hotspots</td><td class="toc-p">27</td></tr>
-        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">142-check headless suite, scripted tour, mobile preview</td><td class="toc-p">29</td></tr>
+        <tr><td class="toc-n">11</td><td>Testing &amp; validation</td><td class="toc-s">148-check headless suite, scripted tour, mobile preview</td><td class="toc-p">29</td></tr>
         <tr><td class="toc-n">12</td><td>Known limitations &amp; future work</td><td class="toc-s">Open items, in priority order</td><td class="toc-p">31</td></tr>
         <tr><td class="toc-n">13</td><td>Build &amp; deploy</td><td class="toc-s">Signed Android APK and the GitHub Pages web build</td><td class="toc-p">32</td></tr>
         <tr><td class="toc-n">A</td><td>Appendix A - Controls reference</td><td class="toc-s">Keyboard, mouse and touch bindings</td><td class="toc-p">33</td></tr>
@@ -569,7 +569,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 2 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 2 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 3 — EXEC SUMMARY I ============================ -->
@@ -592,7 +592,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <div class="kpi"><div class="k-v">17</div><div class="k-l">buildings generated from data</div></div>
       <div class="kpi"><div class="k-v">64</div><div class="k-l">NPCs with original lines</div></div>
       <div class="kpi"><div class="k-v">632</div><div class="k-l">voice recordings replayed</div></div>
-      <div class="kpi"><div class="k-v">142</div><div class="k-l">headless checks, 0 failures</div></div>
+      <div class="kpi"><div class="k-v">148</div><div class="k-l">headless checks, 0 failures</div></div>
     </div>
 
     <h2>The porting thesis</h2>
@@ -622,7 +622,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       <li><strong>Audio.</strong> <code>src/autoload/voice_bank.gd</code> replays the original's own 632 MP3 recordings, matched to the line text through <code>clips.json</code> (340 lines) and <code>clips_girl.json</code> (310 lines), and reuses the original per-character pitch/rate profiles.</li>
     </ul>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 3 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 3 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 4 — EXEC SUMMARY II ============================ -->
@@ -640,7 +640,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Campus world</td><td>17 buildings, 12 street rectangles, 5 zones, 6 wall runs, hinged main gate + Back Gate arch, kerbs, footpaths, crosswalk, 91 cars, 150 trees, 130 bushes, 4&nbsp;200 grass tufts in 32 culled chunks, 14 lamps, 7 benches, 4 vending machines.</td><td><code>campus_data.json</code>, <code>campus_builder.gd</code></td></tr>
         <tr><td>Player</td><td>Walk 2.4&nbsp;m/s, run 5.6&nbsp;m/s, energy-drink boost ×1.3 for 30&nbsp;s, no jump, 1.3&nbsp;m step-up, third-person boom at 5.4&nbsp;m with building avoidance down to 1.2&nbsp;m.</td><td><code>src/actors/player.gd</code>, <code>campus_data.json</code></td></tr>
         <tr><td>NPCs</td><td>All 64 characters, original models, original routes, original dialogue; distance-culled skeletons at 95&nbsp;m. Floating name tags are removed — names appear only in dialogue.</td><td><code>src/actors/npc.gd</code>, <code>npcs.json</code></td></tr>
-        <tr><td>Mission</td><td>All 10 days playable: Day&nbsp;1 campus tour; fees and bank ATM; Room&nbsp;204; library quiz; basketball; NCC drill; lab-manual run; canteen typing challenge; fest dance; first-class quiz. Each day ends in a completion dialog that unlocks the next.</td><td><code>mission_runner.gd</code>, <code>level_complete_dialog.gd</code>, 142-check suite</td></tr>
+        <tr><td>Mission</td><td>All 10 days playable: Day&nbsp;1 campus tour; fees and bank ATM; Room&nbsp;204; library quiz; basketball; NCC drill; lab-manual run; canteen typing challenge; fest dance; first-class quiz. Each day ends in a completion dialog that unlocks the next.</td><td><code>mission_runner.gd</code>, <code>level_complete_dialog.gd</code>, 148-check suite</td></tr>
         <tr><td>New systems</td><td>Four walk-in interiors (Admin, Library, Room&nbsp;204, Canteen); seven minigame variants; student bag with ID, fee receipt, library card and lab manual; bank ATM, notice boards and water coolers.</td><td><code>*_interior.gd</code>, <code>minigame_overlay.gd</code>, <code>inventory_panel.gd</code></td></tr>
         <tr><td>HUD</td><td>Mission panel, wallet and energy, dialogue panel, subtitles, interaction prompt, minimap, toasts, keyboard legend — all anchor-based, so they survive any aspect ratio.</td><td><code>src/ui/hud.gd</code></td></tr>
         <tr><td>Touch</td><td>Small 84&nbsp;px virtual stick with auto-run at the outer ring, look-drag anywhere, and context-only <em>E</em> / <em>G</em> / <em>BAG</em> buttons that call the same resolvers as the keyboard.</td><td><code>src/ui/touch_controls.gd</code></td></tr>
@@ -673,7 +673,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       Android slots remain empty because no handset was available (§10).
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 4 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 4 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 5 — AT A GLANCE ============================ -->
@@ -728,7 +728,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
         <tr><td>Voice</td><td>632 MP3s, 340 + 310 clip entries</td><td>Master / Music / SFX / Voice / UI buses</td></tr>      </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 5 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 5 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 6 — PORTING METHOD ============================ -->
@@ -770,7 +770,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       headless test suite does (§11).
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 6 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 6 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 7 — PAIR: GATE ============================ -->
@@ -822,7 +822,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       the layout are the original's.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 7 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 7 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 8 — PAIR: ADMIN ============================ -->
@@ -879,7 +879,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       sealed inside the room — see §8.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 8 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 8 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 9 — PAIR: CSE / IT ============================ -->
@@ -938,7 +938,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       cadets 1.7/1.62/1.6&nbsp;m, Colonel Singh 1.85&nbsp;m, Remy 1.75&nbsp;m.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 9 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 9 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 10 — PAIR: CANTEEN / NCC ============================ -->
@@ -995,7 +995,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       expansion used, and the reason the headless suite can assert the count.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 10 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 10 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 11 — CAMPUS LAYOUT I ============================ -->
@@ -1067,7 +1067,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       portable: a different campus is a different <code>campus_data.json</code>.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 11 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 11 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 12 — BUILDINGS ============================ -->
@@ -1127,7 +1127,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       side, which is also where the web game put its labels.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 12 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 12 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 13 — ROADS ============================ -->
@@ -1183,7 +1183,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       </figure>
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 13 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 13 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 14 — CAMPUS LANDMARKS ============================ -->
@@ -1248,7 +1248,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       same window grids and the same colours as the original.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 14 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 14 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 14 — DAY 1 TABLE ============================ -->
@@ -1302,7 +1302,7 @@ hr.thin{ border:none; border-top:0.5pt solid var(--rule-soft); margin:3mm 0; }
       unusable — he stands inside a company of 18 cadets.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 15 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 15 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 15 — DAY 1 GATE ============================ -->
@@ -1366,7 +1366,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       Leaving reverses it through <code>hall_return_pos</code>.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 16 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 16 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 16 — DAY 1 REST ============================ -->
@@ -1425,7 +1425,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       the level grid.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 17 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 17 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 17 — HUD ============================ -->
@@ -1465,7 +1465,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 18 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 18 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 18 — MAIN MENU ============================ -->
@@ -1527,7 +1527,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       4&nbsp;s replay afterwards, tap or SKIP after 0.7&nbsp;s, and no music.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 19 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 19 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 20 — UNIFORMS ============================ -->
@@ -1606,7 +1606,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       changes; mission state, NPC behaviour and collision are untouched.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 20 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 20 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 19 — LEVEL SELECT ============================ -->
@@ -1648,7 +1648,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and the quote and LEVELS badge sit where the web build puts them.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 21 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 21 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 21 — STARTUP ============================ -->
@@ -1707,7 +1707,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       5.6&nbsp;s and 8.6&nbsp;s.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 22 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 22 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 22 — TOUCH ============================ -->
@@ -1753,7 +1753,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and the mobile renderer path, not on a physical handset. See §11.3 and §12.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 23 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 23 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 20 — ADMIN OFFICE ============================ -->
@@ -1803,7 +1803,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       either side.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 24 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 24 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 21 — CHARACTERS ============================ -->
@@ -1882,7 +1882,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       and leans the body 0.12&nbsp;rad into the direction of travel.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 25 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 25 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 22 — VOICE ============================ -->
@@ -1951,7 +1951,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       which is what happens if the player talks to an NPC out of mission order.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 26 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 26 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 23 — RENDERING PC ============================ -->
@@ -2009,19 +2009,21 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <tbody>
         <tr><td>CPU — scripts, NPC updates, physics</td><td class="num">≤ 6 ms</td><td>Not the bottleneck; the frame is GPU-bound</td></tr>
         <tr><td>Desktop full quality, 0.88</td><td class="num">≤ 16.6 ms</td><td><strong>21.3 fps</strong> spawn / <strong>27.0 fps</strong> court (47.0 / 36.6 ms p50)</td></tr>
-        <tr><td>Desktop after the ladder, 0.60</td><td class="num">≤ 16.6 ms</td><td><strong>41.7 fps</strong> spawn / <strong>46.2 fps</strong> court (23.9 / 21.2 ms p50)</td></tr>
-        <tr><td>Phone profile, court, 0.60</td><td class="num">≤ 16.6 ms</td><td><strong>82.5 fps</strong> (11.9 ms p50)</td></tr>
+        <tr><td>Desktop after the ladder, HIGH, 0.60</td><td class="num">≤ 16.6 ms</td><td><strong>36.1 fps</strong> spawn / <strong>34.5 fps</strong> court (26.1 / 28.1 ms p50)</td></tr>
+        <tr><td>Desktop AUTO (FAST), 0.60</td><td class="num">≤ 16.6 ms</td><td><strong>54.8 fps</strong> spawn / <strong>60.6 fps</strong> court (18.0 / 16.3 ms p50)</td></tr>
+        <tr><td>Phone profile, court, 0.60</td><td class="num">≤ 16.6 ms</td><td><strong>70.2 fps</strong> (13.2 ms p50; 82.5 on a cool machine)</td></tr>
       </tbody>
     </table>
     <p class="tbl-note">
       Full quality is GPU-bound on this integrated GPU; the ladder steps to
       0.60, disables SSAO / volumetric fog and turns the sun shadow off. A
-      discrete GPU holds 0.88. If it still drops, cut post effects first, then
-      the shadow split, then resolution. All eight phone hotspots are measured
-      on the next page.
+      discrete GPU holds 0.88. The default AUTO profile therefore selects the
+      FAST path on this laptop; Settings → Graphics Profile can force HIGH or
+      FAST. If it still drops, cut post effects first, then the shadow split,
+      then resolution. All eight phone hotspots are measured on the next page.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 27 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 27 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 24 — RENDERING MOBILE ============================ -->
@@ -2033,7 +2035,8 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
     <p class="lead">
       The phone path is selected at start-up by
       <code>OS.has_feature("mobile")</code>, by touch input in a web build, or
-      explicitly with <code>--low-poly</code>. It starts at <strong>0.60</strong>
+      explicitly with <code>--low-poly</code>; desktop AUTO also picks it on an
+      integrated laptop GPU. It starts at <strong>0.60</strong>
       and combines the cheap sky, one 64&nbsp;m shadow split, low-poly props and
       no post effects. The pair below is the same court under both profiles.
     </p>
@@ -2089,7 +2092,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       remain a hardware follow-up.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 28 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 28 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 25 — TESTING ============================ -->
@@ -2109,8 +2112,8 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
   --path <span class="s">"C:\...\ANITS-GODOT\new-game-project"</span> `
   --script res://tests/run_tests.gd</pre>
     <p>
-      The suite is <strong>142 checks</strong> across ten groups. The recorded
-      result is <strong>142 checks, 0 failures</strong>. The original data
+      The suite is <strong>148 checks</strong> across ten groups. The recorded
+      result is <strong>148 checks, 0 failures</strong>. The original data
       checks remain; the new groups walk every day's real mission state machine,
       drive each minigame's win path, and cover the interiors, the bag and
       item persistence.
@@ -2128,8 +2131,8 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
         <tr><td>Campaign walk</td><td class="num">20</td><td>Every day completes its real step machine; talking to the guard never satisfies the ID check</td></tr>
         <tr><td>Minigame win paths</td><td class="num">6</td><td>Quiz, typing, drill, dance, mash and command QTE reach their win state</td></tr>
         <tr><td>Basketball shooting</td><td class="num">4</td><td>An aimed shot follows its gravity arc to the rim; five aimed shots win the shootout; Day&nbsp;5 carries a 5-shot / 3-hit step with a 7&nbsp;s clock</td></tr>
-        <tr><td>New systems</td><td class="num">9</td><td>Three interiors instantiate; minigame, bag and day-complete overlays exist; item grants; lore lines</td></tr>
-        <tr class="tot"><td>Total</td><td class="num">142</td><td>Recorded result: 0 failures</td></tr>
+        <tr><td>New systems</td><td class="num">15</td><td>Three interiors instantiate; minigame, bag and day-complete overlays exist; item grants; lore lines; developer mode and the graphics profile persist; the unlock cap holds</td></tr>
+        <tr class="tot"><td>Total</td><td class="num">148</td><td>Recorded result: 0 failures</td></tr>
       </tbody>
     </table>
     <div class="note">
@@ -2141,7 +2144,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       stops before its last step.
     </div>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 29 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 29 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 26 — TESTING II ============================ -->
@@ -2209,7 +2212,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       are used as the side-by-side pairs in §3.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 30 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 30 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 27 — LIMITATIONS ============================ -->
@@ -2223,7 +2226,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <thead><tr><th style="width:6%">#</th><th style="width:26%">Limitation</th><th style="width:34%">Impact</th><th>Status</th></tr></thead>
       <tbody>
         <tr><td class="num">1</td><td>No physical-device validation</td><td>Touch latency, thermal behaviour and OEM GPU differences are unverified</td><td>Substituted by the mobile-renderer and touch-preview passes (§11.3)</td></tr>
-        <tr><td class="num">2</td><td>No Android frame-rate data</td><td>Desktop is measured; no phone or iPhone was benchmarked</td><td>Desktop settles at 0.60 / 41.7–46.2&nbsp;fps (§10); the phone profile measures 61.6–89.0&nbsp;fps on the dev laptop, but a physical handset is still unmeasured</td></tr>
+        <tr><td class="num">2</td><td>No Android frame-rate data</td><td>Desktop is measured; no phone or iPhone was benchmarked</td><td>Desktop HIGH settles at 0.60 / 34.5–36.1&nbsp;fps (§10); AUTO selects FAST at 54.8–60.6&nbsp;fps, and the phone profile measures 61.6–89.0&nbsp;fps on the dev laptop, but a physical handset is still unmeasured</td></tr>
         <tr><td class="num">3</td><td>Props are CC0 substitutes</td><td>Trees, bushes, grass, rocks and the road texture come from the Quaternius, Road Generator and SimpleGrassTextured packs, not from the original</td><td>Intentional — see Appendix B</td></tr>
         <tr><td class="num">4</td><td>Facial animation is disabled</td><td>The Mixamo facial morph meshes render as white shapes in Godot, so eyes, brows and mouth are hidden</td><td>Deliberate; the body animations are intact</td></tr>
         <tr><td class="num">5</td><td>Two characters are static meshes</td><td>Laksmi and the gate guard have no skeleton, so they do not play the walk or salute clips</td><td>They stand at their posts; the other 62 NPCs animate</td></tr>
@@ -2243,7 +2246,7 @@ if target.npc_id == <span class="s">"clerk"</span> and <span class="k">not</span
       <li><strong>Cloud saves</strong> on top of the existing per-day <code>user://</code> slots.</li>
     </ol>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 31 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 31 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 28 — BUILD ============================ -->
@@ -2305,14 +2308,14 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
 
     <h3>13.3 — Running from source</h3>
     <p>
-      <code>verify.ps1</code> runs the import, the 142-check suite, a 300-frame
+      <code>verify.ps1</code> runs the import, the 148-check suite, a 300-frame
       smoke run and the scripted tour in one command; the benchmark is separate
       (§10). The live build was also booted in a headless Chromium at 1280×720
       and reached the year-select screen, which confirms the deployed PCK and
       WASM load together.
     </p>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 32 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 32 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 29 — APPENDIX A ============================ -->
@@ -2371,7 +2374,7 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 33 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 33 of 34</span></div>
 </section>
 
 <!-- ============================ PAGE 30 — APPENDIX B/C ============================ -->
@@ -2417,12 +2420,12 @@ New-Item -ItemType File <span class="s">"C:\...\build\web\.nojekyll"</span> -For
         <tr><td><code>src/ui/touch_controls.gd</code></td><td>Small virtual stick, look drag, context-only E / G / BAG / NEXT buttons</td></tr>
         <tr><td><code>src/util/campus.gd</code>, <code>src/util/lcg.gd</code></td><td>Plan-pixel conversion; the 16807 generator</td></tr>
         <tr><td><code>src/data/*.json</code></td><td>Campus plan, the 64 NPCs, the economy tables</td></tr>
-        <tr><td><code>tests/run_tests.gd</code></td><td>The 142-check suite: data, campaign walk, minigame wins, interiors and inventory</td></tr>
+        <tr><td><code>tests/run_tests.gd</code></td><td>The 148-check suite: data, campaign walk, minigame wins, interiors and inventory</td></tr>
         <tr><td><code>docs/</code></td><td>Analysis, architecture, asset ledger and this report</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 15 Nov 2026</span><span class="rf-pg">Page 34 of 34</span></div>
+  <div class="run-foot"><span>ANITS Godot 4 Port · Technical Report v1.0 · 17 Nov 2026</span><span class="rf-pg">Page 34 of 34</span></div>
 </section>
 
 </body>

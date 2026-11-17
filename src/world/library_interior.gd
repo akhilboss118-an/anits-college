@@ -280,7 +280,11 @@ func _build_bookshelves() -> void:
 					# Create clusters of books with contrasting colors
 					var x_start := -1.15
 					while x_start < 1.15:
-						var book_w := randf_range(0.25, 0.45)
+						# Keep the last book inside the case: an overshooting book
+						# pokes through the end panel and covers the category sign.
+						var book_w := minf(randf_range(0.25, 0.45), 1.15 - x_start)
+						if book_w < 0.12:
+							break
 						var book_h := randf_range(0.32, 0.46)
 						var col: Color = BOOK_COLORS[book_idx % BOOK_COLORS.size()]
 						book_idx += 1
@@ -291,7 +295,7 @@ func _build_bookshelves() -> void:
 						x_start += book_w
 
 			# Category label on end panel
-			var cat_name := "CSE & IT" if ax < -3.0 else "MATH & BASIC SCI"
+			var cat_name := "CSE & IT" if ax < -3.0 else "MATH & SCI"
 			if rz > 0.0:
 				cat_name = "REFERENCE" if ax < -3.0 else "JOURNALS"
 			_sign(cat_name, "ANITS LIBRARY", Vector3(1.32, 2.1, 0.0), PI * 0.5,
@@ -407,6 +411,7 @@ func _sign(title: String, subtitle: String, pos: Vector3, yaw: float,
 	var lbl := Label3D.new()
 	lbl.text = title
 	lbl.font_size = 28
+	lbl.pixel_size = CampusBuilder.fit_label_pixel_size(title, 28, size.x - 0.08)
 	lbl.modulate = text_col
 	lbl.outline_modulate = Color.BLACK
 	lbl.outline_size = 6
@@ -417,6 +422,7 @@ func _sign(title: String, subtitle: String, pos: Vector3, yaw: float,
 		var sub := Label3D.new()
 		sub.text = subtitle
 		sub.font_size = 14
+		sub.pixel_size = CampusBuilder.fit_label_pixel_size(subtitle, 14, size.x - 0.08)
 		sub.modulate = Color(text_col.r, text_col.g, text_col.b, 0.85)
 		sub.outline_modulate = Color.BLACK
 		sub.outline_size = 4

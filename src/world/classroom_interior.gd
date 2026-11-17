@@ -197,9 +197,9 @@ func _build_dais_and_blackboard() -> void:
 	_board_label("Lab Exam: 2:00 PM today - Prof. Rao", Vector3(-1.3, 1.65, -HALF_D + 0.25), 18, Color("#fce4d6"))
 
 	# Pull-down white projector screen above board
-	CampusBuilder.box(self, Vector3(3.4, 0.12, 0.12), Vector3(0.0, 3.1, -HALF_D + 0.26),
+	CampusBuilder.box(self, Vector3(3.4, 0.12, 0.12), Vector3(0.0, 3.35, -HALF_D + 0.26),
 		CampusBuilder.mat(Color("#ffffff"), 0.4), "ScreenCase")
-	CampusBuilder.box(self, Vector3(3.2, 0.8, 0.02), Vector3(0.0, 2.7, -HALF_D + 0.28),
+	CampusBuilder.box(self, Vector3(3.2, 0.5, 0.02), Vector3(0.0, 3.08, -HALF_D + 0.28),
 		CampusBuilder.mat(Color("#f0f4f8"), 0.2), "ScreenPulldown")
 
 	# Ceiling digital projector
@@ -273,10 +273,10 @@ func _build_student_benches() -> void:
 func _build_ceiling_fans() -> void:
 	# 4 Ceiling fans spaced evenly across the ceiling
 	var fan_pos := [
-		Vector3(-2.8, HEIGHT - 0.1, -1.5),
-		Vector3(2.8, HEIGHT - 0.1, -1.5),
-		Vector3(-2.8, HEIGHT - 0.1, 2.0),
-		Vector3(2.8, HEIGHT - 0.1, 2.0),
+		Vector3(-2.8, HEIGHT, -1.5),
+		Vector3(2.8, HEIGHT, -1.5),
+		Vector3(-2.8, HEIGHT, 2.0),
+		Vector3(2.8, HEIGHT, 2.0),
 	]
 	for p in fan_pos:
 		var root := Node3D.new()
@@ -341,6 +341,7 @@ func _sign(title: String, subtitle: String, pos: Vector3, yaw: float,
 	var lbl := Label3D.new()
 	lbl.text = title
 	lbl.font_size = 26
+	lbl.pixel_size = CampusBuilder.fit_label_pixel_size(title, 26, size.x - 0.08)
 	lbl.modulate = text_col
 	lbl.outline_modulate = Color.BLACK
 	lbl.outline_size = 6
@@ -351,6 +352,7 @@ func _sign(title: String, subtitle: String, pos: Vector3, yaw: float,
 		var sub := Label3D.new()
 		sub.text = subtitle
 		sub.font_size = 14
+		sub.pixel_size = CampusBuilder.fit_label_pixel_size(subtitle, 14, size.x - 0.08)
 		sub.modulate = Color(text_col.r, text_col.g, text_col.b, 0.88)
 		sub.outline_modulate = Color.BLACK
 		sub.outline_size = 4

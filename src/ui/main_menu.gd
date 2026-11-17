@@ -91,6 +91,7 @@ var _screen_welcome: Control
 var _screen_main: Control
 var _screen_levels: Control
 var _screen_settings: Control
+var _screen_dev: Control
 var _screen_intro: Control
 var _screen_loading: Control
 var _intro_logo: TextureRect
@@ -131,6 +132,7 @@ var _vol_slider: HSlider
 var _vol_label: Label
 var _look_slider: HSlider
 var _look_label: Label
+var _gfx_buttons: Dictionary = {}
 var _welcome_tween: Tween
 var _choose_tween: Tween
 var _current: String = "year"
@@ -149,6 +151,15 @@ var _screen_tween: Tween
 var _year_tween: Tween
 var _level_progress: Label
 var _level_progress_bar: ProgressBar
+var _unlock_all_btn: Button
+var _dev_badge: Label
+var _dev_status: Label
+var _dev_day_slider: HSlider
+var _dev_day_label: Label
+var _dev_start_btn: Button
+var _dev_reset_btn: Button
+var _dev_reset_armed: bool = false
+var _dev_reset_tween: Tween
 var _loading_bg: TextureRect
 var _loading_logo: TextureRect
 var _loading_spinner: Control
@@ -354,10 +365,14 @@ func _ready() -> void:
 	layer = 20
 	_touch = Settings.is_touch_mode() if Settings else false
 	_ui = 1.22 if _touch else 1.0
+	var args := OS.get_cmdline_user_args()
+	if (args.has("--dev") or args.has("--unlock-all")) and Settings:
+		Settings.set_dev_mode(true)
 	_build()
+	if args.has("--unlock-all"):
+		_unlock_all_levels()
 	# Verification and screenshot runs go straight to the menu; a normal launch
 	# plays the Little Hearts production card first.
-	var args := OS.get_cmdline_user_args()
 	var skip_intro := args.has("--skip-intro") or args.has("--check") \
 		or args.has("--beauty") or args.has("--menu-shot") or args.has("--flow-shot")
 	if skip_intro:
@@ -417,6 +432,7 @@ func _build() -> void:
 	_build_main_screen()
 	_build_levels_screen()
 	_build_settings_screen()
+	_build_dev_screen()
 	_build_footer()
 	_build_intro_screen()
 	_build_loading_screen()
@@ -836,6 +852,15 @@ func _build_main_screen() -> void:
 	_main_label.size = Vector2(760, 28)
 	_screen_main.add_child(_main_label)
 
+	_dev_badge = Label.new()
+	_dev_badge.text = _spaced("● DEVELOPER MODE ON")
+	_dev_badge.add_theme_font_size_override("font_size", 13)
+	_dev_badge.add_theme_color_override("font_color", Color(1.0, 0.84, 0.30, 0.95))
+	_dev_badge.position = Vector2(96, 850)
+	_dev_badge.size = Vector2(430, 24)
+	_dev_badge.visible = Settings != null and Settings.is_dev_mode()
+	_screen_main.add_child(_dev_badge)
+
 	var features := Label.new()
 	features.text = _spaced("LOW-POLY CAMPUS  ·  DAY 1 STORY  ·  60 FPS ON MOBILE  ·  KEYBOARD + TOUCH")
 	features.add_theme_font_size_override("font_size", 14)
@@ -868,8 +893,10 @@ func _build_levels_screen() -> void:
 	unlock_btn.position = Vector2(250, 34)
 	unlock_btn.add_theme_color_override("font_color", GOLD)
 	unlock_btn.add_theme_color_override("font_hover_color", Color(1, 1, 0.8))
+	unlock_btn.visible = Settings != null and Settings.is_dev_mode()
 	unlock_btn.pressed.connect(_on_unlock_all_pressed)
 	_screen_levels.add_child(unlock_btn)
+	_unlock_all_btn = unlock_btn
 
 	var logo := Label.new()
 	logo.text = "ANITS"
@@ -1132,23 +1159,131 @@ func _make_level_card(n: int, level_name: String, pos: Vector2, card_size: Vecto
 
 
 func _on_unlock_all_pressed() -> void:
+	_unlock_all_levels()
+	show_levels()
+	_show_level_toast("★ ALL 10 LEVELS UNLOCKED! Select any Day to play! ★")
+
+
+func _unlock_all_levels() -> void:
 	if GameState:
-		GameState.unlocked_day = 10
+		GameState.unlocked_day = GameState.MAX_DAYS
 		GameState.give_item("id")
 		GameState.give_item("fee")
 		GameState.give_item("lib")
+	_save_profile_progress()
+
+
+## Persist progression without clobbering the saved player profile when the
+## menu has not started a run yet.
+func _save_profile_progress() -> void:
 	var ss: Node = get_node_or_null("/root/SaveSystem") if is_inside_tree() else null
-	if ss and ss.has_method("save_profile") and GameState:
-		ss.save_profile(GameState.profile, 10)
+	if ss == null or not ss.has_method("save_profile") or GameState == null:
+		return
+	var saved: Dictionary = ss.load_profile() if ss.has_method("load_profile") else {}
+	var prof: Variant = saved.get("profile", GameState.profile)
+	if typeof(prof) != TYPE_DICTIONARY:
+		prof = GameState.profile
+	ss.save_profile(prof, GameState.unlocked_day)
+
+
+func _show_level_toast(text: String, hold: float = 2.2) -> void:
+	if _level_toast == null:
+		return
+	_level_toast.text = text
+	_level_toast.modulate.a = 1.0
+	if _level_toast_tween and _level_toast_tween.is_valid():
+		_level_toast_tween.kill()
+	_level_toast_tween = create_tween()
+	_level_toast_tween.tween_interval(hold)
+	_level_toast_tween.tween_property(_level_toast, "modulate:a", 0.0, 0.5)
+
+
+func show_dev() -> void:
+	## Opening the panel turns dev mode on; the explicit "TURN OFF DEV MODE"
+	## button (or F9 again) is the only way back to a clean menu.
+	_current = "dev"
+	if Settings and not Settings.is_dev_mode():
+		Settings.set_dev_mode(true)
+	_refresh_dev()
+	_show_only(_screen_dev)
+	_fade_in(_screen_dev)
+	if _dev_start_btn:
+		_dev_start_btn.grab_focus()
+
+
+func _refresh_dev() -> void:
+	var on := Settings != null and Settings.is_dev_mode()
+	if _dev_status:
+		_dev_status.text = "DEV MODE ON  ·  TESTING TOOLS ACTIVE" if on else "DEV MODE OFF"
+		_dev_status.add_theme_color_override("font_color",
+			Color(0.55, 1.0, 0.72) if on else Color(1.0, 0.62, 0.56))
+	_refresh_dev_visibility()
+	if _dev_day_slider:
+		_on_dev_day_changed(_dev_day_slider.value)
+
+
+func _refresh_dev_visibility() -> void:
+	var on := Settings != null and Settings.is_dev_mode()
+	if _dev_badge:
+		_dev_badge.visible = on
+	if _unlock_all_btn:
+		_unlock_all_btn.visible = on
+
+
+func _exit_dev_mode() -> void:
+	if Settings:
+		Settings.set_dev_mode(false)
+	_refresh_dev()
+	show_settings()
+
+
+func _on_dev_unlock_all() -> void:
+	_unlock_all_levels()
 	show_levels()
-	if _level_toast:
-		_level_toast.text = "★ ALL 10 LEVELS UNLOCKED! Select any Day to play! ★"
-		_level_toast.modulate.a = 1.0
-		if _level_toast_tween and _level_toast_tween.is_valid():
-			_level_toast_tween.kill()
-		_level_toast_tween = create_tween()
-		_level_toast_tween.tween_interval(2.2)
-		_level_toast_tween.tween_property(_level_toast, "modulate:a", 0.0, 0.5)
+	_show_level_toast("★ DEV MODE: ALL 10 LEVELS UNLOCKED ★")
+
+
+func _on_dev_start_pressed() -> void:
+	_start(int(_dev_day_slider.value))
+
+
+func _on_dev_day_changed(value: float) -> void:
+	var day := clampi(int(value), 1, LEVELS.size())
+	if _dev_day_label:
+		_dev_day_label.text = "DAY %d · %s" % [day, str(LEVELS[day - 1]).to_upper()]
+	if _dev_start_btn:
+		_dev_start_btn.text = "START DAY %d" % day
+
+
+func _on_dev_reset_pressed() -> void:
+	if not _dev_reset_armed:
+		_dev_reset_armed = true
+		if _dev_reset_btn:
+			_dev_reset_btn.text = "CONFIRM RESET? TAP AGAIN"
+			_dev_reset_btn.add_theme_color_override("font_color", GOLD)
+		if _dev_reset_tween and _dev_reset_tween.is_valid():
+			_dev_reset_tween.kill()
+		_dev_reset_tween = create_tween()
+		_dev_reset_tween.tween_interval(3.0)
+		_dev_reset_tween.tween_callback(_disarm_dev_reset)
+		return
+	_disarm_dev_reset()
+	if GameState:
+		GameState.reset_progress()
+	var ss: Node = get_node_or_null("/root/SaveSystem") if is_inside_tree() else null
+	if ss and ss.has_method("clear_all"):
+		ss.clear_all()
+	_refresh_dev()
+	if _dev_status:
+		_dev_status.text = "PROGRESS RESET  ·  ONLY DAY 1 IS OPEN"
+		_dev_status.add_theme_color_override("font_color", Color(1.0, 0.62, 0.56))
+
+
+func _disarm_dev_reset() -> void:
+	_dev_reset_armed = false
+	if _dev_reset_btn:
+		_dev_reset_btn.text = "RESET ALL PROGRESS"
+		_dev_reset_btn.add_theme_color_override("font_color", Color(1.0, 0.62, 0.56))
 
 
 func _on_level_pressed(n: int, card: Button) -> void:
@@ -1177,6 +1312,7 @@ func _on_level_pressed(n: int, card: Button) -> void:
 func show_levels() -> void:
 	_current = "levels"
 	# progression may have changed since the menu was built
+	_refresh_dev_visibility()
 	var unlocked: int = 1
 	if GameState:
 		unlocked = clampi(GameState.unlocked_day, 1, LEVELS.size())
@@ -1268,9 +1404,9 @@ func _build_settings_screen() -> void:
 
 	var box := PanelContainer.new()
 	box.add_theme_stylebox_override("panel", _sb(Color.html("#0a1f42"), Color(0.31, 0.72, 1.0, 0.9), 2, 18))
-	box.custom_minimum_size = Vector2(560, 490)
-	box.position = Vector2(520, 300)
-	box.size = Vector2(560, 490)
+	box.custom_minimum_size = Vector2(560, 700)
+	box.position = Vector2(520, 180)
+	box.size = Vector2(560, 700)
 	_screen_settings.add_child(box)
 
 	var col := VBoxContainer.new()
@@ -1338,6 +1474,46 @@ func _build_settings_screen() -> void:
 	_look_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(_look_label)
 
+	# Graphics profile: AUTO follows the video adapter, HIGH keeps the full
+	# desktop campus, FAST is the phone-class prop/lighting set that holds
+	# 60 fps on integrated laptop GPUs.
+	var gfx_caption := Label.new()
+	gfx_caption.text = _spaced("GRAPHICS PROFILE")
+	gfx_caption.add_theme_font_size_override("font_size", 15)
+	gfx_caption.add_theme_color_override("font_color", MUTED)
+	col.add_child(gfx_caption)
+
+	var gfx_row := HBoxContainer.new()
+	gfx_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	gfx_row.add_theme_constant_override("separation", 10)
+	col.add_child(gfx_row)
+
+	_gfx_buttons.clear()
+	for spec in [["auto", "AUTO"], ["high", "HIGH"], ["fast", "FAST"]]:
+		var mode: String = spec[0]
+		var gfx_btn := _button(spec[1], 14)
+		gfx_btn.custom_minimum_size = Vector2(150, 44)
+		gfx_btn.size = Vector2(150, 44)
+		gfx_btn.pressed.connect(_on_graphics_mode.bind(mode))
+		gfx_row.add_child(gfx_btn)
+		_gfx_buttons[mode] = gfx_btn
+
+	var gfx_note := Label.new()
+	gfx_note.text = "AUTO PICKS FAST ON INTEGRATED LAPTOP GRAPHICS · APPLIES ON RESTART"
+	gfx_note.add_theme_font_size_override("font_size", 11)
+	gfx_note.add_theme_color_override("font_color", Color(0.62, 0.72, 0.86, 0.75))
+	gfx_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	gfx_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(gfx_note)
+	_refresh_graphics_buttons()
+
+	var dev := _button("DEVELOPER MODE", 16)
+	dev.custom_minimum_size = Vector2(0, 56)
+	dev.size = Vector2(0, 56)
+	dev.add_theme_color_override("font_color", GOLD)
+	dev.pressed.connect(show_dev)
+	col.add_child(dev)
+
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 16)
@@ -1355,7 +1531,129 @@ func _build_settings_screen() -> void:
 	done.pressed.connect(hide_settings)
 	row.add_child(done)
 
-	_focus_chain([change, done])
+	_focus_chain([_gfx_buttons.get("auto"), _gfx_buttons.get("high"), _gfx_buttons.get("fast"),
+		dev, change, done])
+
+
+func _build_dev_screen() -> void:
+	## Local-only testing panel: unlock every day, jump straight into a level,
+	## or wipe the save. Kept behind Settings so normal players never see it.
+	_screen_dev = _screen()
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.006, 0.02, 0.06, 0.82)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_screen_dev.add_child(dim)
+
+	var box := PanelContainer.new()
+	box.add_theme_stylebox_override("panel", _sb(Color.html("#0a1f42"), Color(1.0, 0.84, 0.30, 0.9), 2, 18))
+	box.custom_minimum_size = Vector2(820, 640)
+	box.position = Vector2(390, 220)
+	box.size = Vector2(820, 640)
+	_screen_dev.add_child(box)
+
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 16)
+	box.add_child(col)
+
+	var heading := Label.new()
+	heading.text = "DEVELOPER MODE"
+	heading.add_theme_font_size_override("font_size", 34)
+	heading.add_theme_color_override("font_color", GOLD)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(heading)
+
+	_dev_status = Label.new()
+	_dev_status.text = "DEV MODE ON  ·  TESTING TOOLS ACTIVE"
+	_dev_status.add_theme_font_size_override("font_size", 16)
+	_dev_status.add_theme_color_override("font_color", Color(0.55, 1.0, 0.72))
+	_dev_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(_dev_status)
+
+	var note := Label.new()
+	note.text = "Unlock every day, jump straight into any level, or wipe the save. Developer mode is remembered on this device."
+	note.add_theme_font_size_override("font_size", 14)
+	note.add_theme_color_override("font_color", MUTED)
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size = Vector2(0, 44)
+	col.add_child(note)
+
+	var unlock := _button("★  UNLOCK ALL 10 LEVELS", 20)
+	unlock.custom_minimum_size = Vector2(0, 66)
+	unlock.size = Vector2(0, 66)
+	_style_button(unlock, true)
+	unlock.pressed.connect(_on_dev_unlock_all)
+	col.add_child(unlock)
+
+	var divider := ColorRect.new()
+	divider.color = Color(0.36, 0.66, 1.0, 0.35)
+	divider.custom_minimum_size = Vector2(0, 2)
+	col.add_child(divider)
+
+	var day_caption := Label.new()
+	day_caption.text = _spaced("START AT ANY DAY")
+	day_caption.add_theme_font_size_override("font_size", 14)
+	day_caption.add_theme_color_override("font_color", MUTED)
+	col.add_child(day_caption)
+
+	var day_row := HBoxContainer.new()
+	day_row.add_theme_constant_override("separation", 18)
+	col.add_child(day_row)
+
+	_dev_day_slider = HSlider.new()
+	_dev_day_slider.min_value = 1
+	_dev_day_slider.max_value = LEVELS.size()
+	_dev_day_slider.step = 1
+	_dev_day_slider.value = 1
+	_dev_day_slider.custom_minimum_size = Vector2(300, 40)
+	_dev_day_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_style_slider(_dev_day_slider)
+	_dev_day_slider.value_changed.connect(_on_dev_day_changed)
+	day_row.add_child(_dev_day_slider)
+
+	_dev_day_label = Label.new()
+	_dev_day_label.text = "DAY 1 · %s" % str(LEVELS[0]).to_upper()
+	_dev_day_label.add_theme_font_size_override("font_size", 15)
+	_dev_day_label.add_theme_color_override("font_color", SKY_TEXT)
+	_dev_day_label.custom_minimum_size = Vector2(360, 40)
+	_dev_day_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	day_row.add_child(_dev_day_label)
+
+	_dev_start_btn = _button("START DAY 1", 18)
+	_dev_start_btn.custom_minimum_size = Vector2(0, 62)
+	_dev_start_btn.size = Vector2(0, 62)
+	_style_button(_dev_start_btn, true)
+	_dev_start_btn.pressed.connect(_on_dev_start_pressed)
+	col.add_child(_dev_start_btn)
+
+	_dev_reset_btn = _button("RESET ALL PROGRESS", 16)
+	_dev_reset_btn.custom_minimum_size = Vector2(0, 58)
+	_dev_reset_btn.size = Vector2(0, 58)
+	_dev_reset_btn.add_theme_color_override("font_color", Color(1.0, 0.62, 0.56))
+	_dev_reset_btn.pressed.connect(_on_dev_reset_pressed)
+	col.add_child(_dev_reset_btn)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 16)
+	col.add_child(row)
+
+	var back := _button("BACK", 18)
+	back.custom_minimum_size = Vector2(220, 62)
+	back.size = Vector2(220, 62)
+	back.pressed.connect(show_settings)
+	row.add_child(back)
+
+	var exit_btn := _button("TURN OFF DEV MODE", 16)
+	exit_btn.custom_minimum_size = Vector2(260, 62)
+	exit_btn.size = Vector2(260, 62)
+	exit_btn.add_theme_color_override("font_color", GOLD)
+	exit_btn.pressed.connect(_exit_dev_mode)
+	row.add_child(exit_btn)
+
+	_focus_chain([unlock, _dev_start_btn, _dev_reset_btn, back, exit_btn])
 
 
 func _build_intro_screen() -> void:
@@ -2153,7 +2451,7 @@ func _play_preview(visual: CharacterVisual) -> void:
 
 func _show_only(screen: Control) -> void:
 	for s in [_screen_year, _screen_char, _screen_name, _screen_welcome,
-			_screen_main, _screen_levels, _screen_settings]:
+			_screen_main, _screen_levels, _screen_settings, _screen_dev]:
 		(s as Control).visible = s == screen
 	if _screen_intro and screen != _screen_intro:
 		_screen_intro.visible = false
@@ -2178,7 +2476,8 @@ func _fade_in(node: CanvasItem) -> void:
 	node.modulate.a = 0.0
 	_screen_tween = create_tween().set_parallel(true)
 	_screen_tween.tween_property(node, "modulate:a", 1.0, 0.28)
-	if not (node is Control) or node == _screen_welcome or node == _screen_settings:
+	if not (node is Control) or node == _screen_welcome or node == _screen_settings \
+			or node == _screen_dev:
 		return
 	var idx := 0
 	for child in node.get_children():
@@ -2393,6 +2692,7 @@ func show_main() -> void:
 	if _welcome_tween and _welcome_tween.is_valid():
 		_welcome_tween.kill()
 	_refresh_profile()
+	_refresh_dev_visibility()
 	_show_only(_screen_main)
 	_fade_in(_screen_main)
 	if _main_play:
@@ -2538,6 +2838,24 @@ func _apply_look() -> void:
 		Settings.set_look_sensitivity(_look_slider.value / 100.0)
 
 
+func _on_graphics_mode(mode: String) -> void:
+	if Settings:
+		Settings.set_graphics_mode(mode)
+	_refresh_graphics_buttons()
+
+
+func _refresh_graphics_buttons() -> void:
+	var active := Settings.graphics_mode if Settings else "auto"
+	for mode in _gfx_buttons.keys():
+		var btn := _gfx_buttons[mode] as Button
+		if btn == null:
+			continue
+		btn.add_theme_color_override("font_color",
+			GOLD if mode == active else Color(0.72, 0.84, 0.98, 0.9))
+		btn.add_theme_color_override("font_hover_color",
+			Color(1.0, 0.92, 0.60) if mode == active else Color.WHITE)
+
+
 func _start(day: int = 1) -> void:
 	if _starting:
 		return
@@ -2636,8 +2954,19 @@ func dismiss_loading() -> void:
 # ---------------------------------------------------------------- input
 
 func _input(event: InputEvent) -> void:
-	if _root == null or not _root.visible:
+	if not visible or _root == null or not _root.visible:
 		return
+	# Developer shortcut: F9 or Ctrl+Shift+D. Works from any menu screen
+	# except the loading hand-off, and toggles the dev panel.
+	if event is InputEventKey and event.pressed and not event.echo and _current != "loading":
+		var key := event as InputEventKey
+		if key.keycode == KEY_F9 or (key.keycode == KEY_D and key.ctrl_pressed and key.shift_pressed):
+			if _current == "dev":
+				show_settings()
+			else:
+				show_dev()
+			get_viewport().set_input_as_handled()
+			return
 	if _current == "intro" and event.is_action_pressed("ui_cancel"):
 		_skip_intro()
 		get_viewport().set_input_as_handled()
@@ -2652,7 +2981,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _root == null or not _root.visible:
+	if not visible or _root == null or not _root.visible:
 		return
 	if not event.is_action_pressed("ui_accept"):
 		return
@@ -2677,6 +3006,8 @@ func _back() -> void:
 	match _current:
 		"settings":
 			hide_settings()
+		"dev":
+			show_settings()
 		"char":
 			show_year()
 		"name":

@@ -1,7 +1,7 @@
 # ANITS College Simulation - Godot 4 port
 
 **Engine:** Godot **4.7.2 stable** (official build), GDScript only.
-**Binary used on this machine:** `C:\Users\AKHILBOSS\Desktop\Godot_v4.7.2-stable_win64.exe`
+**Binary used on this machine:** `C:\Users\AKHILBOSS\OneDrive\Desktop\Godot_v4.7.2-stable_win64.exe`
 
 This project is a faithful port of the original web game
 (`ANITS-WEB GAME/`) to Godot 4: same campus, same Day 1 flow, same voices,
@@ -25,14 +25,14 @@ no music. Everything is low-poly and built to hold 60 fps on phones.
 ## The validation gate (run this after every batch of edits)
 
 ```powershell
-$GODOT = "C:\Users\AKHILBOSS\Desktop\Godot_v4.7.2-stable_win64.exe"
-$PROJ  = "C:\Users\AKHILBOSS\Desktop\ANITS-GODOT\new-game-project"
+$GODOT = "C:\Users\AKHILBOSS\OneDrive\Desktop\Godot_v4.7.2-stable_win64.exe"
+$PROJ  = "C:\Users\AKHILBOSS\OneDrive\Desktop\ANITS-GODOT\new-game-project"
 
 & $GODOT --headless --path $PROJ --import                      # full import
-& $GODOT --headless --path $PROJ --script res://tests/run_tests.gd   # 57 checks
+& $GODOT --headless --path $PROJ --script res://tests/run_tests.gd   # 148 checks
 & $GODOT --path $PROJ --resolution 1600x900 --quit-after 5000 -- --check   # tour + screenshots
 & $GODOT --path $PROJ --resolution 1600x900 --quit-after 9000 -- --beauty # beauty shots
-& $GODOT --path $PROJ --script res://tests/bench.gd -- --bench-label=pc --bench-seconds=15
+& $GODOT --path $PROJ --script res://tests/bench.gd -- --bench-profile=desktop --bench-label=pc --bench-seconds=15
 ```
 
 `verify.ps1` runs the first three steps in one go.
@@ -48,7 +48,7 @@ $PROJ  = "C:\Users\AKHILBOSS\Desktop\ANITS-GODOT\new-game-project"
 | `src/ui/` | `hud.gd`, `touch_controls.gd`, `main_menu.gd` |
 | `src/data/` | campus layout, NPC tables, economy (verbatim from the web build) |
 | `third_party/anits_original/` | the original FBX/GLB models, textures and 632 voice clips |
-| `tests/` | `run_tests.gd` (57 checks), `bench.gd` (fps/draw-call harness), `PERFORMANCE.md` |
+| `tests/` | `run_tests.gd` (148 checks), `bench.gd` (fps/draw-call harness), `PERFORMANCE.md` |
 | `docs/` | screenshots, report (`docs/report/`), deployment notes |
 
 ## Coordinates

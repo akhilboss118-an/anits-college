@@ -5,8 +5,8 @@ the signed Android APK is produced.
 
 - **Repository:** <https://github.com/akhilboss118-an/anits-college>
 - **Live site:** <https://akhilboss118-an.github.io/anits-college/>
-- **Project root:** `C:\Users\AKHILBOSS\Desktop\ANITS-GODOT\new-game-project`
-- **Godot:** `C:\Users\AKHILBOSS\Desktop\Godot_v4.7.2-stable_win64.exe` (4.7.2 stable)
+- **Project root:** `C:\Users\AKHILBOSS\OneDrive\Desktop\ANITS-GODOT\new-game-project`
+- **Godot:** `C:\Users\AKHILBOSS\OneDrive\Desktop\Godot_v4.7.2-stable_win64.exe` (4.7.2 stable)
 - **Presets:** `export_presets.cfg` → **Web** (`build/web/index.html`) and
   **Android** (`build/anits.apk`)
 
@@ -59,8 +59,8 @@ into the path above.
 ### 2.2 Export
 
 ```powershell
-$GODOT = "C:\Users\AKHILBOSS\Desktop\Godot_v4.7.2-stable_win64.exe"
-$PROJ  = "C:\Users\AKHILBOSS\Desktop\ANITS-GODOT\new-game-project"
+$GODOT = "C:\Users\AKHILBOSS\OneDrive\Desktop\Godot_v4.7.2-stable_win64.exe"
+$PROJ  = "C:\Users\AKHILBOSS\OneDrive\Desktop\ANITS-GODOT\new-game-project"
 
 & $GODOT --headless --path $PROJ --export-release "Web" "$PROJ\build\web\index.html"
 
@@ -292,7 +292,7 @@ powershell -ExecutionPolicy Bypass -File "$PROJ\verify.ps1"
 It runs, in order:
 
 1. `--headless --import`
-2. `tests/run_tests.gd` - **142 checks, 0 failures**
+2. `tests/run_tests.gd` - **148 checks, 0 failures**
 3. a 300-frame headless smoke run
 4. the scripted `--check` tour (10 screenshots, full Day 1 route)
 
@@ -300,7 +300,7 @@ Expected tail:
 
 ```
 OK: import
---- 142 checks, 0 failures ---
+--- 148 checks, 0 failures ---
 OK: unit tests (tests/run_tests.gd)
 OK: smoke run (300 frames)
 OK: scripted tour (--check)
@@ -315,9 +315,11 @@ The benchmark is separate:
 ```
 
 The bench prints `result=PASS` when the measured average meets the target. The
-desktop ladder settles at 0.60 and **41.7–46.2 fps** on the integrated GPU
-(below target); a discrete GPU stays at 0.88. The phone profile measures
-**61.6–89.0 fps** across the eight hotspots on the same laptop.
+desktop HIGH ladder settles at 0.60 and **34.5–36.1 fps** on the integrated GPU
+(below target); the default AUTO profile selects FAST on this GPU and measures
+**54.8 fps** at spawn and **60.6 fps** at the court, while a discrete GPU stays
+at 0.88 with HIGH. The phone profile measures **61.6–89.0 fps** across the eight
+hotspots on the same laptop.
 
 ---
 

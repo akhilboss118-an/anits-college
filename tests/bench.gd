@@ -447,6 +447,7 @@ func _report() -> bool:
 	_kv("label", _label)
 	_kv("mode", _mode)
 	_kv("profile", "mobile" if (_profile == "mobile" or OS.has_feature("mobile")) else "desktop")
+	_kv("render_profile", "fast" if (_main and bool(_main.get("_phone_profile"))) else "high")
 	_kv("scene", _scene_path)
 	_kv("spot", _spot if _spot != "" else "spawn")
 	_kv("game_started", str(_game_started))

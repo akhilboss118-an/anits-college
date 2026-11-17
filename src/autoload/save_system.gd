@@ -22,6 +22,11 @@ func _ready() -> void:
 		var saved: Variant = load_items()
 		if saved is Dictionary:
 			gs.items = saved
+		# Restore campaign progress. Without this, unlocking a day or using
+		# developer mode would only last until the game was closed.
+		var profile_data: Dictionary = load_profile()
+		if not profile_data.is_empty():
+			gs.unlocked_day = clampi(int(profile_data.get("unlocked", 1)), 1, MAX_DAY_SLOTS)
 	set_process(true)
 
 

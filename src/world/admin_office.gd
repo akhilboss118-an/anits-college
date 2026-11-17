@@ -155,7 +155,7 @@ func _build_materials() -> void:
 
 	# --- frosted safety band across the glass.
 	var frost := StandardMaterial3D.new()
-	frost.albedo_color = Color(0.94, 0.97, 0.99, 0.55)
+	frost.albedo_color = Color(0.94, 0.97, 0.99, 0.32)
 	frost.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	frost.roughness = 0.55
 	frost.specular_mode = BaseMaterial3D.SPECULAR_SCHLICK_GGX
@@ -371,7 +371,7 @@ func _glass_pane(side: float) -> Node3D:
 	CampusBuilder.box(root, Vector3(1.3, 2.3, 0.05), Vector3(0, 1.15, 0),
 		_mat("glass"), "Glass")
 	# frosted safety band, the classic office-glass detail
-	CampusBuilder.box(root, Vector3(1.3, 0.34, 0.055), Vector3(0, 1.58, 0),
+	CampusBuilder.box(root, Vector3(1.3, 0.24, 0.055), Vector3(0, 1.58, 0),
 		_mat("frost"), "GlassFrost")
 	var frame := _shiny(METAL, 0.35, 0.6)
 	CampusBuilder.box(root, Vector3(1.36, 0.06, 0.08), Vector3(0, 2.33, 0), frame, "GlassFrame")
@@ -392,8 +392,8 @@ func _glass_pane(side: float) -> Node3D:
 func _glass_label(parent: Node3D, text: String, pos: Vector3, yaw: float) -> void:
 	var label := Label3D.new()
 	label.text = text
-	label.font_size = 34
-	label.pixel_size = 0.0032
+	label.font_size = 64
+	label.pixel_size = 0.0014
 	label.modulate = Color("#f2f7fa")
 	label.outline_size = 6
 	label.outline_modulate = Color("#1d3557")

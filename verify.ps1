@@ -1,8 +1,8 @@
 # Headless validation gate for the ANITS Godot port.
 # Usage:  powershell -ExecutionPolicy Bypass -File verify.ps1
 param(
-	[string]$Godot = "C:\Users\AKHILBOSS\Desktop\Godot_v4.7.2-stable_win64.exe",
-	[string]$Project = "C:\Users\AKHILBOSS\Desktop\ANITS-GODOT\new-game-project",
+	[string]$Godot = "C:\Users\AKHILBOSS\OneDrive\Desktop\Godot_v4.7.2-stable_win64.exe",
+	[string]$Project = $PSScriptRoot,
 	[switch]$SkipTour
 )
 

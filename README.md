@@ -24,9 +24,9 @@ low-end mobile.
 | Minigames | Basketball shootout with mouse/touch aim and a THROW button (gravity arc, rim and backboard collisions, 7 s shot clock, 5 shots / 3 hits), NCC cadence drill, samosa typing, fest dance battle, quiz engine, plus mash and command QTE variants — all with keyboard and touch input |
 | Inventory | Student bag on `B` / touch **Bag**: ID card, stamped fee receipt, library card and signed lab manual; **SHOW ID** clears the gate check on every day |
 | Front end | Year select (2023–2025 uniforms), character select with live 3D previews, name entry, photo main menu, 10-card level grid, loading screen |
-| UI | Anchored HUD (mission, wallet, energy, minimap, prompts, subtitles, toasts), pause menu, touch layout with a virtual stick |
+| UI | Anchored HUD (mission, wallet, energy, minimap, prompts, subtitles, toasts), pause menu, settings (voice, look, graphics profile), touch layout with a virtual stick |
 | Audio | The web build's original voice clips; **no music** |
-| Modes | `--check` scripted tour, `--beauty` / `--beauty-low` screenshot passes, `--touch-preview` phone layout, `--menu-shot` menu captures, `--low-poly` phone profile on desktop |
+| Modes | `--check` scripted tour, `--beauty` / `--beauty-low` screenshot passes, `--touch-preview` phone layout, `--menu-shot` menu captures, `--low-poly` / `--quality-fast` fast profile, `--quality-high` high profile, `--dev` / `--unlock-all` developer mode |
 
 ## Controls
 
@@ -53,39 +53,69 @@ Left thumb stick to move, drag anywhere on the right to look, and the on-screen
 level grid stay clean. In the basketball shootout, drag to aim and tap the
 **THROW** button.
 
+## Developer mode
+
+A persistent local switch for testing the campaign. Turn it on from
+**Settings → DEVELOPER MODE**, or press `F9` / `Ctrl+Shift+D` on any menu
+screen. A gold **DEVELOPER MODE ON** badge appears on the main menu while it is
+active, and the level-select screen gains a **★ UNLOCK ALL LEVELS** button.
+The setting is saved in `user://settings.cfg` (`[dev] enabled`) and stays on
+across launches until you press **TURN OFF DEV MODE**.
+
+| Tool | What it does |
+| --- | --- |
+| **★ UNLOCK ALL 10 LEVELS** | Opens every day on the level grid and writes `unlocked_day = 10` to `profile.json` |
+| **START AT ANY DAY** | Slider from Day 1 to Day 10, then **START DAY N** jumps straight into that level |
+| **RESET ALL PROGRESS** | Two-step confirm; clears the save so only Day 1 is open and Day 1 is the start point |
+| `F9` / `Ctrl+Shift+D` | Open the developer panel from any menu screen |
+| `-- --dev` | Launch with developer mode already enabled |
+| `-- --unlock-all` | Launch with developer mode enabled **and** every day unlocked |
+
+Developer mode only changes menu access and the save file — the campaign,
+missions, minigames and 60 fps target are untouched, so a dev-unlocked day plays
+exactly like one reached normally.
+
 ## Performance
 
 The frame rate is protected on every platform. MSAA is off, and the game ships
-two quality profiles:
+two render profiles:
 
-- **Desktop (Forward+)** starts at **0.88**. If the game stays below **58 fps**
+- **HIGH (desktop Forward+)** starts at **0.88**. If the game stays below **58 fps**
   for three seconds the ladder steps the 3D scale to **0.78 → 0.68 → 0.60**,
   turns SSAO and volumetric fog off, switches to one shadow split and finally
   turns the sun shadow off.
-- **Phone / web-touch / `--low-poly`** starts at **0.60**, replaces the Sky3D
-  atmosphere with a cheap procedural sky and depth fog, uses one 64 m shadow
-  split with no tree shadows, disables glow / SSAO / volumetric fog, and runs
-  the reduced-density low-poly prop set (83 trees, 72 bushes, 1,680 grass cards,
-  50 cars, 45 % ground cover). If needed it steps to **0.54 → 0.50 → 0.46** and
-  then drops the shadow.
+- **FAST (phone / web-touch / integrated laptop GPU)** starts at **0.60**,
+  replaces the Sky3D atmosphere with a cheap procedural sky and depth fog, uses
+  one 64 m shadow split with no tree shadows, disables glow / SSAO / volumetric
+  fog, and runs the reduced-density prop set (83 trees, 72 bushes, 1,680 grass
+  cards, 50 cars, 45 % ground cover). If needed it steps to **0.54 → 0.50 → 0.46**
+  and then drops the shadow.
 
-Measured on a Windows 11 laptop with an AMD Radeon integrated GPU (1080p,
-Forward+, D3D12), with `tests/bench.gd`:
+**Settings → GRAPHICS PROFILE** offers **AUTO / HIGH / FAST**. AUTO keeps HIGH on
+a discrete GPU and picks FAST on an integrated laptop GPU; the choice is saved
+in `settings.cfg` and applies on the next launch. Screenshot and benchmark runs
+pin their profile (`--quality-high`, `--quality-fast`, `--low-poly`) so captures
+and A/B runs stay repeatable.
 
-| Run | Scale | fps avg | Frame p50 | Draw calls | Primitives |
-| --- | --- | --- | --- | --- | --- |
-| Desktop full quality, spawn | 0.88 | 21.3 | 47.0 ms | 1,150 | 3.11 M |
-| Desktop full quality, court | 0.88 | 27.0 | 36.6 ms | 548 | 3.01 M |
-| Desktop after the ladder, spawn | 0.60 | 41.7 | 23.9 ms | 667 | 1.89 M |
-| Desktop after the ladder, court | 0.60 | 46.2 | 21.2 ms | 385 | 1.45 M |
-| Phone profile, eight hotspots | 0.60 | 61.6–89.0 | 11.1–15.7 ms | 324–984 | 0.78–1.68 M |
+Measured on a Windows 11 laptop with an AMD Radeon integrated GPU (1600×900,
+Forward+, D3D12, VSync off), with `tests/bench.gd`:
 
-The phone profile was measured at all eight bench viewpoints on the same laptop,
-standing in for a low-end handset: spawn 72.4, gate 73.3, admin 71.6, parade
-61.6, parking 89.0, court 82.5, canteen 86.1 and lawn 72.5 fps. The integrated
-desktop GPU does not hold 60 fps at full desktop quality, so the ladder takes it
-to 0.60; a discrete GPU stays at 0.88. The full plan, budgets and knob list are
-in [`tests/PERFORMANCE.md`](tests/PERFORMANCE.md).
+| Run | Profile | Scale | fps avg | Frame p50 | Draw calls | Primitives |
+| --- | --- | --- | --- | --- | --- | --- |
+| Desktop, spawn | HIGH | 0.88 | 22.0 | 44.8 ms | 1,062 | 3.11 M |
+| Desktop after the ladder, spawn | HIGH | 0.60 | 36.1 | 26.1 ms | 795 | 3.04 M |
+| Desktop after the ladder, court | HIGH | 0.60 | 34.5 | 28.1 ms | 416 | — |
+| Desktop AUTO, spawn | FAST | 0.60 | 54.8 | 18.0 ms | 660 | 1.23 M |
+| Desktop AUTO, court | FAST | 0.60 | 60.6 | 16.3 ms | 406 | 0.90 M |
+| Phone profile, court | FAST | 0.60 | 70.2 | 13.2 ms | 406 | 0.89 M |
+
+The integrated desktop GPU does not hold 60 fps with the HIGH campus; AUTO
+therefore selects FAST on this machine, and **Settings → GRAPHICS PROFILE →
+HIGH** is there for discrete cards. The phone profile was previously measured at
+all eight bench viewpoints (spawn 72.4, gate 73.3, admin 71.6, parade 61.6,
+parking 89.0, court 82.5, canteen 86.1, lawn 72.5 fps); the numbers above are
+from a long thermal soak, so treat them as a conservative floor. The full plan,
+budgets and knob list are in [`tests/PERFORMANCE.md`](tests/PERFORMANCE.md).
 
 ## Build
 
@@ -107,7 +137,7 @@ New-Item -ItemType File -Path "$PROJ\build\web\.nojekyll" -Force
 The shipped APK is `build/ANITS-College-Simulation-v1.0.apk`
 (115.6 MB, `com.akhilboss.anits`, version 1.0, minSdk 24, targetSdk 36,
 arm64-v8a, signed with the debug keystore). Its SHA-256 is
-`534afcf3d09c05b916ba87caf3d54002ccd84aceac957653e5e1790bfddaba6b`.
+`a8df4134c420767e973a006985b197415921491b4284e36eaecf5373e3da76e3`.
 
 ## Run and verify
 
@@ -115,7 +145,7 @@ arm64-v8a, signed with the debug keystore). Its SHA-256 is
 # play from source
 & $GODOT --path $PROJ
 
-# headless gate: import, 142 unit checks, smoke run, scripted tour
+# headless gate: import, 148 unit checks, smoke run, scripted tour
 powershell -ExecutionPolicy Bypass -File "$PROJ\verify.ps1"
 
 # benchmark
@@ -123,7 +153,7 @@ powershell -ExecutionPolicy Bypass -File "$PROJ\verify.ps1"
     --bench-profile=desktop --bench-spot=spawn --bench-warmup=14 --bench-seconds=5
 ```
 
-`verify.ps1` currently reports **142 checks, 0 failures**. The suite walks every
+`verify.ps1` currently reports **148 checks, 0 failures**. The suite walks every
 day's real mission step machine (gate ID checks, NPC talks, plan and world-space
 objectives, salutes, checks, minigame wins), drives each minigame's win path and
 checks the interiors, inventory and persistence. The tour walks the whole Day 1
@@ -176,7 +206,7 @@ full low-poly set in
 A 34-page technical report covering the port — architecture, campus and roads,
 character pipeline, walk cycle, uniforms by joining year, UI, touch controls,
 rendering, performance, testing and deployment — is at
-[`docs/ANITS_Godot_Report.pdf`](docs/ANITS_Godot_Report.pdf) (37.8 MB). The
+[`docs/ANITS_Godot_Report.pdf`](docs/ANITS_Godot_Report.pdf) (39.6 MB). The
 source is [`docs/report/report.html`](docs/report/report.html); rebuild it with
 `docs/report/build_report.ps1`.
 

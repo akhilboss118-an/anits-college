@@ -12,46 +12,73 @@ the knob list.
 
 ---
 
-## 0. Measured results (15 Nov 2026)
+## 0. Measured results (17 Nov 2026)
 
-Machine: Windows 11 laptop, AMD Radeon (TM) Graphics integrated GPU, 1920×1080,
+Machine: Windows 11 laptop, AMD Radeon (TM) Graphics integrated GPU, 1600×900,
 Forward+ on D3D12, VSync off during the measurement.
 
-The bench now waits for `CampusDB` and starts the real game, so the draw-call
-and primitive counts describe the whole campus rather than an empty first frame.
+The bench waits for `CampusDB` and starts the real game, so the draw-call and
+primitive counts describe the whole campus rather than an empty first frame.
+`render_profile` reports the profile `main.gd` actually chose.
 
-| Run | Scale | fps avg | Frame p50 | Draw calls | Primitives | Verdict |
-| --- | --- | --- | --- | --- | --- | --- |
-| Desktop full quality, spawn | 0.88 | 21.3 | 47.0 ms | 1,150 | 3.11 M | below 60 |
-| Desktop full quality, court | 0.88 | 27.0 | 36.6 ms | 548 | 3.01 M | below 60 |
-| Desktop after the ladder, spawn | 0.60 | 41.7 | 23.9 ms | 667 | 1.89 M | below 60 |
-| Desktop after the ladder, court | 0.60 | 46.2 | 21.2 ms | 385 | 1.45 M | below 60 |
-| Phone profile, spawn | 0.60 | 72.4 | 13.7 ms | 710 | 1.27 M | pass |
-| Phone profile, gate | 0.60 | 73.3 | 13.5 ms | 585 | 1.52 M | pass |
-| Phone profile, admin | 0.60 | 71.6 | 13.6 ms | 570 | 1.48 M | pass |
-| Phone profile, parade | 0.60 | 61.6 | 15.7 ms | 984 | 1.68 M | pass |
-| Phone profile, parking | 0.60 | 89.0 | 11.1 ms | 326 | 0.95 M | pass |
-| Phone profile, court | 0.60 | 82.5 | 11.9 ms | 431 | 0.94 M | pass |
-| Phone profile, canteen | 0.60 | 86.1 | 11.5 ms | 324 | 0.78 M | pass |
-| Phone profile, lawn | 0.60 | 72.5 | 13.5 ms | 510 | 1.57 M | pass |
+| Run | Profile | Scale | fps avg | Frame p50 | Draw calls | Primitives | Verdict |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Desktop full quality, spawn | HIGH | 0.88 | 22.0 | 44.8 ms | 1,062 | 3.11 M | below 60 |
+| Desktop full quality, court | HIGH | 0.88 | 27.0 | 36.6 ms | 548 | 3.01 M | below 60 |
+| Desktop after the ladder, spawn | HIGH | 0.60 | 36.1 | 26.1 ms | 795 | 3.04 M | below 60 |
+| Desktop after the ladder, court | HIGH | 0.60 | 34.5 | 28.1 ms | 416 | 3.27 M | below 60 |
+| Desktop AUTO, spawn | FAST | 0.60 | 54.8 | 18.0 ms | 660 | 1.23 M | below 60 |
+| Desktop AUTO, court | FAST | 0.60 | 60.6 | 16.3 ms | 406 | 0.90 M | pass |
+| Phone profile, court | FAST | 0.60 | 70.2 | 13.2 ms | 406 | 0.89 M | pass |
 
 The desktop starts at 0.88 but this integrated GPU cannot hold 60 fps at full
 quality; the adaptive ladder takes it through 0.78 and 0.68 to 0.60, disables
 SSAO and volumetric fog, switches to one shadow split and then turns the sun
-shadow off. The settled spawn view measures **41.7 fps** and the court
-**46.2 fps**. A discrete GPU holds 0.88.
+shadow off. The settled spawn view measures **36.1 fps** and the court
+**34.5 fps**. A discrete GPU holds 0.88.
 
-The phone profile is the tuned path and clears 60 fps at every hotspot:
-**61.6–89.0 fps** (11.1–15.7 ms p50). It starts at 0.60 and combines the cheap
-procedural sky, one orthogonal 64 m shadow split with no tree shadows, the
-low-poly prop density and no glow / SSAO / volumetric fog. If a weaker device
-still drops below 58 fps for 3 s it steps to 0.54, 0.50 and 0.46 and finally
-drops the shadow. No physical handset was available: these numbers are the
-desktop standing in with `--low-poly`, which runs the same code path as the APK.
+Because the integrated GPU cannot hold 60 fps with the HIGH campus, the default
+**AUTO** graphics profile selects the FAST profile on it. That is the same
+phone-class content and lighting path as the APK: cheap procedural sky, one
+64 m shadow split with no tree shadows, reduced prop density and no glow / SSAO
+/ volumetric fog. It reaches **54.8 fps at spawn** and **60.6 fps at the court**
+in this thermal-soak run; the earlier cool-machine phone run measured **72.4**
+at spawn and **82.5** at the court, so 54.8 is a conservative floor rather than
+the profile's normal speed. **Settings → GRAPHICS PROFILE** can force HIGH or
+FAST, and screenshot/benchmark modes pin their profile.
 
-Bench command used:
+Previous cool-machine phone-profile sweep (15 Nov 2026, same laptop):
+
+| Spot | fps avg | Frame p50 | Draw calls | Primitives |
+| --- | --- | --- | --- | --- |
+| Spawn | 72.4 | 13.7 ms | 710 | 1.27 M |
+| Gate | 73.3 | 13.5 ms | 585 | 1.52 M |
+| Admin | 71.6 | 13.6 ms | 570 | 1.48 M |
+| Parade | 61.6 | 15.7 ms | 984 | 1.68 M |
+| Parking | 89.0 | 11.1 ms | 326 | 0.95 M |
+| Court | 82.5 | 11.9 ms | 431 | 0.94 M |
+| Canteen | 86.1 | 11.5 ms | 324 | 0.78 M |
+| Lawn | 72.5 | 13.5 ms | 510 | 1.57 M |
+
+No physical handset was available: these numbers are the desktop standing in
+with the FAST profile, which runs the same code path as the APK.
+
+Bench commands used:
 
 ```powershell
+# HIGH desktop, full quality
+& $GODOT --path $PROJ --script res://tests/bench.gd -- `
+    --bench-profile=desktop --bench-label=high --bench-seconds=15
+
+# HIGH desktop, settled ladder
+& $GODOT --path $PROJ --script res://tests/bench.gd -- `
+    --bench-profile=desktop --bench-label=high-settled --bench-seconds=15 --bench-adaptive
+
+# FAST profile (what AUTO picks on this laptop)
+& $GODOT --path $PROJ --script res://tests/bench.gd -- `
+    --bench-label=fast --bench-spot=court --bench-warmup=8 --bench-seconds=5 --scale=0.60
+
+# Phone A/B run
 & $GODOT --path $PROJ --script res://tests/bench.gd -- `
     --bench-profile=mobile --bench-spot=court --bench-warmup=8 --bench-seconds=5 `
     --bench-adaptive --low-poly

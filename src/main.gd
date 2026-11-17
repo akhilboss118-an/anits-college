@@ -51,6 +51,11 @@ var _leaf_particles: CPUParticles3D = null
 var in_office: bool = false
 var current_interior: String = ""
 var _marker_time: float = 0.0
+## Cached marker badge text state so `_process` never builds strings per frame.
+var _marker_title: String = ""
+var _marker_last_dist: int = -1
+var _marker_step: int = -1
+var _marker_interior: String = ""
 var _check_mode: bool = false
 var _beauty_mode: bool = false
 var _menu_shot_mode: bool = false
@@ -85,25 +90,44 @@ func _ready() -> void:
 	Engine.max_fps = 60
 	_mobile_gpu = OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios")
 	_renderer = RenderingServer.get_current_rendering_method()
+	var args := OS.get_cmdline_user_args()
+	_check_mode = args.has("--check")
+	_beauty_mode = args.has("--beauty") or args.has("--beauty-low")
+	_menu_shot_mode = args.has("--menu-shot")
+	_intro_shot_mode = args.has("--intro-shot")
+	_flow_shot_mode = args.has("--flow-shot")
 	# A phone browser reports neither `mobile` nor `android`, so touch input on
 	# the web build is the signal that the phone profile is needed there.
 	var touch_device := Settings.is_touch_mode() if Settings else false
-	_phone_profile = _mobile_gpu or (touch_device and OS.has_feature("web")) \
-		or OS.get_cmdline_user_args().has("--low-poly") \
-		or OS.get_cmdline_user_args().has("--beauty-low")
+	# Settings can force the fast or high profile; "auto" picks fast on an
+	# integrated laptop GPU, which cannot hold 60 fps with the high profile.
+	# Screenshot/bench modes pin their profile so captures stay repeatable.
+	var graphics := Settings.graphics_mode if Settings else "auto"
+	var force_fast := args.has("--low-poly") or args.has("--beauty-low") \
+		or args.has("--quality-fast") or args.has("--bench-profile=mobile")
+	var force_high := args.has("--quality-high") or args.has("--bench-profile=desktop") \
+		or (_beauty_mode and not args.has("--beauty-low")) \
+		or _check_mode or _menu_shot_mode or _intro_shot_mode or _flow_shot_mode
+	var fast_graphics := graphics == "fast" \
+		or (graphics == "auto" and _renderer == "forward_plus" and _is_integrated_gpu())
+	if force_high:
+		fast_graphics = false
+	if force_fast:
+		fast_graphics = true
+	_phone_profile = _mobile_gpu or (touch_device and OS.has_feature("web")) or fast_graphics
 	_low_poly = _phone_profile or _renderer == "gl_compatibility"
 	_cheap_sky = _phone_profile
-	_check_mode = OS.get_cmdline_user_args().has("--check")
-	_beauty_mode = OS.get_cmdline_user_args().has("--beauty") \
-		or OS.get_cmdline_user_args().has("--beauty-low")
-	_menu_shot_mode = OS.get_cmdline_user_args().has("--menu-shot")
-	_intro_shot_mode = OS.get_cmdline_user_args().has("--intro-shot")
-	_flow_shot_mode = OS.get_cmdline_user_args().has("--flow-shot")
 	# Desktop screenshots stay clean; `--touch-preview` forces the phone layout.
 	_touch_mode = Settings.is_touch_mode() if Settings else false
 	if (_check_mode or _beauty_mode) and not OS.get_cmdline_user_args().has("--touch-preview"):
 		_touch_mode = false
 	_apply_mobile_quality()
+	# Report screenshots render at full 3D scale with MSAA so the captured
+	# frames are crisp; gameplay keeps the 60 fps quality ladder.
+	if _check_mode or _beauty_mode:
+		var shot_viewport := get_viewport()
+		shot_viewport.scaling_3d_scale = 1.0
+		shot_viewport.msaa_3d = Viewport.MSAA_4X
 	_build_environment()
 	_build_post_process()
 	menu = CanvasLayer.new()
@@ -120,6 +144,22 @@ func _ready() -> void:
 		_run_intro_shots()
 	elif _flow_shot_mode:
 		_run_flow_shot()
+
+
+## Heuristic for laptop iGPUs. "auto" only applies it on the Forward+ desktop
+## renderer; discrete cards keep the high profile and the player can override
+## either way in Settings.
+func _is_integrated_gpu() -> bool:
+	var adapter := RenderingServer.get_video_adapter_name().to_lower()
+	if adapter.contains("llvmpipe") or adapter.contains("swiftshader") \
+			or adapter.contains("microsoft basic render"):
+		return true
+	if adapter.contains("intel") and not adapter.contains("arc"):
+		return true
+	if adapter.contains("radeon") and not adapter.contains("rx ") \
+			and not adapter.contains("pro "):
+		return true
+	return false
 
 
 func _apply_mobile_quality() -> void:
@@ -165,10 +205,10 @@ func _build_environment() -> void:
 
 	sky3d.game_time_enabled = false
 	sky3d.editor_time_enabled = false
-	sky3d.current_time = 9.1
-	sky3d.sky_contribution = 0.42
-	sky3d.ambient_energy = 0.48
-	sky3d.sun_energy = 1.20
+	sky3d.current_time = 9.6
+	sky3d.sky_contribution = 0.52
+	sky3d.ambient_energy = 0.56
+	sky3d.sun_energy = 1.05
 	sky3d.skydome_energy = 0.82
 	sky3d.cloud_intensity = 0.80
 	sky3d.wind_speed = 4.6
@@ -199,21 +239,21 @@ func _build_environment() -> void:
 		_env = e
 		e.background_mode = Environment.BG_SKY
 		e.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-		e.ambient_light_sky_contribution = 0.42
+		e.ambient_light_sky_contribution = 0.52
 		e.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 		e.tonemap_mode = Environment.TONE_MAPPER_ACES
-		e.tonemap_exposure = 0.92
+		e.tonemap_exposure = 0.86
 		e.tonemap_white = 1.55
 		# A warmer, filmic image: rich coastal morning contrast and natural saturation,
 		# with bloom picking up sun on car glass, metallic rails and the campus road.
 		e.adjustment_enabled = true
 		e.adjustment_brightness = 1.02
-		e.adjustment_contrast = 1.08
+		e.adjustment_contrast = 1.04
 		e.adjustment_saturation = 1.05
 		e.glow_enabled = true
 		e.glow_intensity = 0.30
 		e.glow_bloom = 0.08
-		e.glow_hdr_threshold = 1.02
+		e.glow_hdr_threshold = 1.10
 		e.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 		# Sky3D draws its own screen-space atmospheric fog.
 		e.fog_enabled = false
@@ -244,8 +284,9 @@ func _build_environment() -> void:
 		sun.shadow_enabled = true
 		sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 		sun.directional_shadow_max_distance = 128.0
-		sun.shadow_bias = 0.0008
-		sun.shadow_blur = 1.05
+		sun.shadow_bias = 0.0014
+		sun.shadow_normal_bias = 1.4
+		sun.shadow_blur = 1.5
 		if _renderer == "forward_plus" and not _mobile_gpu:
 			sun.light_volumetric_fog_energy = 1.45
 		_sun = sun
@@ -291,14 +332,14 @@ func _build_low_poly_environment() -> void:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	env.ambient_light_sky_contribution = 0.55
-	env.ambient_light_energy = 0.95
+	env.ambient_light_energy = 1.05
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 0.96
+	env.tonemap_exposure = 0.90
 	env.tonemap_white = 1.50
 	env.adjustment_enabled = true
 	env.adjustment_brightness = 1.02
-	env.adjustment_contrast = 1.07
+	env.adjustment_contrast = 1.03
 	env.adjustment_saturation = 1.06
 	env.glow_enabled = false
 	env.ssao_enabled = false
@@ -307,7 +348,7 @@ func _build_low_poly_environment() -> void:
 	env.fog_light_color = Color("#c8dcef")
 	env.fog_light_energy = 0.62
 	env.fog_sun_scatter = 0.14
-	env.fog_density = 0.0022
+	env.fog_density = 0.0018
 	env.fog_aerial_perspective = 0.35
 	env.fog_sky_affect = 0.12
 
@@ -319,14 +360,14 @@ func _build_low_poly_environment() -> void:
 
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-33.8, 47.1, 0.0)
+	sun.rotation_degrees = Vector3(-40.0, 47.1, 0.0)
 	sun.light_color = Color(1.0, 0.9412, 0.8157)
-	sun.light_energy = 1.20
+	sun.light_energy = 1.05
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.directional_shadow_max_distance = 64.0
-	sun.shadow_bias = 0.0010
-	sun.shadow_blur = 0.85
+	sun.shadow_bias = 0.0016
+	sun.shadow_blur = 1.25
 	add_child(sun)
 	_sun = sun
 
@@ -651,9 +692,9 @@ func _build_campus() -> void:
 	var dist_badge := Label3D.new()
 	dist_badge.name = "MarkerDistanceBadge"
 	dist_badge.text = "OBJECTIVE"
-	dist_badge.font_size = 38
-	dist_badge.pixel_size = 0.0075
-	dist_badge.outline_size = 14
+	dist_badge.font_size = 30
+	dist_badge.pixel_size = 0.0062
+	dist_badge.outline_size = 10
 	dist_badge.modulate = Color(1.0, 0.94, 0.70)
 	dist_badge.outline_modulate = Color(0.04, 0.08, 0.16, 0.95)
 	dist_badge.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -864,6 +905,10 @@ func _update_marker() -> void:
 		mission_marker.visible = false
 		return
 	mission_marker.visible = true
+	_marker_title = _current_objective_title()
+	_marker_step = Mission.index
+	_marker_interior = current_interior
+	_marker_last_dist = -1
 	if s.has("pos"):
 		var p: Array = s["pos"]
 		var is_interior := bool(s.get("world", false))
@@ -1147,15 +1192,23 @@ func _process(delta: float) -> void:
 		if marker_pulse:
 			marker_pulse.position.y = 2.55 + sin(_marker_time * 2.0) * 0.14
 		if marker_distance_badge and player:
-			marker_distance_badge.position.y = 1.95 + sin(_marker_time * 2.0) * 0.10
+			# The objective title only changes on a step or interior transition,
+			# never per frame.
+			if Mission.index != _marker_step or current_interior != _marker_interior:
+				_marker_step = Mission.index
+				_marker_interior = current_interior
+				_marker_title = _current_objective_title()
+				_marker_last_dist = -1
 			var dist := player.global_position.distance_to(mission_marker.global_position)
-			var title := _current_objective_title()
-			if dist < 2.8:
-				marker_distance_badge.text = "★ REACHED ★"
-				marker_distance_badge.modulate = Color(0.45, 1.0, 0.55)
-			else:
-				marker_distance_badge.text = "◆ %s · %dm" % [title, int(round(dist))]
-				marker_distance_badge.modulate = Color(1.0, 0.94, 0.70)
+			# The badge is a world-space label: hide it up close (it would fill the
+			# screen) and far away (it would be an unreadable speck).
+			marker_distance_badge.visible = dist >= 3.0 and dist <= 55.0
+			if marker_distance_badge.visible:
+				marker_distance_badge.position.y = 1.95 + sin(_marker_time * 2.0) * 0.10
+				var metres := int(round(dist))
+				if metres != _marker_last_dist:
+					_marker_last_dist = metres
+					marker_distance_badge.text = "◆ %s · %dm" % [_marker_title, metres]
 	if player and _dust_particles:
 		_dust_particles.global_position = player.global_position + Vector3(0, 2.5, 0)
 	if player and _leaf_particles:
@@ -1510,6 +1563,7 @@ func _run_check() -> void:
 	DirAccess.make_dir_recursive_absolute(out_dir)
 
 	# 1 - the spawn outside the main gate
+	await get_tree().create_timer(0.9).timeout
 	await _shot("%s/01_spawn_gate.png" % out_dir)
 
 	# 2 - walk up to the gate and talk to the guard
@@ -1638,7 +1692,8 @@ func _teleport_near(npc_id: String) -> void:
 		# Stand in front of the NPC, using their authored facing. This keeps the
 		# camera boom on the road instead of inside the nearest building facade.
 		var forward := Vector3(sin(npc.base_facing), 0.0, cos(npc.base_facing))
-		spot = npc.global_position + forward * 2.4
+		var right := Vector3(cos(npc.base_facing), 0.0, -sin(npc.base_facing))
+		spot = npc.global_position + forward * 2.4 + right * 1.2
 		spot.y = 0.1
 		if _inside_building(Campus.world_to_map(spot), CampusDB.campus, 1.0):
 			spot = _free_spot_near(npc)
@@ -1720,6 +1775,19 @@ func _run_menu_shots() -> void:
 		menu.show_settings()
 		await get_tree().create_timer(0.5).timeout
 		await _shot("%s/menu_settings.png" % out_dir)
+	if menu and menu.has_method("show_dev"):
+		var dev_before: bool = Settings != null and Settings.is_dev_mode()
+		menu.show_dev()
+		await get_tree().create_timer(0.5).timeout
+		await _shot("%s/menu_dev.png" % out_dir)
+		if menu.has_method("show_levels"):
+			menu.show_levels()
+			await get_tree().create_timer(0.5).timeout
+			await _shot("%s/menu_levels_dev.png" % out_dir)
+		if not dev_before and Settings:
+			Settings.set_dev_mode(false)
+			if menu.has_method("_refresh_dev_visibility"):
+				menu._refresh_dev_visibility()
 	if menu and menu.has_method("_show_loading"):
 		menu._show_loading(2)
 		await get_tree().create_timer(0.35).timeout
@@ -1786,21 +1854,21 @@ func _run_beauty() -> void:
 	# 1 - the main gate from the road outside
 	await _beauty_shot("01_main_gate.png", Vector2(122, 470), 7.0, Vector2(122, 400), 4.0)
 	# 2 - the Admin Block front
-	await _beauty_shot("02_admin_block.png", Vector2(163, 352), 13.0, Vector2(163, 318), 7.0)
+	await _beauty_shot("02_admin_block.png", Vector2(163, 430), 12.0, Vector2(163, 330), 9.0)
 	# 3 - the CSE block across the central road
-	await _beauty_shot("03_cse_block.png", Vector2(128, 268), 8.0, Vector2(152, 264), 6.0)
+	await _beauty_shot("03_cse_block.png", Vector2(180, 287), 12.0, Vector2(128, 264), 6.0)
 	# 4 - the IT block along the main road
-	await _beauty_shot("04_it_block.png", Vector2(240, 196), 9.0, Vector2(268, 196), 6.0)
+	await _beauty_shot("04_it_block.png", Vector2(232, 258), 10.0, Vector2(271, 190), 6.0)
 	# 5 - the canteen and the Civil blocks
-	await _beauty_shot("05_canteen.png", Vector2(272, 133), 7.0, Vector2(292, 128), 4.0)
+	await _beauty_shot("05_canteen.png", Vector2(270, 127), 5.0, Vector2(302, 127), 2.8)
 	# 6 - the NCC ground with the open auditorium pavilion
 	await _beauty_shot("06_ncc_ground.png", Vector2(212, 424), 9.0, Vector2(236, 398), 5.0)
 	# 7 - the basketball court
 	await _beauty_shot("07_basketball.png", Vector2(300, 320), 16.0, Vector2(300, 282), 1.5)
 	# 8 - the temple and the central lawn
-	await _beauty_shot("08_temple.png", Vector2(96, 341), 7.0, Vector2(112, 340), 4.0)
+	await _beauty_shot("08_temple.png", Vector2(86, 358), 7.0, Vector2(112, 340), 4.5)
 	# 9 - the back gate
-	await _beauty_shot("09_back_gate.png", Vector2(236, 74), 8.0, Vector2(236, 98), 5.0)
+	await _beauty_shot("09_back_gate.png", Vector2(236, 30), 4.5, Vector2(236, 110), 5.5)
 	# 10 - the whole campus from the air
 	await _beauty_shot("10_campus_aerial.png", Vector2(215, 560), 205.0, Vector2(215, 250), 0.0)
 	# 11 - the perimeter road and the boundary wall

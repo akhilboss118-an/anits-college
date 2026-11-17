@@ -16,7 +16,7 @@ const DADO_TOP := 1.2
 const TERRACOTTA := Color("#aa5438")
 const WALL_CREAM := Color("#faf4eb")
 const DADO_ORANGE := Color("#c66228")
-const STAINLESS := Color("#b5bcc2")
+const STAINLESS := Color("#c9d0d6")
 const STEEL_DARK := Color("#646b73")
 const CHROME := Color("#d0d6dc")
 const TABLE_BLUE := Color("#20639b")
@@ -81,8 +81,8 @@ func _build_materials() -> void:
 
 	var m_steel := StandardMaterial3D.new()
 	m_steel.albedo_color = STAINLESS
-	m_steel.metallic = 0.85
-	m_steel.roughness = 0.25
+	m_steel.metallic = 0.45
+	m_steel.roughness = 0.4
 	_mats["steel"] = m_steel
 
 	var m_chrome := StandardMaterial3D.new()
@@ -163,6 +163,10 @@ func _build_service_counter() -> void:
 	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	CampusBuilder.box(root, Vector3(8.5, 0.45, 0.04), Vector3(-1.0, 1.33, 0.4), glass, "SneezeGuard")
 	CampusBuilder.box(root, Vector3(8.6, 0.04, 0.06), Vector3(-1.0, 1.56, 0.4), _mat("chrome"), "GuardRail")
+	# Chrome posts carry the guard and rail up off the counter top.
+	for px in [-5.0, -1.8, 0.9, 2.9]:
+		CampusBuilder.box(root, Vector3(0.035, 0.44, 0.035), Vector3(px, 1.32, 0.4),
+			_mat("chrome"), "GuardPost")
 
 	# 1. Hot Samosa & Snack Warming Showcase (left side of counter)
 	var warmer := Node3D.new()
@@ -365,10 +369,10 @@ func _build_wash_basin() -> void:
 
 func _build_ceiling_fans() -> void:
 	var fan_pos := [
-		Vector3(-3.5, HEIGHT - 0.1, 0.5),
-		Vector3(3.5, HEIGHT - 0.1, 0.5),
-		Vector3(-3.5, HEIGHT - 0.1, 3.8),
-		Vector3(3.5, HEIGHT - 0.1, 3.8),
+		Vector3(-3.5, HEIGHT, 0.5),
+		Vector3(3.5, HEIGHT, 0.5),
+		Vector3(-3.5, HEIGHT, 3.8),
+		Vector3(3.5, HEIGHT, 3.8),
 	]
 	for p in fan_pos:
 		var root := Node3D.new()
@@ -417,6 +421,7 @@ func _sign(title: String, subtitle: String, pos: Vector3, yaw: float,
 	var lbl := Label3D.new()
 	lbl.text = title
 	lbl.font_size = 26
+	lbl.pixel_size = CampusBuilder.fit_label_pixel_size(title, 26, size.x - 0.08)
 	lbl.modulate = text_col
 	lbl.outline_modulate = Color.BLACK
 	lbl.outline_size = 6
@@ -427,6 +432,7 @@ func _sign(title: String, subtitle: String, pos: Vector3, yaw: float,
 		var sub := Label3D.new()
 		sub.text = subtitle
 		sub.font_size = 14
+		sub.pixel_size = CampusBuilder.fit_label_pixel_size(subtitle, 14, size.x - 0.08)
 		sub.modulate = Color(text_col.r, text_col.g, text_col.b, 0.88)
 		sub.outline_modulate = Color.BLACK
 		sub.outline_size = 4

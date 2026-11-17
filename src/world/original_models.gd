@@ -125,6 +125,21 @@ static func scale_for(model_id: String, target_size: Vector2) -> float:
 			return minf(sx, sz) * float(cfg.get("value", 1.0))
 
 
+## The imported FBX scenes can contain non-visual helper geometry. The cafe
+## ships a `Collider` box the size of the whole building; left visible it
+## renders as a ghostly white shell around the pavilion. Free those nodes
+## before the model is shown or merged.
+static func strip_helper_meshes(root: Node) -> void:
+	for child in root.get_children():
+		if child is MeshInstance3D:
+			var n := str(child.name).to_lower()
+			if n == "collider" or n == "collision" or n == "_collider":
+				root.remove_child(child)
+				child.free()
+				continue
+		strip_helper_meshes(child)
+
+
 ## Instantiates a model, scaled and placed so its footprint sits on the rect.
 static func place(model_id: String, parent: Node, centre: Vector3, target_size: Vector2,
 		yaw := 0.0, target_y := 0.0) -> Node3D:
@@ -132,6 +147,7 @@ static func place(model_id: String, parent: Node, centre: Vector3, target_size: 
 	if packed == null:
 		return null
 	var inst := packed.instantiate()
+	strip_helper_meshes(inst)
 	var scale := scale_for(model_id, target_size)
 	inst.scale = Vector3(scale, scale, scale)
 	inst.rotation.y = yaw

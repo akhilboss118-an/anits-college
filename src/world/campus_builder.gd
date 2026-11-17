@@ -92,6 +92,17 @@ static func box(parent: Node, size: Vector3, pos: Vector3, material: Material, n
 	return mi
 
 
+## Picks a Label3D pixel_size so `text` fits inside `max_width` metres.
+## Label3D glyph advances are roughly 0.62 * font_size in texture pixels; the
+## estimate is deliberately conservative so long titles never spill off a plate.
+static func fit_label_pixel_size(text: String, font_size: int, max_width: float) -> float:
+	var longest := 1
+	for line in text.split("\n"):
+		longest = maxi(longest, line.strip_edges().length())
+	var width_px := float(longest) * float(font_size) * 0.62
+	return clampf(max_width / maxf(width_px, 1.0), 0.0011, 0.005)
+
+
 static func _rect_world(r: Array) -> Rect2:
 	return Campus.map_rect_to_world(Rect2(r[0], r[1], r[2] - r[0], r[3] - r[1]))
 
@@ -137,10 +148,6 @@ func _build_ground() -> void:
 	var ground := box(self, Vector3(size.x + 1400.0, 0.4, size.y + 1400.0), Vector3(centre.x, -0.2, centre.y),
 		PropsFactory.ground_material(), "Ground")
 	ground.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# a lighter, mown campus lawn sits just above it
-	var lawn := box(self, Vector3(size.x, 0.06, size.y), Vector3(centre.x, 0.01, centre.y),
-		PropsFactory.ground_material(), "CampusLawn")
-	lawn.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# the ground must be solid, otherwise the player falls through the world
 	add_collider(self, Vector3(size.x + 1400.0, 0.4, size.y + 1400.0),
 		Vector3(centre.x, -0.4, centre.y), "GroundCol")
@@ -157,7 +164,7 @@ func _build_roads() -> void:
 		var long_m := maxf(w, d)
 		var centre := Vector3(wr.position.x + w * 0.5, 0.0, wr.position.y + d * 0.5)
 		if short_m >= 16.0 or long_m < 0.5:
-			var road := box(self, Vector3(w, 0.08, d), Vector3(centre.x, 0.04, centre.z),
+			var road := box(self, Vector3(w, 0.09, d), Vector3(centre.x, 0.045, centre.z),
 				PropsFactory.asphalt_material(), "Road")
 			road.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			continue
@@ -166,7 +173,7 @@ func _build_roads() -> void:
 		mi.name = "Road"
 		mi.mesh = PropsFactory.road_mesh(w if vertical else d, d if vertical else w)
 		mi.rotation.y = 0.0 if vertical else PI * 0.5
-		mi.position = Vector3(centre.x, 0.055, centre.z)
+		mi.position = Vector3(centre.x, 0.07, centre.z)
 		mi.material_override = PropsFactory.road_material()
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
@@ -899,6 +906,21 @@ func _build_single_model(b: Dictionary, wr: Rect2, colour: Color, height: float,
 		return
 	node.name = str(b.get("name", "Building"))
 	building_meshes[b.get("name", "")] = node
+	if model_id == "temple":
+		# The temple GLB ships without usable materials and renders pure white.
+		# Tint it with a warm sandstone palette so it reads as a shrine.
+		_override_model_palette(node, [Color("#c98a4b"), Color("#e0b27a"), Color("#a86a3a")])
+	if model_id == "cafe":
+		# The cafe FBX lost its texture on import, so every surface is pure
+		# white. Give the pavilion the web build's warm canteen palette:
+		# cream shell, terracotta counter, wood tables, green plants, dark board.
+		# merge_flat_model() bakes these albedos into vertex colors, which the
+		# renderer reads as linear, so convert from sRGB first or the shell
+		# washes out to white in sunlight.
+		_override_model_palette(node, [
+			Color("#d6bd96").srgb_to_linear(), Color("#c0704c").srgb_to_linear(),
+			Color("#8a5a34").srgb_to_linear(), Color("#3f7d3a").srgb_to_linear(),
+			Color("#2f241c").srgb_to_linear()])
 	# The imported Admin / Workshop / Bank / Cafe / Auditorium models are made
 	# of hundreds of flat-colour meshes.  Merge them to one draw call each.
 	if model_id in ["admin", "workshop", "cafe", "bank", "stairaud"]:
@@ -1221,6 +1243,29 @@ func _collect_label_nodes(node: Node) -> void:
 		_collect_label_nodes(child)
 
 
+## Applies a flat palette to every mesh under an imported model. Used for assets
+## whose own materials are missing or unusable.
+func _override_model_palette(node: Node, palette: Array) -> void:
+	_override_model_palette_walk(node, palette, 0)
+
+
+func _override_model_palette_walk(node: Node, palette: Array, index: int) -> int:
+	if node is MeshInstance3D and palette.size() > 0:
+		(node as MeshInstance3D).material_override = mat(palette[index % palette.size()], 0.78)
+		index += 1
+	for child in node.get_children():
+		index = _override_model_palette_walk(child, palette, index)
+	return index
+
+
+## Turns off shadow casting for every mesh under a node (large imported roofs).
+func _disable_shadows(node: Node) -> void:
+	if node is GeometryInstance3D:
+		(node as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for child in node.get_children():
+		_disable_shadows(child)
+
+
 func _add_building_label(text: String, wr: Rect2, height: float, _face := "S") -> void:	## High-visibility rooftop billboard label centered above the building.
 	if text.strip_edges() == "":
 		return
@@ -1262,6 +1307,7 @@ func _build_specials() -> void:
 				if node:
 					node.name = "OpenAuditorium"
 					node.position.y += 0.05
+					_disable_shadows(node)
 					var k := OriginalModels.scale_for("aud", Vector2(wr.size.x, wr.size.y))
 					# Eight column colliders, exactly where the web build places them.
 					for offset in [[3.42, -1.42], [1.42, -3.42], [-1.42, -3.42],
@@ -1300,6 +1346,7 @@ func _build_specials() -> void:
 			rmi.mesh = roof
 			rmi.material_override = mat(Color.html("#6b3f2f"))
 			rmi.position = Vector3(centre.x, 4.2, centre.z)
+			rmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(rmi)
 			add_collider(self, Vector3(wr.size.x * 0.8, 3.4, wr.size.x * 0.8), Vector3(centre.x, 0.0, centre.z), "PavilionCol")
 		elif s.has("pos") and str(s.get("name", "")) == "Fountain":
@@ -1951,9 +1998,9 @@ func _build_water_coolers() -> void:
 		root.add_child(bmi)
 
 		var lbl := Label3D.new()
-		lbl.text = "ANITS RO WATER"
-		lbl.font_size = 20
-		lbl.pixel_size = 0.0055
+		lbl.text = "RO WATER"
+		lbl.font_size = 18
+		lbl.pixel_size = 0.0035
 		lbl.modulate = Color(0.3, 0.85, 1.0)
 		lbl.outline_size = 4
 		lbl.outline_modulate = Color(0.02, 0.08, 0.15)

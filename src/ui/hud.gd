@@ -981,7 +981,7 @@ func _relayout() -> void:
 	_mission_panel.custom_minimum_size = Vector2(banner_w, 0)
 	_mission_panel.pivot_offset = Vector2.ZERO
 	_mission_panel.add_theme_stylebox_override("panel",
-			_panel_style(Color(0.055, 0.095, 0.185, 0.92), Color(0.30, 0.56, 0.95, 0.85), s, 340))
+			_panel_style(Color(0.055, 0.095, 0.185, 0.97), Color(0.30, 0.56, 0.95, 0.85), s, 340))
 	mission_label.custom_minimum_size = Vector2(maxf(60.0 * s, banner_w - 100.0 * s), 0)
 
 	# --- wallet + energy (top right, left of the pause button) ---
@@ -990,7 +990,7 @@ func _relayout() -> void:
 	_wallet_panel.offset_top = _safe.y + 12.0 * s
 	_wallet_panel.offset_bottom = _safe.y + 12.0 * s
 	_wallet_panel.add_theme_stylebox_override("panel",
-			_panel_style(Color(0.055, 0.095, 0.185, 0.92), Color(1.0, 0.84, 0.3, 0.45), s, 340))
+			_panel_style(Color(0.055, 0.095, 0.185, 0.97), Color(1.0, 0.84, 0.3, 0.45), s, 340))
 	energy_bar.custom_minimum_size = Vector2(120.0 * s, maxf(10.0, 14.0 * s))
 
 	# --- pause button (top right corner) ---
@@ -1026,7 +1026,7 @@ func _relayout() -> void:
 	_bottom.offset_top = -bottom_inset - 460.0 * s
 	_bottom.offset_bottom = -bottom_inset
 	var dialogue_w := clampf(view.x * (0.88 if _touch else 0.80), 330.0 * s, 1150.0 * s)
-	var dialogue_h := 168.0 * s
+	var dialogue_h := 152.0 * s
 	dialogue_panel.custom_minimum_size = Vector2(dialogue_w, dialogue_h)
 	# - portrait: sticks out above the panel's top edge
 	var port := 132.0 * s
@@ -1043,6 +1043,7 @@ func _relayout() -> void:
 	dialogue_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	dialogue_text.position = Vector2(text_x, 50.0 * s)
 	dialogue_text.size = Vector2(maxf(120.0 * s, dialogue_w - text_x - 24.0 * s), dialogue_h - 58.0 * s)
+	dialogue_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	# - the "ready to advance" triangle
 	_next_hint.size = Vector2(22.0 * s, 22.0 * s)
 	_next_hint.position = Vector2(dialogue_w - 42.0 * s, dialogue_h - 30.0 * s)
@@ -1351,7 +1352,7 @@ func _bake_minimap() -> void:
 			continue
 		var rw := (float(rect[2]) - float(rect[0])) * tex_scale
 		var rh := (float(rect[3]) - float(rect[1])) * tex_scale
-		var font := int(minf(rh * 0.42, rw / (float(name.length()) * 0.60)))
+		var font := int(minf(rh * 0.42, rw / (float(name.length()) * 0.68)))
 		if font < 15:
 			continue
 		_add_map_label(view, name, rect, extent, tex_scale, font)
@@ -1372,11 +1373,26 @@ func _bake_minimap() -> void:
 
 
 func _short_building_name(raw: String) -> String:
-	var n := raw.strip_edges()
-	n = n.replace(" Block", "").replace("Stair ", "").replace("Gate ", "")
-	n = n.replace(" Temple", "").strip_edges()
-	n = n.substr(0, 11).strip_edges()
-	return n.to_upper()
+	## Explicit short names keep every minimap label inside its footprint.
+	match raw.strip_edges().to_upper():
+		"MECHANICAL BLOCK": return "MECH"
+		"STAIR AUDITORIUM": return "AUD"
+		"WORKSHOP": return "SHOP"
+		"CHEMICAL BLOCK": return "CHEM"
+		"EEE BLOCK": return "EEE"
+		"CSE BLOCK": return "CSE"
+		"ECE BLOCK": return "ECE"
+		"ADMIN BLOCK": return "ADMIN"
+		"IT BLOCK": return "IT"
+		"CIVIL BLOCK (N)": return "CIVIL N"
+		"CIVIL BLOCK (S)": return "CIVIL S"
+		"CSM BLOCK": return "CSM"
+		"CANTEEN": return "CAFE"
+		"GATE CANTEEN": return "CAFE"
+		"TEMPLE": return "TEMPLE"
+		"MAGIC SPOT": return "MAGIC"
+		"BANK": return "BANK"
+	return raw.strip_edges().substr(0, 11).strip_edges().to_upper()
 
 
 func _add_map_label(view: MapView, text: String, rect: Array, extent: Array,

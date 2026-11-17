@@ -443,3 +443,28 @@ func _test_new_systems() -> void:
 	_check("level complete dialog instances", dlg != null)
 	_eq("lore lines count", dlg.COMPLETION_LINES.size(), 10)
 	dlg.free()
+
+	# Developer mode: persistent switch plus the unlock-all cap.
+	var settings: Node = root.get_node_or_null("Settings")
+	var prev_dev: bool = bool(settings.dev_mode) if settings else false
+	if settings:
+		settings.set_dev_mode(true)
+		_check("developer mode turns on", settings.is_dev_mode())
+		settings.set_dev_mode(false)
+		_check("developer mode turns off", not settings.is_dev_mode())
+		settings.set_dev_mode(prev_dev)
+		var prev_gfx: String = str(settings.graphics_mode)
+		settings.set_graphics_mode("fast")
+		_eq("graphics profile saves fast", settings.graphics_mode, "fast")
+		settings.set_graphics_mode("bogus")
+		_eq("graphics profile rejects unknown", settings.graphics_mode, "auto")
+		settings.set_graphics_mode(prev_gfx)
+	var gs: Node = root.get_node_or_null("GameState")
+	if gs:
+		var prev_unlocked: int = gs.unlocked_day
+		gs.unlocked_day = 1
+		gs.unlock(9)
+		_eq("day 9 completion unlocks day 10", gs.unlocked_day, 10)
+		gs.unlock(10)
+		_eq("unlocked day caps at 10", gs.unlocked_day, 10)
+		gs.unlocked_day = prev_unlocked
