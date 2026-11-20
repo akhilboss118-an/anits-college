@@ -1,5 +1,18 @@
 # ANITS College Simulation (3D Story Game)
 
+## Visual refresh
+
+This edition preserves the original vanilla JavaScript / Three.js game, its seven
+days, original models and audio, saved progress, controls, mission locations,
+navigation, collision boxes, and gate hinges. Building façades now use subtle
+locally generated stone and glass finishes, clearer window framing and roofline
+details. When a person is within the existing talk range (or in conversation),
+the selected person's actual animated silhouette has a crisp white outline.
+The outline adds no collider, no gameplay action and no animation; reduced-motion
+players see the same static cue. Only the person closest to the player is outlined
+and the effect stops when out of range. Graphics quality settings still control
+material resolution and shadows. All artwork needed to run remains in this folder.
+
 All files for the ANITS College 3D simulation game have been saved locally.
 
 ## Gate and yellow-white walking paths update

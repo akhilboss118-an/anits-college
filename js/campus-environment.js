@@ -239,14 +239,45 @@
       return { heightAt, paths, crossings, top, road, start, end, rampLength };
     }
 
-    const parts = new Map(), boxGeom = new T.BoxGeometry(1, 1, 1);
+    const parts = new Map(), boxGeom = new T.BoxGeometry(1, 1, 1), finishes = {};
+    function finish(kind) {
+      if (finishes[kind]) return finishes[kind];
+      const c = document.createElement('canvas'); c.width = c.height = cfg.lowQuality ? 128 : 256;
+      const g = c.getContext('2d'), n = c.width;
+      if (kind === 'glass') {
+        const light = g.createLinearGradient(0, 0, n, n);
+        light.addColorStop(0, '#668b99'); light.addColorStop(.37, '#b8cbd0');
+        light.addColorStop(.39, '#7698a5'); light.addColorStop(.7, '#345969');
+        light.addColorStop(1, '#72949f');
+        g.fillStyle = light; g.fillRect(0, 0, n, n);
+        g.fillStyle = 'rgba(238,245,237,.18)';
+        g.beginPath(); g.moveTo(n * .08, 0); g.lineTo(n * .31, 0);
+        g.lineTo(n * .77, n); g.lineTo(n * .54, n); g.fill();
+      } else {
+        g.fillStyle = kind === 'roof' ? '#c4c2b7' : '#e4e1d8';
+        g.fillRect(0, 0, n, n);
+        for (let i = 0; i < (cfg.lowQuality ? 420 : 1100); i++) {
+          const x = rand() * n, y = rand() * n, d = .4 + rand() * 1.8;
+          g.fillStyle = rand() < .55 ? 'rgba(60,68,66,.12)' : 'rgba(255,255,245,.28)';
+          g.fillRect(x, y, d, d * (.4 + rand()));
+        }
+        g.strokeStyle = 'rgba(62,70,67,.07)'; g.lineWidth = 1;
+        for (let y = 0; y < n; y += n / 4) {
+          g.beginPath(); g.moveTo(0, y + .5); g.lineTo(n, y + .5); g.stroke();
+        }
+      }
+      const tex = new T.CanvasTexture(c); tex.anisotropy = cfg.lowQuality ? 4 : 6;
+      finishes[kind] = tex;
+      return tex;
+    }
     function detailBlock({ x, z, rotation = 0, depth, length, height, name, sign = false, accent = 0xa77463 }) {
       const cs = Math.cos(rotation), sn = Math.sin(rotation);
       function piece(kind, lx, y, lz, w, h, d) {
-        const color = ({ stone: 0xd9d4c8, sill: 0xb8b3a6, shadow: 0x736f6a,
-          metal: 0x637680, glass: 0x527080, roof: 0xaca99e, accent })[kind];
-        if (!parts.has(color)) parts.set(color, []);
-        parts.get(color).push([x + lx * cs + lz * sn, y, z - lx * sn + lz * cs, w, h, d, rotation]);
+        const color = ({ stone: 0xd9d4c8, sill: 0xc7c7bf, shadow: 0x4d585e,
+          metal: 0x576c77, glass: 0xc9e0e7, roof: 0xb8b7ab, accent })[kind];
+        const key = kind + '-' + color;
+        if (!parts.has(key)) parts.set(key, { kind, color, entries: [] });
+        parts.get(key).entries.push([x + lx * cs + lz * sn, y, z - lx * sn + lz * cs, w, h, d, rotation]);
       }
       const front = depth / 2 + .09, rear = -depth / 2 - .09;
       const floors = Math.max(2, Math.min(4, Math.round(height / 3.6)));
@@ -256,6 +287,8 @@
       piece('roof', 0, height + .09, 0, depth + .36, .2, length + .36);
       [front, rear].forEach(px => piece('stone', px, height + .45, 0, .22, .75, length + .55));
       [-length / 2, length / 2].forEach(pz => piece('stone', 0, height + .45, pz, depth + .5, .75, .22));
+      [front, rear].forEach(px => piece('sill', px, height + .78, 0, .3, .1, length + .56));
+      [-length / 2, length / 2].forEach(pz => piece('sill', 0, height + .78, pz, depth + .5, .1, .3));
       for (let f = 1; f < floors; f++) {
         const y = Math.min(height - .55, f * height / floors);
         piece(f === 1 ? 'accent' : 'sill', front, y, 0, .34, .15, length + .26);
@@ -276,6 +309,7 @@
             piece('shadow', outside, y, bz, .12, hh + .16, span + .16);
             piece('glass', outside + (face ? -.08 : .08), y, bz, .09, hh, span);
             piece('metal', outside + (face ? -.14 : .14), y, bz, .055, hh, .045);
+            piece('metal', outside + (face ? -.14 : .14), y, bz, .055, .055, span);
             piece('sill', px, y - hh / 2 - .09, bz, .39, .105, span + .27);
             if (f > 0) piece('stone', px, y + hh / 2 + .12, bz, .35, .1, span + .25);
           });
@@ -300,8 +334,14 @@
 
     function flushBuildings() {
       const matrix = new T.Matrix4(), q = new T.Quaternion(), yaxis = new T.Vector3(0, 1, 0);
-      for (const [color, entries] of parts) {
-        const mesh = new T.InstancedMesh(boxGeom, new T.MeshLambertMaterial({ color }), entries.length);
+      for (const { kind, color, entries } of parts.values()) {
+        const settings = { color };
+        if (kind === 'stone' || kind === 'roof') settings.map = finish(kind);
+        if (kind === 'glass') settings.map = finish('glass');
+        const mat = kind === 'glass'
+          ? new T.MeshPhongMaterial({ ...settings, specular: 0x617f87, shininess: 48 })
+          : new T.MeshLambertMaterial(settings);
+        const mesh = new T.InstancedMesh(boxGeom, mat, entries.length);
         entries.forEach(([x, y, z, w, h, d, rot], i) => {
           q.setFromAxisAngle(yaxis, rot);
           matrix.compose(new T.Vector3(x, y, z), q, new T.Vector3(w, h, d));

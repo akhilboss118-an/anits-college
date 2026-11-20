@@ -927,6 +927,13 @@ function next(){si++;if(si>=1)gateLocked=false;if(si>=STORY.length){finish();ret
 function finish(){done=true;if(NPC.colonel.salute&&Math.hypot(NPC.colonel.x-pl.x,NPC.colonel.z-pl.z)<20)NPC.colonel.salute();marker.visible=false;$('mn').textContent='STORY COMPLETE';$('mt').textContent='You finished your first day! Explore freely.';
  $('h1').textContent='Day '+LVL+' Complete!';$('ovp').textContent=((window.__PROFILE&&window.__PROFILE.name)||(GIRL?'Amy':'Mike'))+': '+window.__LVINFO[LVL-1].done;$('go').textContent='Keep exploring ANITS';$('go').onclick=()=>$('ov').style.display='none';$('ov').style.display='flex';if(window.__levelDone)window.__levelDone(LVL)}
 const near=()=>{let b=null,bd=3.8;for(const n of npcs){if(n.off||n.nt)continue;const d=d3(n);if(d<bd){bd=d;b=n}}return b};
+const personOutline=window.__makeInteractionOutline&&window.__makeInteractionOutline(T);
+const lookDir=new T.Vector3(),LOOK_RANGE=14;let lookNpc=null;
+function lookAtNpc(){cam.getWorldDirection(lookDir);const ox=pl.x,oy=pl.y+1.5,oz=pl.z;let best=null,bt=1e9;
+ for(const n of npcs){if(n.off||n.nt||!n.g||n.g.visible===false)continue;const by=n.g.position.y,h=n.h||1.8,rad=(n===lookNpc?.8:.55);
+  for(let k=0;k<4;k++){const rx=n.x-ox,ry=by+h*(.12+.8*k/3)-oy,rz=n.z-oz,t=rx*lookDir.x+ry*lookDir.y+rz*lookDir.z;if(t<.5||t>LOOK_RANGE)continue;
+   const r=rad+t*.012;if(rx*rx+ry*ry+rz*rz-t*t<r*r){if(t<bt){bt=t;best=n}break}}}
+ return best}
 function lines(n){const s=STORY[si];if(LVL>1){if(s&&s.ok&&s.npc===n.id&&!s.ok())return["Rs. 250 is not in your wallet yet. Please withdraw cash from the bank ATM first."];if(s&&s.idcheck&&n.id==='guard'&&window.__inv&&!__inv.has('id'))return["No ID card with you? No problem, beta. I will give you a temporary one.","Press F to show it."];return(s&&s.lines&&s.lines[n.id])||n.L.d||GEN[0]}return n.L[si]||n.L.d||GEN[0]}
 let dlgT=null,subA=null,mhT='';
 function showDlg(){const n=dlg.n,d0=dlg,i0=dlg.i,t=dlg.l[dlg.i],el=$('dlg'),nm=n.name.replace(/\s*\(.*$/,'')+':';
@@ -1395,6 +1402,7 @@ if(uiBusy()&&isLocked())document.exitPointerLock();lockHint.style.display=(!coar
   if(n.st==='salute'){n.t+=dt;tr=-2.5;if(n.t>3.2)n.st='idle'}else if(n.st==='talk'){tr=-.9+Math.sin(n.ph*5)*.35;tl=-.5+Math.sin(n.ph*4+1)*.3}else if(n.route){tr=Math.sin(n.ph*7)*.4;tl=-tr}
   ar[1].rotation.x+=(tr-ar[1].rotation.x)*Math.min(1,dt*10);ar[0].rotation.x+=(tl-ar[0].rotation.x)*Math.min(1,dt*10);
   n.lab.visible=Math.hypot(n.x-pl.x,n.z-pl.z)<(n.id==='cadet'?5:n.id==='stu'?14:30)}
+ if(personOutline){const blocked=!(started&&!window.__paused&&!shopOpen&&!miniOn&&!window.__call);lookNpc=blocked?null:(dlg?dlg.n:lookAtNpc());personOutline.update(lookNpc,dt,blocked)}
  for(const L of labs){L.s.getWorldPosition(V);const d=cam.position.distanceTo(V),w=clamp(d*L.k,L.mn,L.mx);L.s.scale.set(w,w/4,1)}
  // prompts
  const nn=near();let msg='';if(!dlg&&!saluting&&!shopOpen&&!drinking){if(nn)msg='[E] Talk to '+nn.name;const vv=nearVM();if(vv&&(!nn||vv.d<d3(nn)))msg='[E] Use '+vv.m.name+' (vending machine)';const sv=nearSvc();if(sv&&(!vv||sv.d<vv.d)&&(!nn||sv.d<d3(nn)))msg='[E] '+sv.s.prompt;const bn=benchNear();if(bn&&(!nn||bn.d<d3(nn))&&(!vv||bn.d<vv.d)&&(!sv||bn.d<sv.d))msg=OFC.in?'[E] Sit on the sofa':'[E] Sit on the bench';const od=officeDoor();if(od)msg=od.msg;const nc=NCCs.some(n=>Math.hypot(n.x-pl.x,n.z-pl.z)<16);if(nc)msg+=(msg?'<br>':'')+'[G] Salute'}
@@ -1413,7 +1421,7 @@ if(uiBusy()&&isLocked())document.exitPointerLock();lockHint.style.display=(!coar
  cam.lookAt(pl.x,pl.y+1.35,pl.z);
  officeTick(dt);dnTick(dt);const lightX=MOB?Math.round(pl.x/4)*4:pl.x,lightZ=MOB?Math.round(pl.z/4)*4:pl.z;sun.target.position.set(lightX,0,lightZ);
  if(MOB&&ren.shadowMap.enabled){const sx=Math.round(pl.x/4),sz=Math.round(pl.z/4);if(sx!==PG.sx||sz!==PG.sz||now-PG.shadowAt>700){PG.sx=sx;PG.sz=sz;PG.shadowAt=now;ren.shadowMap.needsUpdate=true}}
- NCCF.update(dt);vmTick(dt);if(!MOB||PG.f%2===0)minimap();skyTick(dt);if(window.__free){cam.position.set(...window.__free.p);cam.lookAt(...window.__free.t)}else if(window.__shootCam){cam.position.copy(window.__shootCam[0]);cam.lookAt(window.__shootCam[1])}ren.render(sc,cam);if(window.__perfHud)window.__perfHud(ren)}
+ NCCF.update(dt);vmTick(dt);if(!MOB||PG.f%2===0)minimap();skyTick(dt);if(window.__free){cam.position.set(...window.__free.p);cam.lookAt(...window.__free.t)}else if(window.__shootCam){cam.position.copy(window.__shootCam[0]);cam.lookAt(window.__shootCam[1])}ren.render(sc,cam);if(window.__perfHud)window.__perfHud(ren);if(personOutline)personOutline.render(ren,sc,cam)}
 /* ---------- Admin Office (waiting room + Ms. Laksmi's office) ----------
    A sealed room built far outside the campus map (OFC in the early constants). The hall door in the Admin Block fades the player in; the exit door fades back.
    Waiting room: sofas (sit with E), restroom with toilet. Ms. Laksmi sits at her desk behind a glass door that opens after OFC_WAIT seconds in the room. */

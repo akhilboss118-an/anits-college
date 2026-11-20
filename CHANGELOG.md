@@ -1,3 +1,8 @@
+
+# NPC look-at white glow
+- Looking toward an NPC (view direction, within 14 m) fades in a soft white outline (tight rim + soft halo); looking away or switching NPC fades out/in cleanly. Depth-tested so walls hide it; cleared instantly on pause/shop/minigame/call.
+- Files: js/interaction-outline.js, js/game.js (lookAtNpc).
+- Not play-tested (owner request).
 # v11: Footpaths removed; only alternating yellow/white kerb blocks as road borders across the campus (gate road included, gaps at zebra crossings)
 
 # v10: Gate zebra crossings + low hedges beside gate paths, deeper brick colour
