@@ -18,3 +18,7 @@ android/app/src/main/assets/capacitor.config.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Vercel
+.vercel/
+.env*.local
