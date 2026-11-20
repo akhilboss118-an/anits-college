@@ -8,7 +8,7 @@ const MALE=/male|david|mark|george|ravi|hemant|prabhat|daniel|alex|fred|rishi|gu
 const pool=g=>{let en=vs.filter(v=>/^en/i.test(v.lang));if(!en.length)en=vs.slice();
  let p=en.filter(v=>g==='f'?FEM.test(v.name)&&!/\bmale\b(?!.*female)/i.test(v.name.replace(/female/ig,'')):(MALE.test(v.name)&&!/female/i.test(v.name)));
  if(!p.length)p=en;p=p.slice().sort((a,b)=>(/en-IN/i.test(b.lang)-/en-IN/i.test(a.lang))||(/en-GB/i.test(b.lang)-/en-GB/i.test(a.lang)));return p};
-const CFG={you:['m',1.28,1.02],youF:['f',1.14,1.0],sushma:['f',.98,1.02],arjun:['m',1.12,1.08],guard:['m',.72,.92],clerk:['f',1.0,.95],prof:['m',.82,.9],suresh:['m',1.05,1.0],colonel:['m',.55,.85]};
+const CFG={you:['m',1.28,1.02],youF:['f',1.14,1.0],sushma:['f',.98,1.02],arjun:['m',1.12,1.08],guard:['m',.72,.92],clerk:['f',1.0,.95],prof:['m',.82,.9],suresh:['m',1.05,1.0],colonel:['m',.55,.85],nss:['m',.8,.95]};
 function profile(key,name){let p=profiles.get(key);if(p&&p.vs===vs.length)return p;
  let c=typeof key==='string'&&CFG[key];
  if(!c){const gk=key&&typeof key==='object'&&key.gender,f=gk?gk==='f':((nCad+=1)%2===0||/mrs|ms\.|miss/i.test(name||''));c=[f?'f':'m',f?.95+((nCad*37)%30)/100:.7+((nCad*29)%45)/100,.9+((nCad*13)%25)/100]}

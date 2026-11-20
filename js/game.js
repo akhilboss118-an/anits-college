@@ -94,6 +94,7 @@ function localColliders(x,z){
 }
 const BB={m:''};
 const OFC={cx:-330,cz:0,hw:6,hd:5,in:false,ready:false,busy:false,waited:0,has:(x,z)=>Math.abs(x+330)<9&&Math.abs(z)<8};
+const CLS={cx:-330,cz:60,hw:7,hd:6,in:false,busy:false,ph:'',t:0,seat:null,has:(x,z)=>Math.abs(x+330)<10&&Math.abs(z-60)<9},CSE_DOOR=W2(159,263.5);
 const cv=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
 const mk=(g,m,x,y,z,cast)=>{const o=new T.Mesh(g,m);o.position.set(x,y,z);o.castShadow=!!cast;o.receiveShadow=true;sc.add(o);return o};
 const lam=c=>new T.MeshLambertMaterial({color:c});
@@ -313,7 +314,7 @@ const okSpot=(px,py,m)=>!(BLD.some(b=>inR(px,py,b.slice(1,5),m))||ROADS.some(r=>
 function push(p,r,npc){let hit=false;for(const c of localColliders(p.x,p.z)){const x=clamp(p.x,c.x0,c.x1),z=clamp(p.z,c.z0,c.z1),dx=p.x-x,dz=p.z-z,d2=dx*dx+dz*dz;
  if(d2<r*r){if(d2>1e-6){const d=Math.sqrt(d2);p.x+=dx/d*(r-d);p.z+=dz/d*(r-d)}else p.x+=r;hit=true}}
  if(npc)for(const n of circles){if(n.off)continue;const dx=p.x-n.x,dz=p.z-n.z,d=Math.hypot(dx,dz),m=r+.45;if(d<m&&d>1e-4){p.x+=dx/d*(m-d);p.z+=dz/d*(m-d)}}
- if(OFC.has(p.x,p.z)){p.x=clamp(p.x,OFC.cx-OFC.hw+.5,OFC.cx+OFC.hw-.5);p.z=clamp(p.z,OFC.cz-OFC.hd+.5,OFC.cz+OFC.hd-.5)}else{p.x=clamp(p.x,wx(36),wx(392));p.z=clamp(p.z,wz(40),wz(475))}return hit}
+ if(OFC.has(p.x,p.z)){p.x=clamp(p.x,OFC.cx-OFC.hw+.5,OFC.cx+OFC.hw-.5);p.z=clamp(p.z,OFC.cz-OFC.hd+.5,OFC.cz+OFC.hd-.5)}else if(CLS.has(p.x,p.z)){p.x=clamp(p.x,CLS.cx-CLS.hw+.5,CLS.cx+CLS.hw-.5);p.z=clamp(p.z,CLS.cz-CLS.hd+.5,CLS.cz+CLS.hd-.5)}else{p.x=clamp(p.x,wx(36),wx(392));p.z=clamp(p.z,wz(40),wz(475))}return hit}
 
 /* ---------- models ---------- */
 const GL=new T.GLTFLoader(),dec=b=>b.slice(0);
@@ -565,12 +566,14 @@ mk(new T.BoxGeometry(XE-YX[0]+.6,.18,.5),kerb,(XE+YX[0]-.6)/2,.17,YA+.25);
   return{out,dep,len,hh}}
  const door=(o,dep,hh)=>{ // entrance door, steps and canopy on the +X face (only needed for the panel-house model)
   const f=dep/2,add=(g,m,x,y,z)=>{const q=mk(g,m,0,0,0,1);q.position.set(x,y,z);o.add(q)};
-  add(new T.BoxGeometry(.2,3.4,3),lam(0x3b2616),f+.05,1.7,0);
+  const leaf=mk(new T.BoxGeometry(.2,3.4,3),lam(0x3b2616),0,0,0,1);leaf.position.set(f+.05,1.7,0);o.add(leaf);o.userData.leaf=leaf;
   add(new T.BoxGeometry(.5,3.4,.25),lam(0x2a2a30),f+.1,1.7,-1.6);add(new T.BoxGeometry(.5,3.4,.25),lam(0x2a2a30),f+.1,1.7,1.6);
   add(new T.BoxGeometry(2.4,.28,5),lam(0x55585f),f+1.1,3.6,0);
   add(new T.BoxGeometry(1.8,.3,4),lam(0xb0aca0),f+.9,.15,0)};
+ const cseLock=(o,dep)=>{const f=dep/2,lm=new T.MeshBasicMaterial({color:0xff2b2b}),g=new T.Group();g.add(mk(new T.BoxGeometry(.16,.5,.9),lam(0x1b1b22),0,0,0,1),mk(new T.SphereGeometry(.18,12,10),lm,0,0,0,1).translateX(.12));
+  g.position.set(f+.2,3.9,0);o.add(g);window.__cseDoor={leaf:o.userData.leaf,lamp:lm,x:o.position.x+f+.05,z:o.position.z}};
  const zFor=plot=>Math.min(24.2,(plot[3]-plot[1])*S-.8)/(bB.max.z-bB.min.z);   // length fits each plot
- const put=(face,plot,tint,name,accent)=>{const z=zFor(plot),r=make(brez,bB,[z*1.3,z,z],face,plot,11.5,tint);door(r.out,r.dep,r.hh);
+ const put=(face,plot,tint,name,accent)=>{const z=zFor(plot),r=make(brez,bB,[z*1.3,z,z],face,plot,11.5,tint);door(r.out,r.dep,r.hh);if(name==='CSE Block')cseLock(r.out,r.dep);
   campus.detailBlock({x:r.out.position.x,z:r.out.position.z,rotation:r.out.rotation.y,depth:r.dep,length:r.len,height:r.hh,name,sign:true,accent})};
  // west of the road: entrance faces EAST (+x).  east of the road: entrance faces WEST.
  put('E',[102,246,156,281],0xd8ded9,'CSE Block',0x8a6a55);   // CSE
@@ -670,6 +673,9 @@ students.forEach(([c,r],i)=>{const n=addNPC({id:'stu',name:'Student',p:r[0],c,ro
   L:{d:["Hey! I'm Remy, second year. First day at ANITS?","Tip: the canteen near the Civil Block has the best chai.","Sorry, I have to run. I'm late for class!"]}});
  n.x=R[0][0];n.z=R[0][1]}
 
+if(window.__LVL===8){
+ NPC.nss=addNPC({id:'nss',name:'NSS Commander',p:[303,281],c:0x1f4fa0,h:1.8,col:'#7fd0ff',face:-Math.PI/2,nochat:true,L:{d:["Keep going, volunteers! Every piece of trash counts.","Not Me, But You!"]}});
+ window.__nssTeam=[FR_NAME,'Ravi','Teja','Harsha','Charan','Sai'].map((nm,i)=>addNPC({id:'nssf',name:nm+' (NSS Team)',p:[290+(i%3)*3,278+Math.floor(i/3)*5],c:[0xe0883a,0x3a8a7a,0xc2563f,0x7b5ac0,0x30a0a8,0xb08a30][i],nt:true,face:Math.PI/2,L:{d:["Let's clean the campus!"]}}))}
 /* ---------- One shared look: every student / staff NPC is the Remy model (cadets keep their NCC capsules, Colonel Singh keeps his commander model) ---------- */
 {try{
  const gl=await parse(B_REMY),proto=gl.scene,clip=gl.animations[0],dur=clip.duration,TS=.9,REST=[1/24,13/24];
@@ -917,15 +923,25 @@ const LVL=window.__LVL||1;let miniOn=false;let gateLocked=true;let STORY=[
  {t:'Go to the Open Auditorium grounds and salute the NCC cadets (press G near Colonel Singh).',at:null,salute:1},
  {t:'Talk to Colonel Singh.',npc:'colonel'}];
 if(LVL>1)STORY=window.__LV({W2,say:s=>say(s),wallet:()=>wallet,pay:n=>{wallet-=n;updWal()},tried:()=>tried.size})[LVL];
+if(LVL===3)STORY.push({t:'Go to the CSE Block door and press E to knock. Pass the quiz to get in, then take your seat in Room 204.',at:CSE_DOOR,rad:3,cls:1,say:'Now go to the CSE Block. Stand in front of the door and press E to knock.'});
+else if(LVL!==8)STORY.push({t:'Mission complete! Go to your class in the CSE Block (Room 204) and take your seat.',at:CSE_DOOR,rad:3,cls:1,say:'Mission complete! Now go to your class in the CSE Block, Room 204.'});
+const CSEQ={passed:false,told:false,enterAt:0,open:0,tries:0};
+const cseKnock=()=>{const s=STORY[si];return LVL===3&&!CSEQ.passed&&started&&!done&&!CLS.in&&!CLS.busy&&!miniOn&&!SIT.on&&!dlg&&s&&s.cls&&dist(pl.x,pl.z,CSE_DOOR)<4.5};
+function cseQuiz(){const Q=window.__CSE_QUIZ;if(!Q||miniOn)return;miniOn=true;CSEQ.tries++;snd(330,.12,'square');setTimeout(()=>snd(330,.12,'square'),180);
+ window.__mini.run({kind:'csequiz',title:'CSE BLOCK DOOR QUIZ',qs:Q.qs,need:Q.need,winText:'Quiz passed! The door unlocks.',loseText:'Door still locked. Try again!',onLeave:()=>{miniOn=false;$('mt').textContent=STORY[si].t}},()=>{miniOn=false;CSEQ.passed=true;CSEQ.enterAt=performance.now()+1800;snd(784,.16,'triangle');setTimeout(()=>snd(988,.28,'triangle'),170);
+  $('mt').textContent='The door is open. Walk in to Room 204 and take your seat.';say('The CSE Block door clicks open. Go in!')})}
+function cseTick(dt){if(LVL!==3)return;const d=window.__cseDoor;if(!d)return;
+ if(started&&!done&&!CSEQ.told&&!CLS.in&&STORY[si]&&STORY[si].cls&&dist(pl.x,pl.z,CSE_DOOR)<6){CSEQ.told=true;say('The CSE Block door is locked. Press E to knock.')}
+ const t=CSEQ.passed?1:0;if(CSEQ.open!==t){CSEQ.open+=Math.sign(t-CSEQ.open)*Math.min(Math.abs(t-CSEQ.open),dt/1.1);d.leaf.scale.z=1-.92*CSEQ.open;d.leaf.position.z=1.5*.92*CSEQ.open;d.lamp.color.setHex(CSEQ.open>.05?0x34c759:0xff2b2b)}}
 const runMini=s=>{miniOn=true;window.__mini.run(s.mini,()=>{miniOn=false;next()})};
 const marker=new T.Group();{const m=new T.MeshBasicMaterial({color:0xffd54a,transparent:true,opacity:.28,depthWrite:false});
  marker.add(new T.Mesh(new T.CylinderGeometry(.9,.9,40,20,1,true),m).translateY(20),new T.Mesh(new T.TorusGeometry(1.4,.14,8,28),new T.MeshBasicMaterial({color:0xffd54a})).rotateX(Math.PI/2).translateZ(-.3))}sc.add(marker);
-const tgt=()=>{const s=STORY[si];if(!s)return null;if(s.npc){const N=NPC[s.npc];if(s.npc==='clerk'&&!OFC.in&&OFC.doorOut)return OFC.doorOut;return N.off&&N.desk?N.desk:[N.x,N.z]}if(s.salute)return[NPC.colonel.x,NPC.colonel.z];return s.at};
+const tgt=()=>{const s=STORY[si];if(!s)return null;if(CLS.in)return CLS.ph==='walk'&&CLS.seat?[CLS.seat.x,CLS.seat.z]:null;if(s.npc){const N=NPC[s.npc];if(s.npc==='clerk'&&!OFC.in&&OFC.doorOut)return OFC.doorOut;return N.off&&N.desk?N.desk:[N.x,N.z]}if(s.salute)return[NPC.colonel.x,NPC.colonel.z];return s.at};
 function say(s){const e=$('sub');if(subA)subA.cancel();const ch=window.__subs.chunks(s,e,'');let c=0;e.style.opacity=1;
  const tick=()=>{e.textContent=ch[c];subA=window.__after(window.__subs.dur(ch[c])+(c===ch.length-1?900:0),()=>{if(++c<ch.length)tick();else e.style.opacity=0})};tick()}
 function next(){si++;if(si>=1)gateLocked=false;if(si>=STORY.length){finish();return}const s=STORY[si];$('mt').textContent=s.t;$('mn').textContent='DAY '+LVL+' \u00B7 MISSION '+(si+1)+' / '+STORY.length;if(s.say)say(s.say);if(s.mini&&!s.at&&!s.npc)runMini(s)}
-function finish(){done=true;if(NPC.colonel.salute&&Math.hypot(NPC.colonel.x-pl.x,NPC.colonel.z-pl.z)<20)NPC.colonel.salute();marker.visible=false;$('mn').textContent='STORY COMPLETE';$('mt').textContent='You finished your first day! Explore freely.';
- $('h1').textContent='Day '+LVL+' Complete!';$('ovp').textContent=((window.__PROFILE&&window.__PROFILE.name)||(GIRL?'Amy':'Mike'))+': '+window.__LVINFO[LVL-1].done;$('go').textContent='Keep exploring ANITS';$('go').onclick=()=>$('ov').style.display='none';$('ov').style.display='flex';if(window.__levelDone)window.__levelDone(LVL)}
+function finish(){done=true;if(NPC.colonel.salute&&Math.hypot(NPC.colonel.x-pl.x,NPC.colonel.z-pl.z)<20)NPC.colonel.salute();marker.visible=false;$('mn').textContent=LVL===8?'CAMP OVER':LVL===3?'LEVEL COMPLETE':'CLASS OVER';$('mt').textContent=LVL===8?'Camp complete. Well done, volunteer!':LVL===3?'Level complete. You found your classroom!':'Game over. See you in the next class!';try{document.exitPointerLock()}catch(e){}
+ $('h1').textContent=LVL===8?'CAMP COMPLETE':LVL===3?'LEVEL COMPLETE':'GAME OVER';$('h1').setAttribute('data-testid','game-over-title');$('ovp').textContent='Day '+LVL+' complete. '+((window.__PROFILE&&window.__PROFILE.name)||(GIRL?'Amy':'Mike'))+': '+window.__LVINFO[LVL-1].done+(LVL===3&&window.__cseQuizResult?' CSE door quiz: '+window.__cseQuizResult.score+' / '+window.__cseQuizResult.total+' correct (pass mark '+window.__cseQuizResult.need+').':'');if(LVL!==8)$('ovp').textContent+=' Attendance: '+window.__attendance.get()+'%.';$('go').style.display='none';$('ov').style.display='flex';if(window.__levelDone)window.__levelDone(LVL)}
 const near=()=>{let b=null,bd=3.8;for(const n of npcs){if(n.off||n.nt)continue;const d=d3(n);if(d<bd){bd=d;b=n}}return b};
 const personOutline=window.__makeInteractionOutline&&window.__makeInteractionOutline(T);
 const lookDir=new T.Vector3(),LOOK_RANGE=14;let lookNpc=null;
@@ -946,7 +962,9 @@ let gateBusy=false;
 function gateCheck(){const s=STORY[si];if(!s||!s.idcheck||!window.__gateFlow||gateBusy)return;if(dlg)resetDialogue();window.__gateFlow.check(()=>{const A=window.__guardAnim;if(!A){gatePass();return}gateBusy=true;let d=0;const fin=()=>{if(d)return;d=1;gateBusy=false;gatePass()};A.inspect(fin)})}
 function resetDialogue(){if(dlgT)dlgT.cancel();dlg=null;$('dlg').style.display='none';npcs.forEach(n=>{if(n.st==='talk')n.st='idle'});window.__voice&&__voice.stop()}
 function interact(){if(window.__call||window.__paused)return;if(window.__inv&&__inv.isOpen&&__inv.isOpen())return;if(shopOpen){closeShop();return}if(drinking)return;
+ if(CLS.in){if(CLS.ph==='walk')classSit();return}
  if(SIT.on){sitStand();return}
+ if(cseKnock()){cseQuiz();return}
  if(!dlg&&!saluting&&!miniOn){const od=officeDoor();if(od){od.go();return}}
  if(!dlg&&!saluting){const sv=nearSvc();if(sv){const v0=nearVM(),n1=near();if((!v0||sv.d<v0.d)&&(!n1||sv.d<d3(n1))){openSvc(sv.s);return}}}
   if(!dlg&&!saluting){const vm=nearVM();if(vm){const n0=near();if(!n0||vm.d<d3(n0)){openShop(vm.m);return}}}
@@ -1020,7 +1038,7 @@ const sfH=d=>SF_BASE+(SF_TOP-SF_BASE)*clamp(d/SF_B,0,1);
 const sfTop=(x,z)=>{const d=sfD(x,z);return d>0?sfH(d):0};
 
 function groundHeightAt(x,z){
- if(OFC.has(x,z))return 0;
+ if(OFC.has(x,z)||CLS.has(x,z))return 0;
  const ah=Math.max(audH(x,z),saH(x,z));if(ah>0)return ah;
  const gatePathHeight=GATE_PATHS.heightAt(x,z);if(gatePathHeight!==null)return gatePathHeight;
  if(x>=FP.x0&&x<=FP.x1&&z>=FP.z0&&z<=FP.z1)return FP_TOP;
@@ -1321,6 +1339,7 @@ VMS.forEach(m=>{const[a,b]=m2(m.x,m.z);mx.fillStyle='#37d3ff';mx.strokeStyle='#f
 const mc=$('mc').getContext('2d');
 function minimap(){const W=110,k=170/W,[a,b]=m2(pl.x-W/2,pl.z-W/2);mc.fillStyle='#222';mc.fillRect(0,0,170,170);mc.drawImage(mapC,a,b,W*MS,W*MS,0,0,170,170);
  const t=tgt();if(t&&!done){let x=(t[0]-pl.x)*k+85,z=(t[1]-pl.z)*k+85;const o=x<8||x>162||z<8||z>162;x=clamp(x,8,162);z=clamp(z,8,162);mc.fillStyle='#ffd54a';mc.strokeStyle='#000';mc.lineWidth=2;mc.beginPath();mc.arc(x,z,o?4:6,0,7);mc.fill();mc.stroke()}
+ if(window.__nssMini)window.__nssMini(mc,k,pl);
  mc.save();mc.translate(85,85);mc.rotate(Math.PI-pl.yaw);mc.fillStyle='#ff3b3b';mc.strokeStyle='#fff';mc.lineWidth=1.5;mc.beginPath();mc.moveTo(0,-9);mc.lineTo(7,7);mc.lineTo(-7,7);mc.closePath();mc.fill();mc.stroke();mc.restore()}
 
 /* ---------- loop ---------- */
@@ -1393,10 +1412,10 @@ if(uiBusy()&&isLocked())document.exitPointerLock();lockHint.style.display=(!coar
  if(SIT.on)sitTick(dt);else{push(pl,.45,true);{const tg=groundHeightAt(pl.x,pl.z);pl.y+=(tg-pl.y)*(1-Math.exp(-dt*22));if(Math.abs(tg-pl.y)<.004)pl.y=tg;pl.y=clamp(pl.y,0,Math.max(FP_TOP+.02,AUDTOP,SATOP))}}player.position.set(pl.x,pl.y,pl.z);player.rotation.y=pl.yaw;
  pAnim(dt,pl.sp>.4,clamp(pl.sp/(stride*pk),.5,3.2),!!dlg,saluting,drinking||!!window.__phoneTalk,pl.sp);
  // NPCs
- for(const n of npcs){n.ph+=dt;let by=0,tilt=0;
+ for(const n of npcs){n.ph+=dt;let by=0,tilt=0;if(n.ctl)n.ctl(dt);
   if(n.route&&!(dlg&&dlg.n===n)){const q=n.route[n.ri],dx=q[0]-n.x,dz=q[1]-n.z,d=Math.hypot(dx,dz);if(d<.5){n.ri+=n.dir;if(n.ri>=n.route.length||n.ri<0){n.dir*=-1;n.ri+=2*n.dir}}else{n.x+=dx/d*(n.spd||1.5)*dt;n.z+=dz/d*(n.spd||1.5)*dt;n.yaw=aL(n.yaw,Math.atan2(dx,dz),dt*8);by=Math.abs(Math.sin(n.ph*7))*.1;tilt=Math.sin(n.ph*7)*.05}}
   else by=Math.sin(n.ph*2)*.015;
-  if(n.rm){by=0;tilt=0;n.rm(dt,!!(n.route&&!(dlg&&dlg.n===n)))}
+  if(n.rm){by=0;tilt=0;n.rm(dt,!!(n.mv||(n.route&&!(dlg&&dlg.n===n))))}
   n.g.position.set(n.x,by+groundHeightAt(n.x,n.z),n.z);n.g.rotation.set(0,aL(n.g.rotation.y,n.yaw,Math.min(1,dt*10)),tilt);
   const ar=n.g.userData.arms;let tr=0,tl=0;
   if(n.st==='salute'){n.t+=dt;tr=-2.5;if(n.t>3.2)n.st='idle'}else if(n.st==='talk'){tr=-.9+Math.sin(n.ph*5)*.35;tl=-.5+Math.sin(n.ph*4+1)*.3}else if(n.route){tr=Math.sin(n.ph*7)*.4;tl=-tr}
@@ -1405,21 +1424,22 @@ if(uiBusy()&&isLocked())document.exitPointerLock();lockHint.style.display=(!coar
  if(personOutline){const blocked=!(started&&!window.__paused&&!shopOpen&&!miniOn&&!window.__call);lookNpc=blocked?null:(dlg?dlg.n:lookAtNpc());personOutline.update(lookNpc,dt,blocked)}
  for(const L of labs){L.s.getWorldPosition(V);const d=cam.position.distanceTo(V),w=clamp(d*L.k,L.mn,L.mx);L.s.scale.set(w,w/4,1)}
  // prompts
- const nn=near();let msg='';if(!dlg&&!saluting&&!shopOpen&&!drinking){if(nn)msg='[E] Talk to '+nn.name;const vv=nearVM();if(vv&&(!nn||vv.d<d3(nn)))msg='[E] Use '+vv.m.name+' (vending machine)';const sv=nearSvc();if(sv&&(!vv||sv.d<vv.d)&&(!nn||sv.d<d3(nn)))msg='[E] '+sv.s.prompt;const bn=benchNear();if(bn&&(!nn||bn.d<d3(nn))&&(!vv||bn.d<vv.d)&&(!sv||bn.d<sv.d))msg=OFC.in?'[E] Sit on the sofa':'[E] Sit on the bench';const od=officeDoor();if(od)msg=od.msg;const nc=NCCs.some(n=>Math.hypot(n.x-pl.x,n.z-pl.z)<16);if(nc)msg+=(msg?'<br>':'')+'[G] Salute'}
- if(SIT.on)msg='[E] Stand up';window.__sitUI={show:SIT.on||msg.indexOf('Sit on')>=0,label:SIT.on?'STAND':'SIT'};
+ const nn=near();let msg='';if(!dlg&&!saluting&&!shopOpen&&!drinking){if(nn)msg='[E] Talk to '+nn.name;const vv=nearVM();if(vv&&(!nn||vv.d<d3(nn)))msg='[E] Use '+vv.m.name+' (vending machine)';const sv=nearSvc();if(sv&&(!vv||sv.d<vv.d)&&(!nn||sv.d<d3(nn)))msg='[E] '+sv.s.prompt;const bn=benchNear();if(bn&&(!nn||bn.d<d3(nn))&&(!vv||bn.d<vv.d)&&(!sv||bn.d<sv.d))msg=OFC.in?'[E] Sit on the sofa':'[E] Sit on the bench';const od=officeDoor();if(od)msg=od.msg;if(cseKnock())msg='[E] Knock on the CSE Block door';const nc=NCCs.some(n=>Math.hypot(n.x-pl.x,n.z-pl.z)<16);if(nc)msg+=(msg?'<br>':'')+'[G] Salute'}
+ if(CLS.in)msg=classSeatNear()?'[E] Sit on your seat':'';else if(SIT.on)msg='[E] Stand up';window.__sitUI={show:(SIT.on&&!CLS.in)||msg.indexOf('Sit on')>=0,label:SIT.on?'STAND':'SIT'};
  {const tx=msg&&started&&!shopOpen&&!drinking&&!dlg?msg:'';if(tx!==mhT){mhT=tx;mh.innerHTML=tx.split('<br>').map(l=>'<span>'+l.replace(/^\[(\w)\]\s*/,'<kbd>$1</kbd>')+'</span>').join('');mh.style.display=tx?'block':'none'}}   // key hints sit under the mission, not in the middle of the view
  // mission checks
- const s=STORY[si];if(started&&!done&&s&&!miniOn&&!SIT.on&&s.at&&dist(pl.x,pl.z,s.at)<(s.rad||5)){if(s.mini)runMini(s);else if(s.cine&&window.__day2&&window.__day2[s.cine]){miniOn=true;window.__day2[s.cine](s.fee,()=>{miniOn=false;s.done&&s.done();next()})}else next()}if(started&&!done&&s&&s.chk&&s.chk())next();
+ const s=STORY[si];if(started&&!done&&s&&!miniOn&&!SIT.on&&s.at&&dist(pl.x,pl.z,s.at)<(s.rad||5)){if(s.cls){if(!CLS.busy&&!CLS.in&&(LVL!==3||(CSEQ.passed&&performance.now()>=CSEQ.enterAt)))classEnter()}else if(s.mini)runMini(s);else if(s.cine&&window.__day2&&window.__day2[s.cine]){miniOn=true;window.__day2[s.cine](s.fee,()=>{miniOn=false;s.done&&s.done();next()})}else next()}if(started&&!done&&s&&s.chk&&s.chk())next();
  const t=tgt();marker.visible=!!t&&!done&&started&&Math.hypot(t[0]-pl.x,t[1]-pl.z)>(STORY[si]&&STORY[si].at?4:3.5);if(t)marker.position.set(t[0],groundHeightAt(t[0],t[1]),t[1]);marker.rotation.y+=dt;
  // camera (with building avoidance)
- const cd=OFC.in?3.4:dlg||drinking||window.__phoneTalk?3.2:5.4,fw=[Math.sin(cy),Math.cos(cy)];let dd=cd;
+ const cd=OFC.in||CLS.in?3.4:dlg||drinking||window.__phoneTalk?3.2:5.4,fw=[Math.sin(cy),Math.cos(cy)];let dd=cd;
  for(;dd>1.2;dd-=.4){const x=pl.x-fw[0]*dd*Math.cos(cp),z=pl.z-fw[1]*dd*Math.cos(cp),y=pl.y+1.5+dd*Math.sin(cp);if(!localColliders(x,z).some(c=>x>c.x0-.3&&x<c.x1+.3&&z>c.z0-.3&&z<c.z1+.3&&y<c.h))break}
  V.set(pl.x-fw[0]*dd*Math.cos(cp),pl.y+1.5+dd*Math.sin(cp),pl.z-fw[1]*dd*Math.cos(cp));V.y=Math.max(V.y,groundHeightAt(V.x,V.z)+.45);cam.position.lerp(V,Math.min(1,dt*10));cam.position.y=Math.max(cam.position.y,groundHeightAt(cam.position.x,cam.position.z)+.4);if(window.__admin){const A=window.__admin,hx=A.hall.x1-A.cx-.7,cp3=cam.position,zi=cp3.z>A.hall.z0-.2&&cp3.z<A.hall.z1+.2,plIn=Math.abs(pl.x-A.cx)<hx+.7&&pl.z>A.hall.z0-.2&&pl.z<A.hall.z1+.2;
   if(plIn){if(cp3.z>A.hall.z0-7&&cp3.z<A.hall.z1+7)cp3.x=clamp(cp3.x,A.cx-hx,A.cx+hx);cp3.y=Math.min(cp3.y,2.6);}
   else if(zi&&Math.abs(cp3.x-A.cx)<47.7*A.K){cp3.z=pl.z<A.cz?A.hall.z0-.3:A.hall.z1+.3}}
+ if(CLS.in){const c3=cam.position;c3.x=clamp(c3.x,CLS.cx-CLS.hw+.3,CLS.cx+CLS.hw-.3);c3.z=clamp(c3.z,CLS.cz-CLS.hd+.3,CLS.cz+CLS.hd-.3);c3.y=clamp(c3.y,.5,3.3)}
  if(OFC.in){const c3=cam.position;c3.x=clamp(c3.x,OFC.cx-OFC.hw+.3,OFC.cx+OFC.hw-.3);c3.z=clamp(c3.z,OFC.cz-OFC.hd+.3,OFC.cz+OFC.hd-.3);c3.y=clamp(c3.y,.5,3.05)}
  cam.lookAt(pl.x,pl.y+1.35,pl.z);
- officeTick(dt);dnTick(dt);const lightX=MOB?Math.round(pl.x/4)*4:pl.x,lightZ=MOB?Math.round(pl.z/4)*4:pl.z;sun.target.position.set(lightX,0,lightZ);
+ officeTick(dt);classTick(dt);timeTick(dt);dnTick(dt);const lightX=MOB?Math.round(pl.x/4)*4:pl.x,lightZ=MOB?Math.round(pl.z/4)*4:pl.z;sun.target.position.set(lightX,0,lightZ);
  if(MOB&&ren.shadowMap.enabled){const sx=Math.round(pl.x/4),sz=Math.round(pl.z/4);if(sx!==PG.sx||sz!==PG.sz||now-PG.shadowAt>700){PG.sx=sx;PG.sz=sz;PG.shadowAt=now;ren.shadowMap.needsUpdate=true}}
  NCCF.update(dt);vmTick(dt);if(!MOB||PG.f%2===0)minimap();skyTick(dt);if(window.__free){cam.position.set(...window.__free.p);cam.lookAt(...window.__free.t)}else if(window.__shootCam){cam.position.copy(window.__shootCam[0]);cam.lookAt(window.__shootCam[1])}ren.render(sc,cam);if(window.__perfHud)window.__perfHud(ren);if(personOutline)personOutline.render(ren,sc,cam)}
 /* ---------- Admin Office (waiting room + Ms. Laksmi's office) ----------
@@ -1509,6 +1529,103 @@ function officeTick(dt){
  else if(OFC.ready||!OFC.in)ofHud.style.display='none';
  const tgt=OFC.ready?1:0;if(OFC.open!==tgt){OFC.open+=Math.sign(tgt-OFC.open)*Math.min(Math.abs(tgt-OFC.open),dt/.9);OFC.panes.forEach(p=>{p.g.position.x=OFC.cx+p.s*(.65+1.3*OFC.open)})}}
 
+
+/* ---------- Class in the CSE Block (Room 204): every level ends here. Sealed room outside the map (same trick as the Admin Office).
+   Flow: last mission -> walk to the CSE Block door -> fade into Room 204 -> walk to the glowing seat -> E to sit -> listen to Prof. Rao -> bell -> GAME OVER screen. ---------- */
+const CLS_LINES=["Prof. Rao: Good morning, class! Please settle down and open your notebooks.","Prof. Rao: Today we begin with linked lists. Every node holds some data and a pointer to the next node.","Prof. Rao: The last node points to NULL. That is how the chain knows where to end.","Prof. Rao: Practise this in the lab tomorrow. Any doubts? Good. That is all for today."];
+const CLS_AT=[.8,7.6,14.6,21.6],CLS_END=29.5;
+const clsHud=document.createElement('div');clsHud.id='cls-hud';clsHud.setAttribute('data-testid','class-listening-hud');
+clsHud.style.cssText='position:fixed;top:78px;left:50%;transform:translateX(-50%);z-index:12;display:none;padding:8px 20px 10px;border-radius:16px;background:rgba(29,53,87,.9);border:1px solid #ffd54a;color:#fff;font:700 14px Figtree,system-ui,sans-serif;pointer-events:none;white-space:nowrap;text-align:center;letter-spacing:.12em';
+clsHud.innerHTML='<span>LISTENING TO CLASS...</span><div style="margin-top:6px;height:5px;width:220px;border-radius:3px;background:rgba(255,255,255,.2);overflow:hidden"><i style="display:block;height:100%;width:0;background:#ffd54a"></i></div>';document.body.appendChild(clsHud);
+{const O={x:CLS.cx,z:CLS.cz},W=CLS.hw,D=CLS.hd,H=3.6,mats={};
+ const cm=c=>mats[c]||(mats[c]=new T.MeshLambertMaterial({color:c,emissive:new T.Color(c).multiplyScalar(.32)}));
+ const bx=(w,h,d,c,lx,y,lz,basic)=>{const m=mk(new T.BoxGeometry(w,h,d),basic?new T.MeshBasicMaterial({color:c}):cm(c),O.x+lx,y,O.z+lz);m.receiveShadow=false;return m};
+ const tex=(w,h,draw,lx,y,lz,ry)=>{const c=cv(1024,Math.round(1024*h/w));draw(c.getContext('2d'),c.width,c.height);const m=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:new T.CanvasTexture(c)}));m.position.set(O.x+lx,y,O.z+lz);m.rotation.y=ry||0;sc.add(m);return m};
+ const CREAM=0xf1e9d6,BLUE=0xd3e2ee;
+ bx(2*W+.6,.3,2*D+.6,0x9a7a56,0,-.15,0);
+ {const fl=tex(2*W,2*D,(g,w,h)=>{for(let i=0;i<14;i++)for(let j=0;j<12;j++){g.fillStyle=(i+j)%2?'#dccdae':'#cfbd98';g.fillRect(i*w/14,j*h/12,w/14,h/12)}},0,.012,0,0);fl.rotation.set(-Math.PI/2,0,0)}
+ bx(2*W+.6,.2,2*D+.6,0xf4f4f4,0,H+.1,0,1);
+ [[-4,-3],[0,-3],[4,-3],[-4,1],[0,1],[4,1],[-4,4.5],[0,4.5],[4,4.5]].forEach(([a,b])=>bx(1.8,.05,.5,0xfffbe6,a,H-.01,b,1));
+ bx(2*W+.48,H,.24,BLUE,0,H/2,-D-.12);bx(.24,H,2*D,CREAM,-W-.12,H/2,0);bx(.24,H,2*D,CREAM,W+.12,H/2,0);bx(2*W+.48,H,.24,CREAM,0,H/2,D+.12);
+ bx(2*W,.9,.04,0x8c2f39,0,.45,-D+.02);
+ // whiteboard, logo, room sign, clock
+ tex(6.4,2.0,(g,w,h)=>{g.fillStyle='#8a6a48';g.fillRect(0,0,w,h);g.fillStyle='#f7f9fa';g.fillRect(12,12,w-24,h-24);g.textAlign='left';g.fillStyle='#1d3557';g.font='800 62px sans-serif';g.fillText('DATA STRUCTURES',48,96);
+  g.font='600 36px sans-serif';g.fillStyle='#2a7a4a';g.fillText('Unit 3 : Linked Lists',48,150);g.fillStyle='#c0392b';g.font='700 34px monospace';g.fillText('[data|next] -> [data|next] -> NULL',48,220);g.fillStyle='#1d3557';g.font='600 30px sans-serif';g.fillText('ANITS  \u00B7  CSE  \u00B7  Room 204',48,280)},0,1.95,-D+.03,0);
+ const lg=new T.Mesh(new T.PlaneGeometry(1.2,1.2),new T.MeshBasicMaterial({map:new T.TextureLoader().load('assets/img/anits_logo.png'),transparent:true}));lg.position.set(O.x+5,2.0,O.z-D+.03);sc.add(lg);
+ tex(1.6,.5,(g,w,h)=>{g.fillStyle='#1d3557';g.fillRect(0,0,w,h);g.fillStyle='#ffd54a';g.textAlign='center';g.font='800 118px sans-serif';g.fillText('ROOM 204',w/2,h*.5);g.font='600 62px sans-serif';g.fillStyle='#fff';g.fillText('CSE Block',w/2,h*.88)},-5,2.9,-D+.03,0);
+ tex(.7,.7,(g,w,h)=>{g.fillStyle='#fff';g.beginPath();g.arc(w/2,h/2,w/2-6,0,7);g.fill();g.strokeStyle='#222';g.lineWidth=14;g.stroke();g.lineWidth=12;g.beginPath();g.moveTo(w/2,h/2);g.lineTo(w/2,h*.2);g.moveTo(w/2,h/2);g.lineTo(w*.7,h*.58);g.stroke()},-2.4,3.0,-D+.03,0);
+ // windows on both side walls
+ const win=(g,w,h)=>{const s=g.createLinearGradient(0,0,0,h);s.addColorStop(0,'#7fc3ee');s.addColorStop(1,'#d9f0ff');g.fillStyle=s;g.fillRect(0,0,w,h);g.fillStyle='rgba(255,255,255,.7)';g.beginPath();g.ellipse(w*.3,h*.3,w*.18,h*.09,0,0,7);g.fill();g.strokeStyle='#6b4a2d';g.lineWidth=18;g.strokeRect(0,0,w,h);g.beginPath();g.moveTo(w/2,0);g.lineTo(w/2,h);g.moveTo(0,h*.55);g.lineTo(w,h*.55);g.stroke()};
+ [-3.6,0,3.6].forEach(z=>{tex(2.2,1.5,win,-W+.02,1.95,z,Math.PI/2);tex(2.2,1.5,win,W-.02,1.95,z,-Math.PI/2)});
+ // exit door (south-east)
+ bx(1.2,2.2,.1,0x6b3f1d,5.2,1.1,D-.05);bx(.12,2.4,.2,0x3e2410,4.55,1.2,D-.1);bx(.12,2.4,.2,0x3e2410,5.85,1.2,D-.1);bx(1.4,.12,.2,0x3e2410,5.2,2.4,D-.1);
+ tex(1.0,.32,(g,w,h)=>{g.fillStyle='#117a3a';g.fillRect(0,0,w,h);g.fillStyle='#fff';g.textAlign='center';g.font='800 150px sans-serif';g.fillText('EXIT',w/2,h*.76)},5.2,2.7,D-.03,Math.PI);
+ // teacher dais + table + teacher
+ bx(2*W-1,.12,1.7,0x8a6a48,0,.06,-D+1.0);bx(1.9,.78,.7,0x6b4a2d,-3.4,.12+.39,-D+1.3);bx(.5,.03,.35,0xffd54a,-3.4,.12+.8,-D+1.3,1);
+ const teacher=capsule(0x6a5a3a,1.75,.38);teacher.position.set(0,.12,-D+1.15);teacher.rotation.y=0;sc.add(teacher);
+ // desks, chairs, classmates
+ const CX=[-4.8,-1.6,1.6,4.8],RZ=[-1.2,.6,2.4],legC=0x555a62;
+ const mkDesk=(x,z)=>{bx(1.5,.05,.55,0xc9a46a,x,.76,z);[-.68,.68].forEach(a=>bx(.04,.74,.45,legC,x+a,.37,z));addCol(O.x+x,O.z+z,1.5,.55,.8)};
+ const mkChair=(x,z)=>{bx(.5,.05,.5,0x2f5f9e,x,.43,z);bx(.5,.42,.05,0x2f5f9e,x,.7,z+.24);[-.2,.2].forEach(a=>bx(.04,.42,.45,legC,x+a,.21,z))};
+ const cols=[0x3b82c4,0xc04a4a,0x8a5ac0,0xd0a030,0x2a9a6a,0xc06a8a,0x2aa6a0,0xe07a30,0x7a8ad0],mates=[];let ci=0;
+ const MINE={r:1,c:2},EMPTY=['0,1','2,3','1,0'];
+ RZ.forEach((z,r)=>CX.forEach((x,c)=>{mkDesk(x,z);mkChair(x,z+.75);if(r===MINE.r&&c===MINE.c)return;if(EMPTY.includes(r+','+c))return;
+  const g=capsule(cols[ci++%cols.length],1.25,.3);g.position.set(O.x+x,.38,O.z+z+.72);g.rotation.y=Math.PI;sc.add(g);mates.push({g,ph:Math.random()*6,y:.38})}));
+ CLS.seat={x:O.x+CX[MINE.c],z:O.z+RZ[MINE.r]+.75,yaw:Math.PI,sy:.47};
+ bx(1.6,.03,1.2,0xffd54a,CX[MINE.c],.014,RZ[MINE.r]+.75,1).material.transparent=true;
+ // bookshelf + plants
+ bx(.5,2.0,1.6,0x6b4a2d,-W+.4,1.0,-4.2);for(let r=0;r<4;r++)for(let k=0;k<5;k++)bx(.3,.34,.1,[0xc0392b,0x2e86c1,0x27ae60,0xf1c40f,0x8e44ad][(r+k)%5],-W+.55,.35+r*.46,-4.85+k*.3,0);
+ [[-6.3,5.2],[6.3,-4.6]].forEach(([a,b])=>{bx(.45,.4,.45,0xb85c38,a,.2,b);const l=mk(new T.SphereGeometry(.42,10,8),cm(0x2f7a38),O.x+a,.85,O.z+b);l.scale.y=1.3});
+ CLS.teacher=teacher;CLS.mates=mates}
+
+const TL=window.__TL={left:300,over:false},tlHud=document.createElement('div');tlHud.id='time-hud';tlHud.setAttribute('data-testid','level-timer');
+tlHud.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:8;display:none;padding:6px 18px;border-radius:999px;background:rgba(8,14,26,.82);border:1.5px solid #ffd54a;color:#fff;font:800 18px Figtree,system-ui,sans-serif;letter-spacing:.08em;pointer-events:none;white-space:nowrap';document.body.appendChild(tlHud);
+function timeTick(dt){
+ if(LVL===8){tlHud.style.display='none';return}
+ if(!started||done||TL.over){if(done||TL.over)tlHud.style.display='none';return}
+ const m=Math.floor(TL.left/60),sc2=Math.floor(TL.left%60),txt='TIME '+m+':'+(sc2<10?'0':'')+sc2;
+ if(tlHud.textContent!==txt)tlHud.textContent=txt;tlHud.style.display=CLS.in&&CLS.ph!=='walk'?'none':'block';tlHud.style.color=TL.left<60?'#ff6b6b':'#fff';tlHud.style.borderColor=TL.left<60?'#ff6b6b':'#ffd54a';
+ if(window.__paused||window.__call||miniOn||$('ov').style.display!=='none'||(CLS.in&&CLS.ph!=='walk'))return;
+ TL.left=Math.max(0,TL.left-dt);if(TL.left<=0)timeUp()}
+function timeUp(){TL.over=true;done=true;marker.visible=false;tlHud.style.display='none';clsHud.style.display='none';try{document.exitPointerLock()}catch(e){}if(window.OfflineSave)window.OfflineSave.halt();if(dlg)resetDialogue();
+ $('mn').textContent="TIME'S UP";$('mt').textContent='You were late to class.';
+ $('h1').textContent="TIME'S UP!";$('h1').setAttribute('data-testid','time-up-title');
+ $('ovp').textContent='You did not finish your missions and reach your seat in class within 5:00, '+((window.__PROFILE&&window.__PROFILE.name)||(GIRL?'Amy':'Mike'))+'. Try again!';
+ const go=$('go');go.style.display='';go.textContent='Retry Level';go.setAttribute('data-testid','retry-level-btn');go.disabled=false;go.onclick=()=>{sessionStorage.setItem('anits-go','lvl'+LVL);location.reload()};
+ let b=$('timeup-btns');if(!b){b=document.createElement('button');b.id='timeup-btns';b.setAttribute('data-testid','time-up-level-select-btn');b.textContent='Level Select';b.onclick=()=>{sessionStorage.setItem('anits-go','levels');location.reload()};go.parentNode.insertBefore(b,go.nextSibling)}
+ $('ov').style.display='flex'}
+const clsEnd=()=>CLS.in&&CLS.ph==='end';
+function classSeatNear(){return CLS.in&&CLS.ph==='walk'&&!SIT.on&&!CLS.busy&&CLS.seat&&Math.hypot(pl.x-CLS.seat.x,pl.z-CLS.seat.z)<2.1}
+const ATT={on:false,fin:false,late:false,left:0,msg:'',msgT:0,col:'#ffd54a'},attHud=document.createElement('div');attHud.id='att-hud';attHud.setAttribute('data-testid','class-countdown');attHud.style.cssText='position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:7;display:none;padding:clamp(4px,1.4vh,7px) clamp(10px,2vw,14px);border-radius:999px;background:rgba(10,15,25,.82);border:1.5px solid #ffd54a;color:#fff;font:700 clamp(10px,2.6vh,13px) Figtree,sans-serif;letter-spacing:.06em';document.body.appendChild(attHud);
+let ATTAC=null;function attBeep(){try{ATTAC=ATTAC||new(window.AudioContext||window.webkitAudioContext)();if(ATTAC.state==='suspended')ATTAC.resume();const t=ATTAC.currentTime,o=ATTAC.createOscillator(),g=ATTAC.createGain();o.type='square';o.frequency.value=ATT.left<8?1175:880;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.08*(window.__SFX==null?1:window.__SFX),t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+.16);o.connect(g);g.connect(ATTAC.destination);o.start(t);o.stop(t+.18)}catch(e){}}
+function attShow(t,c){attHud.textContent=t;attHud.style.borderColor=c;attHud.style.display='block'}
+function attTick(dt){const s=STORY[si];if(!started||done){attHud.style.display='none';return}
+ if(ATT.msgT>0){ATT.msgT-=dt;attShow(ATT.msg,ATT.col);if(ATT.msgT<=0)attHud.style.display='none';return}
+ if(!ATT.on&&!ATT.fin&&s&&s.cls&&!CLS.in){ATT.on=true;ATT.late=false;ATT.left=localStorage.getItem('anits-dev')==='1'?30:Math.max(60,dist(pl.x,pl.z,CSE_DOOR)/4.5+45)}
+ if(!ATT.on||CLS.in){attHud.style.display='none';return}
+ if(!window.__paused&&!window.__call&&!miniOn){ATT.left-=dt;if(ATT.left<=0&&!ATT.late){ATT.late=true;const a=window.__attendance.miss();window.__attendance.log(LVL,'late');ATT.msg='LATE FOR CLASS! ATTENDANCE -5% (NOW '+a+'%)';ATT.col='#ff4d5a';ATT.msgT=4;say('You are late for class! Your attendance drops to '+a+'%. Hurry to Room 204.')}}
+ if(!ATT.late&&ATT.left>0&&ATT.left<20&&!window.__paused&&!window.__call&&!miniOn){const sc=Math.ceil(ATT.left);if(sc!==ATT.lastSec){ATT.lastSec=sc;attBeep()}}
+ if(ATT.late)attShow('LATE \u00B7 ATTENDANCE '+window.__attendance.get()+'%','#ff4d5a');else{const m=Math.ceil(Math.max(0,ATT.left));attShow('CLASS IN '+Math.floor(m/60)+':'+String(m%60).padStart(2,'0'),ATT.left<20?'#ff8a3d':'#ffd54a')}}
+function attAttend(){if(ATT.on&&!ATT.late){const a=window.__attendance.attend();window.__attendance.log(LVL,'on');ATT.msg='ON TIME! ATTENDANCE +3% (NOW '+a+'%)';ATT.col='#5dff9a';ATT.msgT=4}ATT.on=false;ATT.fin=true}
+function classEnter(){if(CLS.busy||CLS.in)return;attAttend();CLS.busy=true;if(dlg)resetDialogue();ofFade.style.opacity=1;
+ setTimeout(()=>{pl.x=CLS.cx+5.2;pl.z=CLS.cz+CLS.hd-1.4;pl.y=0;pl.yaw=Math.PI;pl.sp=0;cy=Math.PI;cp=.3;CLS.in=true;CLS.ph='walk';CLS.t=0;
+  cam.position.set(pl.x,2.4,pl.z+2.6);$('mt').textContent='Room 204: walk to your seat (glowing marker) and press E to sit.';
+  say('You enter Room 204 in the CSE Block. Your seat is the one with the glowing marker.');
+  setTimeout(()=>{ofFade.style.opacity=0;CLS.busy=false},150)},480)}
+function classSit(){if(!classSeatNear())return;CLS.ph='sit';$('mt').textContent='Sit back and listen to the class.';cy=Math.PI;
+ if(pacts.sit)sitStart({s:CLS.seat,lx:0,lz:1});else{pl.x=CLS.seat.x;pl.z=CLS.seat.z;pl.yaw=Math.PI}}
+function classTick(dt){
+ cseTick(dt);attTick(dt);
+ if(CLS.in&&CLS.teacher){CLS.at=(CLS.at||0)+dt;const tc=CLS.teacher,ar=tc.userData.arms,talk=CLS.ph==='listen';tc.rotation.y=Math.sin(CLS.at*.4)*.3;
+  if(ar){ar[1].rotation.x+=((talk?-.9+Math.sin(CLS.at*5)*.35:0)-ar[1].rotation.x)*Math.min(1,dt*8);ar[0].rotation.x+=((talk?-.5+Math.sin(CLS.at*4+1)*.3:0)-ar[0].rotation.x)*Math.min(1,dt*8)}
+  CLS.mates.forEach(m=>{m.g.position.y=m.y+Math.sin(CLS.at*1.6+m.ph)*.012;m.g.rotation.z=Math.sin(CLS.at*.7+m.ph)*.03})}
+ if(!CLS.in||done||window.__paused||window.__call)return;
+ if(CLS.ph==='sit'){if(!SIT.on||SIT.ph==='seated'){CLS.ph='listen';CLS.t=0;CLS.line=-1;clsHud.style.display='block'}return}
+ if(CLS.ph==='listen'){CLS.t+=dt;clsHud.lastChild.firstChild.style.width=Math.min(100,CLS.t/CLS_END*100)+'%';
+  const li=CLS_AT.filter(a=>CLS.t>=a).length-1;if(li>CLS.line){CLS.line=li;const ln=CLS_LINES[li];say(ln);try{window.__voice&&NPC.prof&&__voice.say(NPC.prof,ln.replace(/^Prof\. Rao:\s*/,''))}catch(e){}}
+  if(CLS.t>=CLS_END){CLS.ph='end';snd(784,.16,'triangle');setTimeout(()=>snd(988,.3,'triangle'),180);setTimeout(()=>snd(784,.16,'triangle'),520);setTimeout(()=>snd(988,.4,'triangle'),700);
+   say('The bell rings. Class dismissed!');$('mt').textContent='Class is over.';
+   setTimeout(()=>{ofFade.style.opacity=1},1800);setTimeout(()=>{clsHud.style.display='none';finish();setTimeout(()=>{ofFade.style.opacity=0},250)},2600)}}}
 
 /* ---------- Girl NPCs: the Amy rig with the Mixamo Breathing Idle (standing) and Running (on their routes), own names, lines and voices (window.__GIRLS from js/girls.js) ---------- */
 {try{const G=window.__GIRLS||[];if(!G.length)throw new Error('no girls data');
@@ -1750,15 +1867,15 @@ if(ball){
 }
 
 window.__saveApi={
- snapshot:()=>({wallet,bankBal,energy,si:done?STORY.length:si,x:pl.x,z:pl.z,yaw:pl.yaw,t:DN.h}),
+ snapshot:()=>({wallet,bankBal,energy,si:done?STORY.length:si,x:CLS.in?CSE_DOOR[0]:pl.x,z:CLS.in?CSE_DOOR[1]:pl.z,yaw:pl.yaw,t:DN.h,tl:TL.left}),
  load(){const d=window.OfflineSave&&window.OfflineSave.load();if(!d)return false;
   try{wallet=d.wallet;bankBal=d.bankBal;energy=d.energy;updWal();$('enf').style.width=energy+'%';$('env').textContent=Math.round(energy);
-   pl.x=d.x;pl.z=d.z;pl.yaw=d.yaw;cy=d.yaw;
+   pl.x=d.x;pl.z=d.z;pl.yaw=d.yaw;cy=d.yaw;if(typeof d.tl==='number'&&d.tl>0)TL.left=Math.min(300,d.tl);
    if(d.si>=STORY.length){si=STORY.length-2;next();next()}else{si=d.si-1;next()}
    return true}catch(e){console.warn('save restore failed',e);window.OfflineSave.clear();return false}}};
-window.__g={gateCheck,resetDialogue,get shopOpen(){return shopOpen},get drinking(){return drinking},get lvl(){return LVL},get story(){return STORY},boy,pacts,pmix,pl,npcs,NPC,get si(){return si},next,interact,salute,set cy(v){cy=v},set cp(v){cp=v},cam,get dlg(){return dlg},get saluting(){return saluting},push,colliders,groundHeightAt,OFC};
+window.__g={gateCheck,resetDialogue,get shopOpen(){return shopOpen},get drinking(){return drinking},get lvl(){return LVL},get story(){return STORY},boy,pacts,pmix,pl,npcs,NPC,get si(){return si},next,interact,salute,set cy(v){cy=v},set cp(v){cp=v},cam,get dlg(){return dlg},get saluting(){return saluting},push,colliders,groundHeightAt,OFC,CLS,classEnter,classSit,classSeatNear,sc,say,wx,wz,W2,localColliders,BLD,ROADS,SAND,BASK,NCC,circles,NCCs,snd,get started(){return started},get done(){return done}};
 window.__gatePaths=GATE_PATHS;
 cam.position.set(pl.x,4,pl.z+8);
-if(window.__PERF)await window.__PERF.prewarm(ren,sc,cam);const go=$('go');go.disabled=false;go.textContent=(window.OfflineSave&&window.OfflineSave.has())?'Continue':'Start';go.onclick=()=>{$('ov').style.display='none';started=true;if(si<0&&!window.__saveApi.load())next();if(window.OfflineSave)window.OfflineSave.start(window.__saveApi.snapshot);lockMouse()};
+if(window.__PERF)await window.__PERF.prewarm(ren,sc,cam);const go=$('go');go.disabled=false;go.textContent=(window.OfflineSave&&window.OfflineSave.has())?'Continue':'Start';go.onclick=()=>{$('ov').style.display='none';started=true;const fresh=si<0&&!window.__saveApi.load();if(fresh){next();if(LVL!==8)setTimeout(()=>say('You have 5:00 to finish all your missions and be seated in class. Hurry!'),1500)}if(window.OfflineSave&&LVL!==8)window.OfflineSave.start(window.__saveApi.snapshot);lockMouse()};
 frame();
 })();

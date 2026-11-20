@@ -7,7 +7,8 @@ window.__LVINFO=[
  {n:'Library Card',th:'lv_library',done:'Quiz passed. Your library card is in your pocket!'},
  {n:'Basketball Event',th:'lv_basketball',done:'Nothing but net! The court has a new star.'},
  {n:'NCC Parade',th:'lv_parade',done:'Inspected, drilled, ran 1.4 km, flag hoisted and saluted. Your NCC certificate is in your bag. Jai Hind!'},
- {n:'Lab Manual Run',th:'lv_lab',done:'All signatures collected. The lab is open for you!'}];
+ {n:'Lab Manual Run',th:'lv_lab',done:'All signatures collected. The lab is open for you!'},
+ {n:'NSS Cleaning Volunteer',th:'lv_nss',done:'You and your 6 teammates cleaned the campus for the NSS camp. Your participation certificate is in your bag!'}];
 window.__LV=function(c){const W=c.W2,P=c.pay,FEE=250;
  const R={
  2:[
@@ -30,6 +31,7 @@ window.__LV=function(c){const W=c.W2,P=c.pay,FEE=250;
   {t:'Basketball shootout: score 3 of 5. Drag to aim the ring at the hoop, then press SHOOT.',mini:{kind:'shoot',title:'BASKETBALL SHOOTOUT',shots:5,need:3}},
   {t:'Celebrate with your friend at the Canteen.',npc:'arjun',lines:{arjun:["Super shots! You are a proper player!"]}}],
  6:[
+  {t:'Take permission from your HOD, Prof. Rao, at the CSE Block to attend the NCC parade.',npc:'prof',lines:{prof:["The NCC parade today? Permission granted. Represent ANITS well.","But be back in class on time, understood?"]}},
   {t:'Report to Colonel Singh at the Open Auditorium grounds.',npc:'colonel',lines:{colonel:["Cadet, today is the NCC parade. Stand straight and report properly!"]}},
   {t:'Uniform check: tap each fault on the cadet and fix it, then stand at attention.',npc:'colonel',cine:'parade',fee:'uniform',lines:{colonel:["Report for uniform inspection. A cadet is judged from cap to boots."]}},
   {t:'Fall in with the company and answer the Colonel\'s drill commands.',at:W(214,396),rad:16,cine:'parade',fee:'drill'},
@@ -46,4 +48,7 @@ window.__LV=function(c){const W=c.W2,P=c.pay,FEE=250;
   {t:'Show your ID card to Security Guard Bajirao at the main gate (press F near him).',npc:'guard',idcheck:true,lines:{guard:["Stop! Students need to show their ID card at the gate.","Press F to show your ID card."]}},
   {t:'Walk through the main gate and into the college.',at:W(122,396),rad:7}];
  Object.keys(R).forEach(k=>R[k]=ID.concat(R[k]));
+ R[8]=[
+  {t:'Meet the NSS Commander at the basketball ground (press E to talk).',npc:'nss',lines:{nss:["Good morning, volunteers! Welcome to our NSS special camp at ANITS.","I am your NSS Commander. Our camp mission: clean our college campus. Not Me, But You!","Our team has 7 volunteers: you and your 6 friends. Walk over trash to pick it up, and your friends will help clean near you. Your bag holds 10, so drop it in the green dustbins for bonus points.","Clean the basketball ground, the NCC ground, every block and every road before the time runs out.","Everyone who joins this camp gets a participation certificate. Let's make ANITS shine. Jai Hind!"]}},
+  {t:'NSS camp: clean the basketball ground, NCC ground, blocks and roads with your team before time runs out!',say:'Camp mission started! Walk over the trash to collect it.'}];
  return R};

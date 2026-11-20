@@ -1,0 +1,39 @@
+/* Timer lane: the class timer owns the top-centre strip. Energy, wallet and
+   announcements sit BELOW it, so nothing covers the timer on any screen size. */
+:root { --tm-lane: 46px; }
+html.mobile body.touch { --tm-lane: 32px; }
+body:has(#nss-hud[style*="flex"]) { --tm-lane: 92px; }
+html.mobile body.touch:has(#nss-hud[style*="flex"]) { --tm-lane: 74px; }
+
+body #time-hud,
+body #att-hud,
+body #nss-hud {
+  top: var(--hud-top, 12px) !important;
+  z-index: 30 !important;
+}
+body #time-hud { max-width: 40vw; }
+
+body #en { top: calc(var(--hud-top, 16px) + var(--tm-lane)) !important; }
+body #wal { top: calc(var(--hud-top, 16px) + var(--tm-lane) + 46px) !important; }
+body #mission-say { top: calc(var(--hud-top, 16px) + var(--tm-lane) + 94px) !important; }
+body #ofc-hud { top: calc(var(--hud-top, 16px) + var(--tm-lane) + 94px) !important; z-index: 30 !important; }
+
+html.mobile body.touch #time-hud {
+  padding: 3px 12px !important;
+  font-size: 14px !important;
+  letter-spacing: .06em !important;
+  border-width: 1.5px !important;
+}
+html.mobile body.touch #en { top: calc(var(--hud-top) + var(--tm-lane)) !important; }
+html.mobile body.touch #wal { top: calc(var(--hud-top) + var(--tm-lane) + 40px) !important; }
+html.mobile body.touch #mission-say { top: calc(var(--hud-top) + var(--tm-lane) + 76px) !important; }
+html.mobile body.touch #ofc-hud {
+  top: calc(var(--hud-top) + var(--tm-lane) + 76px) !important;
+  font-size: 11px !important;
+  padding: 4px 12px !important;
+}
+html.mobile body.touch #nss-hud { top: var(--hud-top) !important; }
+
+@media (max-height: 320px) {
+  html.mobile body.touch #wal { top: calc(var(--hud-top) + var(--tm-lane) + 38px) !important; }
+}

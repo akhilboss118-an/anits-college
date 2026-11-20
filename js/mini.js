@@ -32,14 +32,15 @@ body.shooting #mini.shootmode .mi-shotbtn{margin:0!important;width:auto!importan
 const $=id=>document.getElementById(id),WASD={KeyW:'ArrowUp',KeyA:'ArrowLeft',KeyS:'ArrowDown',KeyD:'ArrowRight'};
 function build(){el=document.createElement('div');el.id='mini';el.setAttribute('data-testid','mini-overlay');
  el.innerHTML='<div class="mb"><div id="mi-t"></div><div id="mi-s"></div><div id="mi-b"></div><div id="mi-h"></div></div>';document.body.appendChild(el);
- el.addEventListener('pointerdown',e=>e.stopPropagation());el.addEventListener('click',e=>{const o=e.target.closest('[data-o]');if(o&&act&&act.pick)act.pick(+o.dataset.o);if(e.target.closest('.mi-btn')&&act&&act.again)act.again();if(e.target.closest('.mi-shot')&&act&&act.shot)act.shot()})}
+ el.addEventListener('pointerdown',e=>e.stopPropagation());el.addEventListener('click',e=>{const o=e.target.closest('[data-o]');if(o&&act&&act.pick)act.pick(+o.dataset.o);if(e.target.closest('.mi-leave')&&act&&act.leave){act.leave();return}if(e.target.closest('.mi-btn')&&act&&act.again)act.again();if(e.target.closest('.mi-shot')&&act&&act.shot)act.shot()})}
 addEventListener('keydown',e=>{if(!act||window.__paused)return;e.preventDefault();e.stopImmediatePropagation();if(e.repeat&&!/^(Arrow|Key[WASD])/.test(e.code))return;act.key&&act.key(e)},true);
 addEventListener('anits-pause',()=>{act&&act.onPause&&act.onPause()});addEventListener('anits-resume',()=>{act&&act.onResume&&act.onResume()});
 let shootOn=false;const ev=d=>{try{dispatchEvent(new CustomEvent('anits-shoot',{detail:d}))}catch(e){}};
 function stop(){cancelAnimationFrame(raf);clearTimeout(tm);act=null;el.style.display='none';el.classList.remove('shootmode');document.body.classList.remove('shooting');if(shootOn){shootOn=false;ev({type:'end'})}}
-function end(win,cfg,cb,again){const b=$('mi-b');
- b.innerHTML='<div class="mi-res '+(win?'w':'l')+'">'+(win?'Mission complete!':'Not enough, try again!')+'</div>'+(win?'':'<button class="mi-btn" data-testid="mini-retry-btn">Try again (Enter)</button>');$('mi-h').textContent='';
- if(win){tm=setTimeout(()=>{stop();cb()},1300);act={key(){}}}else act={key(e){if(e.code==='Enter'||e.code==='Space')again()},again};}
+function end(win,cfg,cb,again){const b=$('mi-b'),res=cfg.res?'<div style="font-size:17px;font-weight:700;margin:2px 0 6px" data-testid="quiz-score">'+cfg.res+'</div>':'';
+ b.innerHTML='<div class="mi-res '+(win?'w':'l')+'">'+(win?(cfg.winText||'Mission complete!'):(cfg.loseText||'Not enough, try again!'))+'</div>'+res+(win?'':'<button class="mi-btn" data-testid="mini-retry-btn">Try again (Enter)</button>'+(cfg.onLeave?' <button class="mi-btn mi-leave" style="background:#2a4a7a;color:#fff" data-testid="mini-leave-btn">Step back (Esc)</button>':''));$('mi-h').textContent='';
+ const leave=()=>{stop();cfg.onLeave&&cfg.onLeave()};
+ if(win){tm=setTimeout(()=>{stop();cb()},cfg.winText?2200:1300);act={key(){}}}else act={key(e){if(e.code==='Enter'||e.code==='Space')again();else if(e.code==='Escape'&&cfg.onLeave)leave()},again,leave};}
 const kinds={
  shoot(cfg,fin){let shot=0,hit=0,busy=0,pAt=0;const touch=document.body.classList.contains('touch');
   el.classList.add('shootmode');document.body.classList.add('shooting');shootOn=true;ev({type:'start',total:cfg.shots});
@@ -75,6 +76,14 @@ const kinds={
    else if(stage===2){const d=doors[k];if(!d)return;const el=document.querySelectorAll('.mi-door')[k];if(d.v===204){el.classList.add('ok');msg('The plate adds up to 204. This is the room!');setTimeout(s3,1000)}else{miss++;el.classList.add('bad');msg(d.peek)}}
    else if(stage===3){if(k===2){msg('Click! The door opens and Arjun waves at you.');stage=4;setTimeout(()=>fin(true),1100)}else{miss++;msg('The keypad buzzes. Each number is double the one before it.')}}};
   act={key(e){const m=/^(Digit|Numpad)([1-4])$/.exec(e.code);if(m)pick(+m[2]-1)},pick};s1()},
+ csequiz(cfg,fin){let i=0,ok=0,lock=0;const Q=cfg.qs,esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const show=()=>{if(i>=Q.length){const win=ok>=cfg.need;cfg.res='You scored '+ok+' / '+Q.length+' (pass mark '+cfg.need+')';window.__cseQuizResult={score:ok,total:Q.length,need:cfg.need,passed:win};fin(win);return}
+   const [q,o]=Q[i];lock=0;$('mi-s').textContent='Question '+(i+1)+' of '+Q.length+' - get '+cfg.need+' right to open the door';
+   $('mi-b').innerHTML='<div style="font-size:19px;font-weight:700;margin-bottom:6px" data-testid="quiz-question">'+esc(q)+'</div>'+o.map((x,k)=>'<button class="mi-opt" data-o="'+k+'" data-testid="quiz-opt-'+k+'">'+(k+1)+'. '+esc(x)+'</button>').join('')+'<div class="mi-msg" id="mi-m"></div>'};
+  const pick=k=>{if(lock||i>=Q.length||!Q[i][1][k]&&Q[i][1][k]!=='')return;lock=1;const right=Q[i][2],btns=document.querySelectorAll('#mi-b .mi-opt');if(k===right)ok++;
+   if(btns[right])btns[right].style.cssText+=';background:#1f9d55;border-color:#6dff9f';if(k!==right&&btns[k])btns[k].style.cssText+=';background:#b3263a;border-color:#ff7a85';
+   const m=$('mi-m');if(m)m.textContent=k===right?'Correct!':'Not quite.';setTimeout(()=>{i++;show()},850)};
+  act={key(e){const m=/^(Digit|Numpad)([1-4])$/.exec(e.code);if(m)pick(+m[2]-1)},pick};show();$('mi-h').textContent='Keys 1-4 or click'},
  quiz(cfg,fin){let i=0,ok=0;const show=()=>{if(i>=cfg.qs.length){fin(ok>=cfg.need);return}const [q,o]=cfg.qs[i];
    $('mi-s').textContent='Question '+(i+1)+' of '+cfg.qs.length+' - get '+cfg.need+' right';
    $('mi-b').innerHTML='<div style="font-size:19px;font-weight:700;margin-bottom:6px">'+q+'</div>'+o.map((x,k)=>'<button class="mi-opt" data-o="'+k+'" data-testid="quiz-opt-'+k+'">'+(k+1)+'. '+x+'</button>').join('')};

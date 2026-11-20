@@ -1,5 +1,15 @@
 # ANITS College Simulation (3D Story Game)
 
+## Gameplay HUD: desktop and landscape mobile
+
+The mission card, energy, wallet, map, bag, pause and phone controls now occupy
+separate screen zones. Tap the mission chevron on a landscape phone to read the
+entire objective; the compact card keeps the world visible while playing. Dialogue
+and subtitles use the space between the thumb controls, and the FPS readout stays
+beside the map rather than overlapping status indicators. No missions, menus,
+models, controls or save data have been removed. Run the complete game using the
+instructions below; all files are included in this folder.
+
 ## Visual refresh
 
 This edition preserves the original vanilla JavaScript / Three.js game, its seven

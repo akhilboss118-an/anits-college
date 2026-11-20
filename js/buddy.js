@@ -2,7 +2,7 @@
 (()=>{
 const LVL=window.__LVL||1,qs=new URLSearchParams(location.search),girl=window.__CHAR==='girl';
 const POOL=window.__POOL&&window.__POOL[girl?'girl':'boy'];
-if(LVL<2||!POOL||!POOL.buddy||qs.get('buddy')==='0')return;
+if(LVL<2||LVL===8||!POOL||!POOL.buddy||qs.get('buddy')==='0')return;
 if(!(qs.get('buddy')==='1'||Math.random()<.6))return;
 window.__buddyDay=true;   // the friend already chats with you today, so no phone call on top of it
 const css=document.createElement('style');css.textContent=`#bd-cap{position:fixed;left:50%;bottom:18px;transform:translate(-50%,6px);z-index:11;width:min(620px,calc(100vw - 440px));padding:6px 16px;border-radius:999px;background:rgba(8,14,26,.74);border:1px solid rgba(120,190,255,.6);box-shadow:0 4px 14px rgba(0,0,0,.3);color:#fff;font:600 14px/1.35 'Figtree',sans-serif;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}#bd-cap.on{opacity:1;transform:translate(-50%,0)}#bd-cap b{display:inline;font:800 inherit;font-size:inherit;color:#ffd54a;margin-right:7px}@media(max-width:900px){#bd-cap{width:min(620px,94vw)}}body.touch #bd-cap,body.touch #bd-cap.on{left:calc(var(--sl) + var(--jr) + 14px);right:calc(var(--sr) + var(--jr) + var(--u)*1.3 + 30px);width:auto;transform:none;bottom:calc(var(--sb) - 4px);font-size:13px;padding:5px 12px}`;document.head.appendChild(css);

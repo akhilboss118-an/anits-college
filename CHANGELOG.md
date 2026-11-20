@@ -1,3 +1,14 @@
+# Level 8: NSS Cleaning Volunteer (new)
+- New level "Day 8 - NSS Cleaning Volunteer" (js/nss.js + small hooks in game.js, levels.js, menu.js, inventory.js, voice.js, buddy.js, assets.js).
+- Starts at the basketball ground with no NPCs; NCC cadets, the Colonel and every other NPC are removed.
+- NSS Commander briefing, then a 6:00 cleaning race with a 7-member team (you + 6 friends who follow and pick up nearby trash).
+- 100 pieces of trash over the basketball ground, NCC ground, blocks and roads; HUD with timer, counter, per-zone progress; minimap dots.
+- Star rating, on-screen participation certificate with the player's name (downloadable PNG), certificate saved to the bag (B).
+- Unlocks after finishing Day 7. To jump straight to it: open the browser console and run localStorage.setItem('anits-unlocked',8)
+- Cleaning sounds: rustle on pickup, bin thunk on drop, crowd cheer + Jai Hind at the end.
+- Dustbins: 10 green bins around campus (minimap squares); bag holds 10; dropping gives +5 bonus per piece; score = 10 per trash + bonus.
+- Not play-tested.
+
 
 # NPC look-at white glow
 - Looking toward an NPC (view direction, within 14 m) fades in a soft white outline (tight rim + soft halo); looking away or switching NPC fades out/in cleanly. Depth-tested so walls hide it; cleared instantly on pause/shop/minigame/call.
@@ -106,3 +117,26 @@ Report to the Colonel -> uniform check -> fall in and drill -> march in step -> 
 - LOOK stick, BAG, RUN, SALUTE and the contextual Talk/Open/Use button share one glass look with colour accents; Talk pulses when an action is available.
 - Mini-games: chunky arrow cross with press-down effect and a large gold SHOOT / TAP button.
 - Files: js/touch.js, css/mobile.css (js/game.js untouched; window.__joy / __lookBy contract unchanged).
+
+# Class in the CSE Block (end of every level)
+- After the last mission of every level a new step appears: go to your class in the CSE Block (Room 204). A marker shows the CSE Block door.
+- Entering the door fades into Room 204 (sealed room outside the map, like the Admin Office). Walk to the glowing seat, press E to sit.
+- Prof. Rao lectures (subtitles + voice if available), classmates sit around you, the bell rings, then the GAME OVER screen shows with Next Level / Level Select.
+- Edited: js/game.js only (CLS state, classEnter/classSit/classTick, finish() now shows GAME OVER).
+
+# 5:00 level timer + NCC permission
+- Every level has a 5:00 timer (top centre). It pauses during calls, pause menu and mini-games/cutscenes, and stops once you sit in class. At 0:00 the TIME'S UP screen shows (Retry Level / Level Select).
+- Level 6 (NCC Parade) now starts with: take permission from HOD Prof. Rao at the CSE Block, then report to the parade.
+- Edited: js/game.js, js/levels.js.
+
+# Level 3 (Find Your Classroom): CSE door quiz
+- At the end of Day 3, stand in front of the CSE Block door (red lock light) and press E to knock.
+- 5-question CS quiz, 3 correct to pass. Fail: score shown, Try again (Enter) or Step back (Esc). Door stays locked until passed.
+- Pass: lock turns green, door opens, you walk in to Room 204, sit on the glowing seat (E), class ends, LEVEL COMPLETE screen shows quiz score + Play Again.
+- Edit questions in js/cse-quiz-data.js. Code: js/game.js (cseQuiz/cseTick), js/mini.js (csequiz), js/menu.js (Play Again).
+- Not play-tested (syntax-checked only).
+
+# Mobile timer fix + interactive tutorial
+- Class timer (#time-hud / #att-hud / #nss-hud) now owns the top-centre strip; energy, wallet and announcements sit below it (css/hud-timer.css). Nothing covers the timer on phones or desktop.
+- First-time interactive tutorial (js/tutorial.js, css/tutorial.css): guided main-menu tour, level-select tip, and an in-game lesson (move, look, run, timer, mission, energy, minimap, talk, bag/pause). Class timer is frozen during the lesson.
+- Replay: HOW TO PLAY button on the main menu and in the pause menu. Reset: window.__tutorial.reset() in the console.

@@ -1,0 +1,40 @@
+#tut { position: fixed; inset: 0; z-index: 9000; pointer-events: none; display: none; font-family: 'Figtree', system-ui, sans-serif; }
+#tut.on { display: block; }
+#tut .tb { position: fixed; background: rgba(2, 8, 22, .72); pointer-events: auto; touch-action: none; }
+#tut .tb.clear { background: transparent; }
+#tut .tr {
+  position: fixed; border: 2.5px solid #ffd54a; border-radius: 12px; pointer-events: none; display: none;
+  box-shadow: 0 0 0 3px rgba(255, 213, 74, .25), 0 0 22px 4px rgba(255, 213, 74, .55);
+  animation: tutPulse 1.3s ease-in-out infinite;
+}
+@keyframes tutPulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(255, 213, 74, .25), 0 0 14px 2px rgba(255, 213, 74, .45) } 50% { box-shadow: 0 0 0 7px rgba(255, 213, 74, .12), 0 0 28px 8px rgba(255, 213, 74, .75) } }
+#tut .tc {
+  position: fixed; width: min(340px, calc(100vw - 20px)); box-sizing: border-box; padding: 14px 16px 12px; border-radius: 14px;
+  background: rgba(10, 16, 30, .97); border: 1.5px solid #ffd54a; border-left-width: 5px; color: #fff; pointer-events: auto;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .55); animation: tutIn .28s ease-out; line-height: 1.35;
+}
+@keyframes tutIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+#tut .tc .tn { font-size: 10px; font-weight: 800; letter-spacing: .16em; color: #ffd54a; }
+#tut .tc h3 { margin: 3px 0 5px; font: 800 18px/1.2 'Bricolage Grotesque', 'Figtree', sans-serif; letter-spacing: .02em; }
+#tut .tc p { margin: 0; font-size: 14px; color: rgba(255, 255, 255, .88); }
+#tut .tc p b { color: #ffd54a; }
+#tut .tc kbd { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 5px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .3); border-bottom-width: 2px; font: 700 12px 'Figtree', sans-serif; text-align: center; }
+#tut .tc .th { margin-top: 8px; font-size: 12px; font-weight: 800; letter-spacing: .06em; color: #7dff9a; animation: tutBlink 1.2s ease-in-out infinite; }
+#tut .tc .th.ok { animation: none; color: #7dff9a; }
+@keyframes tutBlink { 50% { opacity: .45 } }
+#tut .tc .tf { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+#tut .tc button { font: 800 13px 'Figtree', sans-serif; letter-spacing: .08em; cursor: pointer; border-radius: 999px; min-height: 40px; padding: 0 18px; }
+#tut .tc .tx { background: none !important; box-shadow: none !important; min-height: 36px; border: none; color: rgba(255, 255, 255, .6); padding: 0 4px; text-decoration: underline; }
+#tut .tc .tp { background: #ffd54a; border: none; color: #201800; }
+#tut .tc .tp:active { transform: scale(.95); }
+#tut .tc .tp.ghost { background: transparent; border: 1.5px solid rgba(255, 213, 74, .7); color: #ffd54a; }
+
+@media (max-height: 430px) {
+  #tut .tc { width: min(300px, calc(100vw - 16px)); padding: 9px 12px 8px; border-radius: 11px; }
+  #tut .tc h3 { font-size: 15px; margin: 2px 0 3px; }
+  #tut .tc p { font-size: 12px; }
+  #tut .tc .th { margin-top: 5px; font-size: 11px; }
+  #tut .tc .tf { margin-top: 7px; }
+  #tut .tc button { min-height: 36px; font-size: 12px; padding: 0 14px; }
+}
+@media (prefers-reduced-motion: reduce) { #tut .tr, #tut .tc, #tut .tc .th { animation: none; } }

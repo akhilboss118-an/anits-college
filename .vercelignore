@@ -1,0 +1,11 @@
+android/
+www/
+.git/
+.github/
+node_modules/
+output/
+build_apk/
+*.apk
+*.zip
+*.bat
+*.ps1

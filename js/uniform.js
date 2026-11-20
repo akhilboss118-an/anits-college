@@ -1,3 +1,4 @@
+/* global THREE */
 /* Year-based uniform: 2024 = original brown look, 2025 = sky blue shirt / navy pants (+ navy chunni for girls). */
 (()=>{const T=THREE;
 const imgs={},loadImg=u=>imgs[u]||(imgs[u]=new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=u}));

@@ -6,6 +6,7 @@ const META={
  fee:{n:'Fee Receipt',from:'Day 2',hint:'Complete Day 2 (Pay the Fees) to collect the receipt.'},
  lib:{n:'Library Card',from:'Day 4',hint:'Complete Day 4 (Library Card) to collect it.'},
  lab:{n:'Lab Manual Form',from:'Day 7',hint:'Complete Day 7 (Lab Manual Run) to collect the signed form.'},
+ nss:{n:'NSS Participation Certificate',from:'Day 8',hint:'Complete Day 8 (NSS Cleaning Volunteer) to collect your certificate.'},
  ncc:{n:'NCC Parade Certificate',from:'Day 6',hint:'Complete Day 6 (NCC Parade) to collect your certificate.'}};
 const css=document.createElement('style');css.textContent=`
 #inv-btn{position:fixed;left:16px;bottom:100px;z-index:12;display:none;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1.5px solid rgba(120,190,255,.8);background:rgba(6,22,56,.78);color:#fff;font:800 13px 'Figtree',sans-serif;letter-spacing:.1em;cursor:pointer;backdrop-filter:blur(6px)}
@@ -40,6 +41,7 @@ function card(id){const d=document.createElement('div'),n=nm(),R=roll();
  if(id==='id'){d.className='ic id';d.innerHTML='<div class="h">ANITS &middot; STUDENT ID</div><div class="ph">'+n[0].toUpperCase()+'</div><div class="t"><strong>'+n+'</strong>B.Tech CSE &middot; Year 1<br>Roll '+R+'</div><div class="bc"></div>'}
  else if(id==='lib'){d.className='ic lib';d.innerHTML='<div class="h">CENTRAL LIBRARY &middot; ANITS</div><div class="ph">'+n[0].toUpperCase()+'</div><div class="t"><strong>'+n+'</strong>Member LB-'+R.slice(-4)+'<br>Valid: 4 years</div><div class="bc"></div>'}
  else if(id==='ncc'){const P=window.__parade,t=P?P.total():0;d.className='ic ncc';d.innerHTML='<div class="h">NCC &middot; ANITS UNIT</div><div class="t"><strong>'+n+'</strong>Parade certificate<br>Grade: '+(P?P.grade(t):'Cadet')+' ('+t+'/100)</div><div class="st">JAI HIND</div>'}
+ else if(id==='nss'){d.className='ic ncc';d.innerHTML='<div class="h">NSS &middot; ANITS UNIT</div><div class="t"><strong>'+n+'</strong>Participation certificate<br>Special camp &middot; Campus clean-up</div><div class="st">NOT ME BUT YOU</div>'}
  else if(id==='lab'){const L=window.__day2&&window.__day2.labData?window.__day2.labData():{};d.className='ic fee';d.innerHTML='<div class="h">LAB MANUAL FORM</div><div class="t"><strong>'+n+'</strong>Roll '+R+'<br>Prof. Rao: signed<br>Admin: stamped</div>'+(L.reg||L.issue?'<img class="sg" src="'+(L.reg||L.issue)+'" alt="signature">':'')+'<div class="st">LAB OPEN</div>'}
  else{d.className='ic fee';d.innerHTML='<div class="h">ANITS &middot; FEE RECEIPT</div><div class="t"><strong>'+n+'</strong>Roll '+R+'<br>Tuition fee (Sem 1): &#8377;250<br>Receipt no. FR-'+R.slice(-4)+'</div><div class="st">PAID</div>'+(sg()?'<img class="sg" src="'+sg()+'" alt="signature">':'')}
  return d}

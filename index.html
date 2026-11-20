@@ -1,27 +1,85 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><title>ANITS College Simulation</title><meta name="theme-color" content="#020a1a"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="ANITS"><meta name="screen-orientation" content="landscape"><meta name="x5-orientation" content="landscape"><meta name="x5-fullscreen" content="true"><meta name="full-screen" content="yes"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="assets/icons/icon-192.png"><link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/NotoSansTelugu-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/NotoSansTelugu-Bold.woff2"><link rel="stylesheet" href="css/styles.css"><link rel="stylesheet" href="css/menu.css"><link rel="stylesheet" href="css/mobile.css"><link rel="stylesheet" href="css/subs.css"><link rel="stylesheet" href="css/pause.css"><script src="js/mobile.js"></script><script src="js/progression.js"></script><script src="js/core.js"></script><script src="js/pause.js"></script></head><body><script src="js/cinematic.js"></script><div id="cred">Temple model &middot; &ldquo;Indian Temple&rdquo; by <a data-testid="temple-model-credit-link" href="https://sketchfab.com/3d-models/indian-temple-d7dfdd1f6efc412d968120f81b191dae" target="_blank" rel="noopener noreferrer">pranavaryakirtik</a> &middot; CC-BY-4.0</div>
-<div class="p" id="mis"><b id="mn" data-testid="mission-title">MISSION</b><div id="mt" data-testid="mission-objective"></div><div id="mh" data-testid="key-hints"></div></div>
-<div class="p" id="sub" data-testid="subtitle"></div><div class="p" id="dlg" data-testid="dialogue"></div>
-<div class="p" id="wal" data-testid="wallet"></div><div class="p" id="en" data-testid="energy-bar"><span>ENERGY</span><div id="enb"><i id="enf"></i></div><b id="env" data-testid="energy-value">40</b><div id="enp" data-testid="energy-popup"></div></div>
-<div id="shop" data-testid="shop-panel"><div class="sh"><span id="shT" data-testid="shop-title"></span><span id="shW" data-testid="shop-wallet"></span></div><div id="shL" data-testid="shop-items"></div><div class="sf">1-5: buy a drink &nbsp;|&nbsp; E / Esc: close</div><button id="shX" data-testid="shop-close-button">Close</button></div>
-<div class="p" id="mm" data-testid="minimap"><canvas id="mc" width="170" height="170" data-testid="minimap-canvas"></canvas></div>
-<div id="ov" data-testid="game-start-overlay"><div class="eyebrow">ANITS CAMPUS &middot; 3D STORY</div><h1 id="h1" data-testid="overlay-heading">ANITS - First Day</h1><p id="ovp" data-testid="overlay-description">You are a fresher arriving at ANITS for the very first day. Enter through the main gate, meet the staff, find your friends, and show respect to the NCC cadets. Talk to everyone: every capsule has something to say.</p><button id="go" data-testid="play-level-button" disabled>Loading...</button><div class="keys"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span><kbd>Shift</kbd> Run</span><span><kbd>E</kbd> Talk / Use</span><span><kbd>G</kbd> Salute</span><span>Drag mouse to look</span></div></div>
-
-<div id="menu" data-testid="menu-root"></div>
-<script src="js/vendor/three.min.js"></script><script src="js/vendor/GLTFLoader.js"></script><script src="js/levels.js"></script><script src="js/mini.js"></script><script src="js/inventory.js"></script><script src="js/uniform.js"></script><script src="js/assets.js"></script><script src="js/menu.js"></script>
-<script>
-/* FPS counter: sits just left of the minimap, only while the map is showing */
-(function(){var el=document.createElement('div');el.id='fpsbox';el.setAttribute('data-testid','fps-counter');
-el.style.cssText='position:fixed;z-index:9;display:none;padding:3px 8px;border-radius:8px;background:rgba(4,12,28,.72);color:#9ff0a8;font:800 12px/1.2 monospace;letter-spacing:.03em;pointer-events:none;white-space:nowrap;text-shadow:0 1px 2px #000';
-document.body.appendChild(el);
-var fr=0,t0=performance.now();
-function place(){var mm=document.getElementById('mm');if(!mm){el.style.display='none';return}
-var cs=getComputedStyle(mm),r=mm.getBoundingClientRect();
-if(cs.display==='none'||cs.visibility==='hidden'||!r.width||document.hidden){el.style.display='none';return}
-var L=r.left,T=r.top+4,pb=document.getElementById('pz-btn');
-if(pb){var pr=pb.getBoundingClientRect();if(pr.width&&getComputedStyle(pb).display!=='none'){L=Math.min(L,pr.left);T=Math.max(T,pr.top+(pr.height-18)/2)}}
-el.style.display='block';el.style.top=Math.round(T)+'px';el.style.right=Math.round(innerWidth-L+8)+'px'}
-(function loop(){requestAnimationFrame(loop);fr++;var n=performance.now();
-if(n-t0>=500){var f=Math.round(fr*1000/(n-t0));fr=0;t0=n;el.textContent=f+' FPS';el.style.color=f>=50?'#9ff0a8':f>=30?'#ffe27a':'#ff8a8a';place()}})();
-addEventListener('resize',place)})();
-</script>
-</body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>ANITS College Simulation</title>
+  <meta name="theme-color" content="#020a1a">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ANITS">
+  <meta name="screen-orientation" content="landscape">
+  <meta name="x5-orientation" content="landscape">
+  <meta name="x5-fullscreen" content="true">
+  <meta name="full-screen" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/NotoSansTelugu-Regular.woff2">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/fonts/NotoSansTelugu-Bold.woff2">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/menu.css">
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/subs.css">
+  <link rel="stylesheet" href="css/pause.css">
+  <link rel="stylesheet" href="css/gameplay-hud.css">
+  <link rel="stylesheet" href="css/hud-timer.css">
+  <link rel="stylesheet" href="css/tutorial.css">
+  <script src="js/mobile.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/pause.js"></script>
+</head>
+<body>
+  <script src="js/cinematic.js"></script>
+  <div id="cred">Temple model &middot; &ldquo;Indian Temple&rdquo; by <a data-testid="temple-model-credit-link" href="https://sketchfab.com/3d-models/indian-temple-d7dfdd1f6efc412d968120f81b191dae" target="_blank" rel="noopener noreferrer">pranavaryakirtik</a> &middot; CC-BY-4.0</div>
+  <div class="p" id="mis" data-testid="mission-panel"><b id="mn" data-testid="mission-title">MISSION</b><div id="mt" data-testid="mission-objective"></div><div id="mh" data-testid="key-hints"></div></div>
+  <div class="p" id="sub" data-testid="subtitle"></div>
+  <div class="p" id="dlg" data-testid="dialogue"></div>
+  <div class="p" id="wal" data-testid="wallet"></div>
+  <div class="p" id="en" data-testid="energy-bar"><span>ENERGY</span><div id="enb"><i id="enf"></i></div><b id="env" data-testid="energy-value">40</b><div id="enp" data-testid="energy-popup"></div></div>
+  <div id="shop" data-testid="shop-panel"><div class="sh"><span id="shT" data-testid="shop-title"></span><span id="shW" data-testid="shop-wallet"></span></div><div id="shL" data-testid="shop-items"></div><div class="sf">1-5: buy a drink &nbsp;|&nbsp; E / Esc: close</div><button id="shX" data-testid="shop-close-button">Close</button></div>
+  <div class="p" id="mm" data-testid="minimap"><canvas id="mc" width="170" height="170" data-testid="minimap-canvas"></canvas></div>
+  <div id="ov" data-testid="game-start-overlay"><div class="eyebrow">ANITS CAMPUS &middot; 3D STORY</div><h1 id="h1" data-testid="overlay-heading">ANITS - First Day</h1><p id="ovp" data-testid="overlay-description">You are a fresher arriving at ANITS for the very first day. Enter through the main gate, meet the staff, find your friends, and show respect to the NCC cadets. Talk to everyone: every capsule has something to say.</p><button id="go" data-testid="play-level-button" disabled>Loading...</button><div class="keys"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span><kbd>Shift</kbd> Run</span><span><kbd>E</kbd> Talk / Use</span><span><kbd>G</kbd> Salute</span><span>Drag mouse to look</span></div></div>
+  <div id="menu" data-testid="menu-root"></div>
+  <script src="js/vendor/three.min.js"></script>
+  <script src="js/vendor/GLTFLoader.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/cse-quiz-data.js"></script>
+  <script src="js/mini.js"></script>
+  <script src="js/inventory.js"></script>
+  <script src="js/uniform.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/menu.js"></script>
+  <script>
+    /* CSS docks the FPS readout beside the minimap without covering other HUD items. */
+    (function () {
+      var el = document.createElement('div');
+      el.id = 'fpsbox';
+      el.setAttribute('data-testid', 'fps-counter');
+      el.style.cssText = 'position:fixed;display:none;border-radius:6px;background:rgba(10,16,30,.88);color:#9ff0a8;font:800 11px/1.2 monospace;pointer-events:none;white-space:nowrap;text-shadow:0 1px 2px #000';
+      document.body.appendChild(el);
+      var frames = 0, previous = performance.now();
+      function place() {
+        var map = document.getElementById('mm');
+        el.style.display = map && getComputedStyle(map).display !== 'none' && getComputedStyle(map).visibility !== 'hidden' && map.getBoundingClientRect().width && !document.hidden ? 'block' : 'none';
+      }
+      (function loop() {
+        requestAnimationFrame(loop);
+        frames++;
+        var now = performance.now();
+        if (now - previous >= 500) {
+          var fps = Math.round(frames * 1000 / (now - previous));
+          frames = 0;
+          previous = now;
+          el.textContent = fps + ' FPS';
+          el.style.color = fps >= 50 ? '#9ff0a8' : fps >= 30 ? '#ffe27a' : '#ff8a8a';
+          place();
+        }
+      })();
+      addEventListener('resize', place);
+    })();
+  </script>
+  <script src="js/tutorial.js"></script>
+</body>
+</html>

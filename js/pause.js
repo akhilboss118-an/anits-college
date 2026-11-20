@@ -22,6 +22,7 @@
         '<button class="pzp" id="pz-resume" data-testid="pause-resume-btn">RESUME</button>' +
         '<button id="pz-restart" data-testid="pause-restart-btn">RESTART LEVEL</button>' +
         '<button id="pz-levels" data-testid="pause-level-select-btn">LEVEL SELECT</button>' +
+        '<button class="pzw" id="pz-how" data-testid="pause-how-to-play-btn">HOW TO PLAY</button>' +
         '<button class="pzw" id="pz-set" data-testid="pause-settings-btn">SETTINGS</button>' +
       '</div>' +
       '<div class="pzk" id="pz-keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &middot; <kbd>Shift</kbd> run &middot; <kbd>E</kbd> talk / use &middot; <kbd>G</kbd> salute &middot; <kbd>B</kbd> bag &middot; <kbd>Esc</kbd> / <kbd>P</kbd> pause</div>' +
@@ -46,7 +47,7 @@
   }
   var gameOn = function () {
     var ov = $('ov'), mn = $('menu');
-    return !!(window.__g && ov && ov.style.display === 'none' && mn && mn.style.display === 'none' && !window.__call);
+    return !!(window.__g && ov && ov.style.display === 'none' && mn && mn.style.display === 'none' && !window.__call && !window.__tut);
   };
   var invOpen = function () { var i = $('inv'); return !!(i && i.style.display === 'flex') };
   var shopOpen = function () { return !!(window.__g && window.__g.shopOpen) };
@@ -94,6 +95,7 @@
     document.body.appendChild(btn); document.body.appendChild(pz);
     btn.onclick = function () { window.__paused ? close() : open() };
     $('pz-resume').onclick = close;
+    $('pz-how').onclick = function () { close(); window.__tutorial && window.__tutorial.startGame(true) };
     $('pz-set').onclick = function () { view('settings') };
     $('pz-back').onclick = function () { view('main') };
     $('pz-restart').onclick = function () { ask('restart') };
