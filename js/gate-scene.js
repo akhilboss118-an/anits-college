@@ -341,6 +341,7 @@
   var scene = window.__gateScene = {
     ready: true,
     get dog() { return dog },
+    get state() { return state },
     whistle: function (done) {
       var A = window.__guardAnim;
       if (A && A.whistle) A.whistle();
@@ -359,7 +360,11 @@
   /* ---------- load dog ---------- */
   function load() {
     G = window.__g;
-    if (!G || !G.sc || !G.NPC || !T.FBXLoader) return;
+    if (!G || !G.sc || !G.NPC || !T.FBXLoader) {
+      setTimeout(load, 150);
+      return;
+    }
+    if (dog) return;
     var mgr = new T.LoadingManager();
     mgr.setURLModifier(function () { return 'assets/models/dog/textures/dog_uv.png' });
     var tex = new T.TextureLoader(mgr).load('assets/models/dog/textures/dog_uv.png');

@@ -1,9 +1,11 @@
 /* Perimeter wall: a 3.6 m (about twice the player's height) brick compound wall around the whole campus, with buttress pillars and taller corner towers.
    The main gate keeps its own opening on the south side (map-pixel x 100..145). Walls are solid colliders. */
 (function () {
-  var T = window.THREE, G = window.__g;
-  if (!T || !G || !G.sc || !G.colliders || !G.wx || !G.wz) return;
-  try {
+  function initWall() {
+    var T = window.THREE, G = window.__g;
+    if (!T || !G || !G.sc || !G.colliders || !G.wx || !G.wz) return false;
+    if (window.__campusWall) return true;
+    try {
     var HEIGHT = 3.6, THICK = 0.9, PILLAR = 12;
     var X0 = G.wx(50), X1 = G.wx(374), Z0 = G.wz(50), Z1 = G.wz(432);
     var GX0 = G.wx(100), GX1 = G.wx(145);
@@ -79,5 +81,15 @@
 
     G.sc.add(group);
     window.__campusWall = { group: group, height: HEIGHT };
-  } catch (e) { console.warn('Campus wall failed, continuing without it', e) }
+    return true;
+  } catch (e) {
+    console.warn('Campus wall failed, continuing without it', e);
+    return false;
+  }
+}
+if (!initWall()) {
+  var iv = setInterval(function () {
+    if (initWall()) clearInterval(iv);
+  }, 120);
+}
 })();
