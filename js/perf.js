@@ -7,20 +7,26 @@
   var T = window.THREE; if (!T) return;
   var ua = navigator.userAgent || '';
   var MOB = (function () { try { return matchMedia('(pointer:coarse)').matches } catch (e) { return false } })() || /Android|iPhone|iPad|Mobi/i.test(ua);
-  /* quality tier: low (<=4 GB phones) / med (other phones) / high (desktop). Override: ?q=low|med|high or Settings > Graphics */
+  /* quality tier: low (<=4 GB phones or low-spec laptops) / med / high. Override: ?q=low|med|high or Settings > Graphics */
   var tier = 'high';
   (function () {
     var want = (/[?&]q=(low|med|high)/.exec(location.search) || [])[1], saved = null;
     try { saved = localStorage.getItem('anits-quality') } catch (e) {}
     if (!want && /^(low|med|high)$/.test(saved || '')) want = saved;
     if (want) { tier = want; return }
-    if (!MOB) return;
-    var mem = navigator.deviceMemory;           // 0.5..8 on Android Chrome; undefined on iPhone/Firefox
+    var mem = navigator.deviceMemory;           // 0.5..8 on Chrome; undefined on iPhone/Firefox/Safari
+    var cores = navigator.hardwareConcurrency;
+    if (!MOB) {
+      // Low-end laptop detection: <=4GB RAM or <=4 CPU threads
+      if ((mem && mem <= 4) || (cores && cores <= 4)) tier = 'low';
+      else if ((mem && mem <= 8) || (cores && cores <= 6)) tier = 'med';
+      return;
+    }
     tier = (mem && mem >= 6) ? 'med' : 'low';   // conservative phone geometry/shadow tier; render resolution has its own readable floor
   })();
   var LOW = tier === 'low';
-  var MAXTEX = LOW ? ((navigator.deviceMemory && navigator.deviceMemory <= 2) ? 512 : 1024) : (tier === 'med' ? 1024 : 2048);
-  var ANISO = LOW ? 4 : (MOB ? 6 : 8);          // the GPU clamps this to its own maximum
+  var MAXTEX = LOW ? 512 : (tier === 'med' ? 1024 : 2048);
+  var ANISO = LOW ? 2 : (MOB ? 4 : 8);          // the GPU clamps this to its own maximum
 
   /* low tier: shrink big textures once (a 1024 texture + mipmaps = ~5 MB of GPU memory each; 4 GB phones choke on dozens of them) */
   var shrunk = new WeakMap();

@@ -5,8 +5,8 @@
 const T=THREE,$=id=>document.getElementById(id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),aL=(a,b,t)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;
 let seed=5;const rnd=()=>(seed=seed*16807%2147483647)/2147483647;
-const MOB=matchMedia('(pointer:coarse)').matches||/Android|iPhone|iPad|Mobi/i.test(navigator.userAgent);const LOWQ=!!(window.__PERF&&window.__PERF.LOW);const quality=window.__PERF&&window.__PERF.tier;const maxDpr=Math.min(devicePixelRatio,MOB?(LOWQ?1.5:quality==='med'?1.75:2):2);const ren=new T.WebGLRenderer({antialias:!MOB&&devicePixelRatio<2,powerPreference:'high-performance'});ren.setPixelRatio(maxDpr);ren.setSize(innerWidth,innerHeight);ren.shadowMap.enabled=!LOWQ;ren.shadowMap.type=MOB?T.PCFShadowMap:T.PCFSoftShadowMap;ren.shadowMap.autoUpdate=!MOB;
-const PG={last:performance.now(),sum:0,n:0,pr:ren.getPixelRatio(),max:maxDpr,min:MOB?Math.min(devicePixelRatio,LOWQ?1:quality==='med'?1.1:1.2):.7,warm:0,hold:0,cap:9,capT:0,f:0,sx:null,sz:null,shadowAt:0,menuRenderAt:0};document.body.prepend(ren.domElement);
+const MOB=matchMedia('(pointer:coarse)').matches||/Android|iPhone|iPad|Mobi/i.test(navigator.userAgent);const LOWQ=!!(window.__PERF&&window.__PERF.LOW);const quality=window.__PERF&&window.__PERF.tier;const maxDpr=Math.min(devicePixelRatio,LOWQ?1.0:quality==='med'?(MOB?1.25:1.35):(MOB?1.5:1.75));const ren=new T.WebGLRenderer({antialias:!MOB&&!LOWQ&&devicePixelRatio<2,powerPreference:'high-performance'});ren.setPixelRatio(maxDpr);ren.setSize(innerWidth,innerHeight);ren.shadowMap.enabled=!LOWQ;ren.shadowMap.type=MOB?T.PCFShadowMap:T.PCFSoftShadowMap;ren.shadowMap.autoUpdate=!(MOB||LOWQ||quality==='med');
+const PG={last:performance.now(),sum:0,n:0,pr:ren.getPixelRatio(),max:maxDpr,min:MOB?Math.min(devicePixelRatio,LOWQ?.85:quality==='med'?1:1.1):(LOWQ?.85:.75),warm:0,hold:0,cap:9,capT:0,f:0,sx:null,sz:null,shadowAt:0,menuRenderAt:0};document.body.prepend(ren.domElement);
 const sc=new T.Scene();sc.background=new T.Color(0xdcebf2);sc.fog=new T.Fog(0xdcebf2,LOWQ?125:170,LOWQ?360:540);
 const cam=new T.PerspectiveCamera(60,innerWidth/innerHeight,.1,LOWQ?330:MOB?560:800);
 /* ---------- sky dome, sun glow and drifting clouds ---------- */
@@ -1440,8 +1440,8 @@ if(uiBusy()&&isLocked())document.exitPointerLock();lockHint.style.display=(!coar
  if(OFC.in){const c3=cam.position;c3.x=clamp(c3.x,OFC.cx-OFC.hw+.3,OFC.cx+OFC.hw-.3);c3.z=clamp(c3.z,OFC.cz-OFC.hd+.3,OFC.cz+OFC.hd-.3);c3.y=clamp(c3.y,.5,3.05)}
  cam.lookAt(pl.x,pl.y+1.35,pl.z);
  officeTick(dt);classTick(dt);timeTick(dt);dnTick(dt);const lightX=MOB?Math.round(pl.x/4)*4:pl.x,lightZ=MOB?Math.round(pl.z/4)*4:pl.z;sun.target.position.set(lightX,0,lightZ);
- if(MOB&&ren.shadowMap.enabled){const sx=Math.round(pl.x/4),sz=Math.round(pl.z/4);if(sx!==PG.sx||sz!==PG.sz||now-PG.shadowAt>700){PG.sx=sx;PG.sz=sz;PG.shadowAt=now;ren.shadowMap.needsUpdate=true}}
- NCCF.update(dt);vmTick(dt);if(!MOB||PG.f%2===0)minimap();skyTick(dt);if(window.__free){cam.position.set(...window.__free.p);cam.lookAt(...window.__free.t)}else if(window.__shootCam){cam.position.copy(window.__shootCam[0]);cam.lookAt(window.__shootCam[1])}ren.render(sc,cam);if(window.__perfHud)window.__perfHud(ren);if(personOutline)personOutline.render(ren,sc,cam)}
+ if((MOB||LOWQ||quality==='med')&&ren.shadowMap.enabled){const sx=Math.round(pl.x/4),sz=Math.round(pl.z/4);if(sx!==PG.sx||sz!==PG.sz||now-PG.shadowAt>600){PG.sx=sx;PG.sz=sz;PG.shadowAt=now;ren.shadowMap.needsUpdate=true}}
+ NCCF.update(dt);vmTick(dt);if((!MOB&&!LOWQ)||PG.f%2===0)minimap();skyTick(dt);if(window.__free){cam.position.set(...window.__free.p);cam.lookAt(...window.__free.t)}else if(window.__shootCam){cam.position.copy(window.__shootCam[0]);cam.lookAt(window.__shootCam[1])}ren.render(sc,cam);if(window.__perfHud)window.__perfHud(ren);if(personOutline)personOutline.render(ren,sc,cam)}
 /* ---------- Admin Office (waiting room + Ms. Laksmi's office) ----------
    A sealed room built far outside the campus map (OFC in the early constants). The hall door in the Admin Block fades the player in; the exit door fades back.
    Waiting room: sofas (sit with E), restroom with toilet. Ms. Laksmi sits at her desk behind a glass door that opens after OFC_WAIT seconds in the room. */

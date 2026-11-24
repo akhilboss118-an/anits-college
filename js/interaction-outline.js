@@ -1,20 +1,30 @@
 /* Soft white look-at glow for NPCs. Two depth-tested inverted-hull passes (tight rim + soft halo)
-   re-render only the targeted NPC meshes on a private layer, so animation, collision and the
-   normal render are never touched. Alpha fades in/out; switching NPCs fades out, then in. */
+   rendered on an isolated outline scene, perfectly synchronised with animated SkinnedMeshes and static Meshes.
+   Zero scene graph re-traversal, no T-pose glitch, and ultra-optimised for low-end mobile & laptop GPUs. */
 (function () {
   window.__makeInteractionOutline = function (T) {
-    var LAYER = 3, FADE_IN = 7, FADE_OUT = 10;
-    var active = null, group = null, meshes = [], alpha = 0;
-    var rim = { value: 0 }, halo = { value: 0 };
+    var FADE_IN = 7, FADE_OUT = 10;
+    var active = null, group = null, entries = [], alpha = 0;
+    var rimW = { value: 0.028 }, haloW = { value: 0.065 };
+    var outlineScene = new T.Scene();
 
-    function mat(width, tag) {
+    function createMat(isSkinned, widthRef, tag) {
       var m = new T.MeshBasicMaterial({
-        color: 0xffffff, side: T.BackSide, transparent: true, opacity: 0,
-        depthTest: true, depthWrite: false, fog: false, skinning: true,
-        polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
+        color: 0xffffff,
+        side: T.BackSide,
+        transparent: true,
+        opacity: 0,
+        depthTest: true,
+        depthWrite: false,
+        fog: false,
+        skinning: isSkinned,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1
       });
+
       m.onBeforeCompile = function (shader) {
-        shader.uniforms.uGlowW = width;
+        shader.uniforms.uGlowW = widthRef;
         shader.vertexShader = shader.vertexShader
           .replace('#include <common>', '#include <common>\nuniform float uGlowW;')
           .replace('#include <project_vertex>', [
@@ -29,37 +39,70 @@
             'gl_Position = projectionMatrix * mvPosition;'
           ].join('\n'));
       };
-      m.customProgramCacheKey = function () { return 'npc-glow'; };
+
+      m.customProgramCacheKey = function () {
+        return 'npc-glow-' + tag;
+      };
+
       return m;
     }
-    var rimMat = mat(rim), haloMat = mat(halo);
 
-    function restore() {
-      meshes.forEach(function (e) { e.mesh.layers.mask = e.mask; });
-      meshes = [];
-    }
+    // Separate materials for SkinnedMesh and static Mesh prevent Three.js program cache collisions
+    var haloMatSkinned = createMat(true, haloW, 'halo-skin');
+    var haloMatStatic = createMat(false, haloW, 'halo-stat');
+    var rimMatSkinned = createMat(true, rimW, 'rim-skin');
+    var rimMatStatic = createMat(false, rimW, 'rim-stat');
 
     function clear() {
-      restore();
+      while (outlineScene.children.length > 0) {
+        outlineScene.remove(outlineScene.children[0]);
+      }
+      entries = [];
       active = group = null;
       alpha = 0;
     }
 
     function attach(npc) {
-      var found = [];
+      if (!npc || !npc.g) return;
+      clear();
       npc.g.updateMatrixWorld(true);
-      npc.g.traverse(function (mesh) {
-        if (!mesh.isMesh || !mesh.visible || !mesh.geometry || !mesh.geometry.attributes.normal) return;
-        found.push(mesh);
-      });
-      if (!found.length) return;
-      found.forEach(function (mesh) {
-        meshes.push({ mesh: mesh, mask: mesh.layers.mask });
-        mesh.layers.enable(LAYER);
-      });
-      rim.value = .03;
-      halo.value = .07;
-      active = npc; group = npc.g; alpha = 0;
+
+      if (!npc.g.__outlineEntries) {
+        var list = [];
+        npc.g.traverse(function (mesh) {
+          if (!mesh.isMesh || !mesh.visible || !mesh.geometry) return;
+          if (mesh.isSprite || (mesh.name && mesh.name.indexOf('label') !== -1)) return;
+          if (!mesh.geometry.attributes.normal) {
+            try { mesh.geometry.computeVertexNormals(); } catch (e) {}
+          }
+          if (!mesh.geometry.attributes.normal) return;
+
+          var oMesh;
+          if (mesh.isSkinnedMesh && mesh.skeleton) {
+            oMesh = new T.SkinnedMesh(mesh.geometry, haloMatSkinned);
+            oMesh.bind(mesh.skeleton, mesh.bindMatrix);
+            oMesh.matrixAutoUpdate = false;
+            oMesh.frustumCulled = false;
+            list.push({ orig: mesh, outline: oMesh, isSkinned: true });
+          } else {
+            oMesh = new T.Mesh(mesh.geometry, haloMatStatic);
+            oMesh.matrixAutoUpdate = false;
+            oMesh.frustumCulled = false;
+            list.push({ orig: mesh, outline: oMesh, isSkinned: false });
+          }
+        });
+        npc.g.__outlineEntries = list;
+      }
+
+      entries = npc.g.__outlineEntries;
+      if (!entries || !entries.length) return;
+
+      for (var i = 0; i < entries.length; i++) {
+        outlineScene.add(entries[i].outline);
+      }
+      active = npc;
+      group = npc.g;
+      alpha = 0;
     }
 
     function update(target, dt, hard) {
@@ -68,36 +111,48 @@
         clear();
         if (hard) return;
       }
-      dt = Math.min(dt || 0, .1);
+      dt = Math.min(dt || 0, 0.1);
       if (active && target !== active) {
         alpha -= dt * FADE_OUT;
         if (alpha <= 0) clear();
       }
       if (!active && target) attach(target);
-      if (active && target === active) alpha = Math.min(1, alpha + dt * FADE_IN);
+      if (active && target === active) {
+        alpha = Math.min(1, alpha + dt * FADE_IN);
+      }
     }
 
     function render(renderer, scene, camera) {
-      if (!active || alpha <= .01 || !meshes.length) return;
-      var background = scene.background, previousMaterial = scene.overrideMaterial;
-      var autoClear = renderer.autoClear, cameraMask = camera.layers.mask;
-      var fog = scene.fog;
+      if (!active || alpha <= 0.01 || !entries.length) return;
+
+      // Keep outline mesh world transforms strictly aligned with source NPC meshes
+      for (var i = 0; i < entries.length; i++) {
+        var e = entries[i];
+        if (e.orig && e.orig.matrixWorld) {
+          e.outline.matrixWorld.copy(e.orig.matrixWorld);
+        }
+      }
+
+      var autoClear = renderer.autoClear;
       try {
         renderer.autoClear = false;
-        scene.background = null;
-        scene.fog = null;
-        camera.layers.set(LAYER);
-        haloMat.opacity = .28 * alpha;
-        scene.overrideMaterial = haloMat;
-        renderer.render(scene, camera);
-        rimMat.opacity = .95 * alpha;
-        scene.overrideMaterial = rimMat;
-        renderer.render(scene, camera);
+
+        // 1. Soft wide halo pass
+        haloMatSkinned.opacity = 0.28 * alpha;
+        haloMatStatic.opacity = 0.28 * alpha;
+        for (var i = 0; i < entries.length; i++) {
+          entries[i].outline.material = entries[i].isSkinned ? haloMatSkinned : haloMatStatic;
+        }
+        renderer.render(outlineScene, camera);
+
+        // 2. Crisp bright rim pass
+        rimMatSkinned.opacity = 0.95 * alpha;
+        rimMatStatic.opacity = 0.95 * alpha;
+        for (var i = 0; i < entries.length; i++) {
+          entries[i].outline.material = entries[i].isSkinned ? rimMatSkinned : rimMatStatic;
+        }
+        renderer.render(outlineScene, camera);
       } finally {
-        camera.layers.mask = cameraMask;
-        scene.overrideMaterial = previousMaterial;
-        scene.background = background;
-        scene.fog = fog;
         renderer.autoClear = autoClear;
       }
     }
@@ -106,7 +161,7 @@
     Object.defineProperties(api, {
       current: { get: function () { return active ? active.name : null; } },
       alpha: { get: function () { return alpha; } },
-      meshCount: { get: function () { return meshes.length; } }
+      meshCount: { get: function () { return entries.length; } }
     });
     window.__outline = api;
     return api;
