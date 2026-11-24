@@ -1,3 +1,12 @@
+# Level 8: team photo + spot progress bars
+- HUD: each spot shows a live progress bar, % and who is assigned (YOU at NCC; friends at Basketball/Blocks/Roads).
+- End screen: certificate screen has a TEAM PHOTO button (all 7 volunteers holding the certificate, downloadable PNG).
+- Photo drawing verified in a browser; full level 8 run not play-tested.
+
+# Level 8: spot assignment
+- Player is assigned the NCC Ground. 6 friends are split over Basketball Ground, Blocks and Roads (2 each); they walk to their spot and clean it, then come to help at the NCC Ground (and elsewhere if all done).
+- HUD shows spots; commander briefing updated. Files: js/nss.js, js/levels.js. Not play-tested in a browser.
+
 # Level 8: NSS Cleaning Volunteer (new)
 - New level "Day 8 - NSS Cleaning Volunteer" (js/nss.js + small hooks in game.js, levels.js, menu.js, inventory.js, voice.js, buddy.js, assets.js).
 - Starts at the basketball ground with no NPCs; NCC cadets, the Colonel and every other NPC are removed.
@@ -140,3 +149,12 @@ Report to the Colonel -> uniform check -> fall in and drill -> march in step -> 
 - Class timer (#time-hud / #att-hud / #nss-hud) now owns the top-centre strip; energy, wallet and announcements sit below it (css/hud-timer.css). Nothing covers the timer on phones or desktop.
 - First-time interactive tutorial (js/tutorial.js, css/tutorial.css): guided main-menu tour, level-select tip, and an in-game lesson (move, look, run, timer, mission, energy, minimap, talk, bag/pause). Class timer is frozen during the lesson.
 - Replay: HOW TO PLAY button on the main menu and in the pause menu. Reset: window.__tutorial.reset() in the console.
+
+## Security gate scene
+- Guard checks the ID card, then whistles (generated WebAudio sound, no audio file) and the gate opens.
+- The dog (assets/models/dog/Dog_model.fbx) roams around and sits near the guard; it trots to the guard and sits when he whistles.
+- The dog model has no skeleton or animations, so its legs, head and tail are animated by script (js/gate-scene.js).
+- The dog barks twice (generated sound) when it trots to the guard after the whistle.
+- Walk within about 2 m of the dog and press E (or tap PET DOG on touch screens) to pet it: it sits, wags, yips and hearts float up.
+- Perimeter wall: a 3.6 m brick compound wall (about twice the player's height) with pillars and corner towers now surrounds the whole campus (js/campus-wall.js). The main gate keeps its opening. The wall is solid.
+- Guard booth: a small blue-and-white SECURITY booth stands beside the guard at the gate (js/guard-booth.js). The dog has a bed and water bowl by the guard and goes there to rest.

@@ -851,7 +851,7 @@ if(GIRL)try{const n=NPC.arjun;if(!n)throw new Error('friend NPC missing');
  const endAnim=()=>{const cb=A.cb;A.mode=null;A.cb=null;arm.visible=false;ownArm.visible=true;sway.rotation.y=0;if(cb)cb()};
  const start=(mode,dur,cb)=>{if(A.cb){const o=A.cb;A.cb=null;o()}A.mode=mode;A.t=0;A.dur=dur;A.cb=cb||null;arm.visible=true;ownArm.visible=false;card.visible=mode==='inspect';
   const id=A.id=(A.id||0)+1;setTimeout(()=>{if(A.id===id&&A.mode)endAnim()},dur*1000+2500)};
- window.__guardAnim={inspect:cb=>start('inspect',1.9,cb),wave:cb=>start('wave',2.8,cb),get busy(){return !!A.mode}};
+ window.__guardAnim={inspect:cb=>start('inspect',1.9,cb),wave:cb=>start('wave',2.8,cb),whistle:cb=>start('whistle',1.8,cb),get busy(){return !!A.mode}};
  n.rm=dt=>{if(Math.hypot(n.x-pl.x,n.z-pl.z)>90)return;ph+=dt;const talk=n.st==='talk';
   sway.scale.y=1+Math.sin(ph*1.7)*.006;                                      // breathing
   sway.rotation.z=Math.sin(ph*.55)*.014;                                     // slow weight shift
@@ -860,6 +860,7 @@ if(GIRL)try{const n=NPC.arjun;if(!n)throw new Error('friend NPC missing');
    let tg=Math.atan2(pl.x-n.x,pl.z-n.z)-hold.rotation.y;tg=Math.atan2(Math.sin(tg),Math.cos(tg));tg=Math.max(-1.1,Math.min(1.1,tg));
    sway.rotation.y+=(tg*w-sway.rotation.y)*Math.min(1,dt*8);
    if(A.mode==='inspect'){arm.rotation.set(-1.25*w-.08*Math.sin(A.t*5)*w,0,-.15*w);card.rotation.x=-.5+Math.sin(A.t*3.2)*.35*w;card.rotation.z=Math.sin(A.t*2.1)*.15*w;sway.rotation.x+=.1*w+Math.sin(A.t*6)*.03*w}
+   else if(A.mode==='whistle'){arm.rotation.set(-1.95*w,0,.4*w);sway.rotation.x-=.07*w;sway.rotation.x+=Math.sin(A.t*30)*.006*w}
    else{arm.rotation.set(-1.7*w,0,-.15*w-Math.sin(A.t*7)*.45*w);sway.rotation.x+=.05*w;sway.rotation.z+=Math.sin(A.t*3.5)*.03*w}
    if(A.t>=A.dur)endAnim()}}
  const old=n.g;old.remove(n.lab);hold.add(n.lab);hold.position.copy(old.position);hold.rotation.copy(old.rotation);
@@ -930,6 +931,17 @@ const cseKnock=()=>{const s=STORY[si];return LVL===3&&!CSEQ.passed&&started&&!do
 function cseQuiz(){const Q=window.__CSE_QUIZ;if(!Q||miniOn)return;miniOn=true;CSEQ.tries++;snd(330,.12,'square');setTimeout(()=>snd(330,.12,'square'),180);
  window.__mini.run({kind:'csequiz',title:'CSE BLOCK DOOR QUIZ',qs:Q.qs,need:Q.need,winText:'Quiz passed! The door unlocks.',loseText:'Door still locked. Try again!',onLeave:()=>{miniOn=false;$('mt').textContent=STORY[si].t}},()=>{miniOn=false;CSEQ.passed=true;CSEQ.enterAt=performance.now()+1800;snd(784,.16,'triangle');setTimeout(()=>snd(988,.28,'triangle'),170);
   $('mt').textContent='The door is open. Walk in to Room 204 and take your seat.';say('The CSE Block door clicks open. Go in!')})}
+const RH={t:0,cool:0,el:null};window.__raoHint=RH;
+function raoHintTick(dt){
+ const s=STORY[si],on=LVL===3&&started&&!done&&!miniOn&&!dlg&&!CLS.in&&!window.__paused&&s&&s.mini&&s.mini.kind==='floor'&&s.at;
+ if(!on){RH.t=0;if(RH.el)RH.el.style.display='none';return}
+ if(!RH.el){const e=document.createElement('div');e.setAttribute('data-testid','rao-hint-arrow');e.style.cssText='position:fixed;left:50%;top:150px;transform:translateX(-50%);z-index:6;display:none;pointer-events:none;text-align:center;color:#fff;font:700 12px sans-serif;text-shadow:0 1px 4px #000';e.innerHTML='<div class="rha" style="font-size:44px;line-height:44px;color:#ffd54a;transition:transform .15s">&#9650;</div><div class="rht" style="background:rgba(10,15,25,.78);padding:4px 12px;border-radius:999px"></div>';document.body.appendChild(e);RH.el=e}
+ const dx=s.at[0]-pl.x,dz=s.at[1]-pl.z,d=Math.hypot(dx,dz);
+ if(RH.el.style.display!=='none'){const fx=Math.sin(cy),fz=Math.cos(cy),th=Math.atan2(dx*-fz+dz*fx,dx*fx+dz*fz);RH.el.firstChild.style.transform='rotate('+th+'rad)';RH.el.lastChild.textContent='Prof. Rao: classroom this way, '+Math.round(d)+' m';if(d<18){RH.el.style.display='none';RH.t=0}}
+ if(d<35){RH.t=0;RH.cool=Math.max(0,RH.cool-dt);return}
+ RH.t+=dt;RH.cool=Math.max(0,RH.cool-dt);
+ if(RH.t>14&&RH.cool<=0){RH.cool=40;RH.t=0;RH.el.style.display='block';setTimeout(()=>{if(RH.el)RH.el.style.display='none'},9000);say('Prof. Rao (calling out): Lost? The classroom wing is right beside the CSE Block. Follow the arrow and the yellow beam!')}
+}
 function cseTick(dt){if(LVL!==3)return;const d=window.__cseDoor;if(!d)return;
  if(started&&!done&&!CSEQ.told&&!CLS.in&&STORY[si]&&STORY[si].cls&&dist(pl.x,pl.z,CSE_DOOR)<6){CSEQ.told=true;say('The CSE Block door is locked. Press E to knock.')}
  const t=CSEQ.passed?1:0;if(CSEQ.open!==t){CSEQ.open+=Math.sign(t-CSEQ.open)*Math.min(Math.abs(t-CSEQ.open),dt/1.1);d.leaf.scale.z=1-.92*CSEQ.open;d.leaf.position.z=1.5*.92*CSEQ.open;d.lamp.color.setHex(CSEQ.open>.05?0x34c759:0xff2b2b)}}
@@ -959,7 +971,7 @@ function showDlg(){const n=dlg.n,d0=dlg,i0=dlg.i,t=dlg.l[dlg.i],el=$('dlg'),nm=n
   dlgT=window.__after(window.__subs.dur(ch[c]),()=>{if(dlg!==d0||dlg.i!==i0)return;if(++c<ch.length)tick();else if(!window.__call&&!shopOpen)interact()})};tick()}
 function gatePass(){const s=STORY[si];if(!s||!s.idcheck)return;next();window.__guardAnim&&window.__guardAnim.wave();dlg={n:NPC.guard,l:["Thank you! Welcome to ANITS. Go in!"],i:0};$('dlg').style.display='block';showDlg()}
 let gateBusy=false;
-function gateCheck(){const s=STORY[si];if(!s||!s.idcheck||!window.__gateFlow||gateBusy)return;if(dlg)resetDialogue();window.__gateFlow.check(()=>{const A=window.__guardAnim;if(!A){gatePass();return}gateBusy=true;let d=0;const fin=()=>{if(d)return;d=1;gateBusy=false;gatePass()};A.inspect(fin)})}
+function gateCheck(){const s=STORY[si];if(!s||!s.idcheck||!window.__gateFlow||gateBusy)return;if(dlg)resetDialogue();window.__gateFlow.check(()=>{const A=window.__guardAnim;if(!A){gatePass();return}gateBusy=true;let d=0;const fin=()=>{if(d)return;d=1;const S=window.__gateScene,go=()=>{gateBusy=false;gatePass()};if(S&&S.whistle)S.whistle(go);else go()};A.inspect(fin)})}
 function resetDialogue(){if(dlgT)dlgT.cancel();dlg=null;$('dlg').style.display='none';npcs.forEach(n=>{if(n.st==='talk')n.st='idle'});window.__voice&&__voice.stop()}
 function interact(){if(window.__call||window.__paused)return;if(window.__inv&&__inv.isOpen&&__inv.isOpen())return;if(shopOpen){closeShop();return}if(drinking)return;
  if(CLS.in){if(CLS.ph==='walk')classSit();return}
@@ -1615,7 +1627,7 @@ function classEnter(){if(CLS.busy||CLS.in)return;attAttend();CLS.busy=true;if(dl
 function classSit(){if(!classSeatNear())return;CLS.ph='sit';$('mt').textContent='Sit back and listen to the class.';cy=Math.PI;
  if(pacts.sit)sitStart({s:CLS.seat,lx:0,lz:1});else{pl.x=CLS.seat.x;pl.z=CLS.seat.z;pl.yaw=Math.PI}}
 function classTick(dt){
- cseTick(dt);attTick(dt);
+ cseTick(dt);raoHintTick(dt);attTick(dt);
  if(CLS.in&&CLS.teacher){CLS.at=(CLS.at||0)+dt;const tc=CLS.teacher,ar=tc.userData.arms,talk=CLS.ph==='listen';tc.rotation.y=Math.sin(CLS.at*.4)*.3;
   if(ar){ar[1].rotation.x+=((talk?-.9+Math.sin(CLS.at*5)*.35:0)-ar[1].rotation.x)*Math.min(1,dt*8);ar[0].rotation.x+=((talk?-.5+Math.sin(CLS.at*4+1)*.3:0)-ar[0].rotation.x)*Math.min(1,dt*8)}
   CLS.mates.forEach(m=>{m.g.position.y=m.y+Math.sin(CLS.at*1.6+m.ph)*.012;m.g.rotation.z=Math.sin(CLS.at*.7+m.ph)*.03})}

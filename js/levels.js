@@ -17,8 +17,8 @@ window.__LV=function(c){const W=c.W2,P=c.pay,FEE=250;
   {t:'Pay the fees to Laksmi (Admin) at the Admin Block.',npc:'clerk',ok:()=>c.wallet()>=FEE,cine:'pay',fee:FEE,done:()=>P(FEE),lines:{clerk:["Thank you! Rs. 250 received. Here is your receipt."]}},
   {t:'Show the fee receipt to Prof. Rao at the CSE Block.',npc:'prof',lines:{prof:["Ah, the fee receipt. Very good, you are officially a student!"]}}],
  3:[
-  {t:'Ask Prof. Rao where your classroom is.',npc:'prof',lines:{prof:["Your classroom? Room 204, second floor of the west wing."]}},
-  {t:'Go to the west wing and find Room 204 on the floor with four rooms.',at:W(80,175),rad:6,mini:{kind:'floor',title:'FIND ROOM 204'}},
+  {t:'Ask Prof. Rao where your classroom is.',npc:'prof',lines:{prof:["Your classroom? Room 204, second floor of the classroom wing right beside this CSE Block."]}},
+  {t:'Go to the classroom wing beside the CSE Block and find Room 204 on the floor with four rooms.',at:W(164,252),rad:6,mini:{kind:'floor',title:'FIND ROOM 204'}},
   {t:'Meet your friend at the Canteen.',npc:'arjun',lines:{arjun:["Hey! Over here! I saved you a seat in the right room!"]}}],
  4:[
   {t:'Get the library form signed by Laksmi (Admin Officer) at the Admin Block.',npc:'clerk',cine:'libsign',fee:'admin',lines:{clerk:["A library card? Fill the application form and I will sign as Admin Officer."]}},
@@ -49,6 +49,6 @@ window.__LV=function(c){const W=c.W2,P=c.pay,FEE=250;
   {t:'Walk through the main gate and into the college.',at:W(122,396),rad:7}];
  Object.keys(R).forEach(k=>R[k]=ID.concat(R[k]));
  R[8]=[
-  {t:'Meet the NSS Commander at the basketball ground (press E to talk).',npc:'nss',lines:{nss:["Good morning, volunteers! Welcome to our NSS special camp at ANITS.","I am your NSS Commander. Our camp mission: clean our college campus. Not Me, But You!","Our team has 7 volunteers: you and your 6 friends. Walk over trash to pick it up, and your friends will help clean near you. Your bag holds 10, so drop it in the green dustbins for bonus points.","Clean the basketball ground, the NCC ground, every block and every road before the time runs out.","Everyone who joins this camp gets a participation certificate. Let's make ANITS shine. Jai Hind!"]}},
+  {t:'Meet the NSS Commander at the basketball ground (press E to talk).',npc:'nss',lines:{nss:["Good morning, volunteers! Welcome to our NSS special camp at ANITS.","I am your NSS Commander. Our camp mission: clean our college campus. Not Me, But You!","Our team has 7 volunteers: you and your 6 friends. Everyone gets one spot: YOU take the NCC Ground. Your friends go to the Basketball Ground, the Blocks and the Roads (two friends each), and once their spot is clean they will come over to help you. Your bag holds 10, so drop it in the green dustbins for bonus points.","Clean your spot, the NCC Ground, and help wherever you are needed before the time runs out.","Everyone who joins this camp gets a participation certificate. Let's make ANITS shine. Jai Hind!"]}},
   {t:'NSS camp: clean the basketball ground, NCC ground, blocks and roads with your team before time runs out!',say:'Camp mission started! Walk over the trash to collect it.'}];
  return R};

@@ -28,7 +28,7 @@ const PLACES=[
  {k:'aud',re:/auditorium|ncc ground|parade|drill/,t:'The Open Auditorium ground is where the NCC company stands in formation, in front of the auditorium steps.'},
  {k:'court',re:/basketball|court|hoop/,t:'The basketball court is where the freshers\' matches happen. Students play there after class.'},
  {k:'gate',re:/main gate|\bgate\b|entrance|exit/,t:'The main gate is where Bajirao stands. The gate stays shut until you show your ID card.'},
- {k:'class',re:/class ?room|room ?204|west wing|lecture hall/,t:'The classrooms are in the west wing. Room 204 is at the north end of the corridor.'},
+ {k:'class',re:/class ?room|room ?204|west wing|lecture hall/,t:'The classrooms are right beside the CSE Block. Room 204 is on the second floor.'},
  {k:'vend',re:/vending|cold drink|soda|energy (drink|machine)/,t:'There are cold-drink vending machines at both canteens: one here, one near the main gate. Press E next to one to buy.'},
  {k:'temple',re:/temple|shikara|mandir/,t:'There is an old 12th-century Bhumija Shikara temple inside the campus. It is well worth a visit.'},
  {k:'power',re:/power (supply )?room|transformer|substation|generator/,t:'The Power Supply Room is the old NCC ground, with transformers and a high-voltage gantry. Stay outside the fence, it is dangerous!'},

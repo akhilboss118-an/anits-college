@@ -16,6 +16,9 @@ body.nss #mission-pin{display:none!important}
 #nss-hud .zs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 #nss-hud .z{padding:3px 10px;border-radius:999px;background:rgba(8,14,26,.74);border:1px solid rgba(120,190,255,.55);font:700 11px 'Figtree',system-ui,sans-serif;letter-spacing:.05em;white-space:nowrap}
 #nss-hud .z.ok{border-color:#3ce678;color:#8dffb0}
+#nss-hud .z.you{border-color:#ffd54a}
+#nss-hud .z{position:relative;overflow:hidden;background:linear-gradient(90deg,rgba(60,230,120,.55) var(--p,0%),rgba(8,14,26,.74) var(--p,0%))}
+#nss-hud .z .w{font-weight:600;opacity:.85;margin-left:5px}
 #nss-hud .who{font:700 11px 'Figtree',system-ui,sans-serif;letter-spacing:.1em;padding:2px 12px;border-radius:999px;background:rgba(8,14,26,.6)}
 body.touch #nss-hud{top:6px}body.touch #nss-hud .pill{font-size:13px;padding:4px 10px}body.touch #nss-hud .z{font-size:9px;padding:2px 7px}
 #nss-end{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(3,10,24,.84);backdrop-filter:blur(6px);font-family:'Figtree',system-ui,sans-serif;color:#fff;padding:14px}
@@ -61,10 +64,36 @@ npcs.forEach(n=>{if(n===cmd||team.includes(n))return;n.off=true;n.nt=true;if(n.g
 g.NCCs.length=0;
 team.forEach(n=>{const i=g.circles.indexOf(n);if(i>=0)g.circles.splice(i,1)});
 
-/* ---- team look: caps + vests (NSS volunteers) ---- */
-const deco=(n,vc,cc)=>{if(!n.g)return;const vest=new T.Mesh(new T.CylinderGeometry(.2,.19,.42,14,1,true),new T.MeshLambertMaterial({color:vc,side:T.DoubleSide}));vest.position.y=1.2;vest.scale.z=.78;
- const cap=new T.Mesh(new T.SphereGeometry(.125,12,8,0,Math.PI*2,0,Math.PI/2),new T.MeshLambertMaterial({color:cc}));cap.position.y=1.66;n.g.add(vest,cap)};
-deco(cmd,0x14306e,0x14306e);team.forEach(n=>deco(n,0xff7a00,0x14306e));
+/* ---- team look: the game's existing characters (Remy, Amy girls, NCC cadets, Colonel Singh), each distinct, with an NSS vest ---- */
+const FRIEND=GIRL?{name:'Sushma',kind:'amy',h:1.6,tintAll:[1,.74,.6]}:{name:'Arjun',kind:'remy',h:1.75,tint:{Topmat:0xe0883a}};
+const SPEC=window.__nssSpec={team:[FRIEND,
+ {name:'Divya',kind:'amy',h:1.62,tintAll:[1,.86,.8]},
+ {name:'Ravi',kind:'cadetB',h:1.74},
+ {name:'Anjali',kind:'amy',h:1.58,tintAll:[.82,.9,1]},
+ {name:'Harsha',kind:'remy',h:1.78,tint:{Topmat:0x3a78c0,Bottommat:0x2a2f45}},
+ {name:'Sneha',kind:'cadetG',h:1.64}],cmd:{name:'NSS Commander',kind:'colonel',h:1.85}};
+team.forEach((n,i)=>{n.name=SPEC.team[i].name+' (NSS Team)'});
+const labs=[];
+function mkLab(txt,col){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');
+ x.font="800 30px Figtree,'Segoe UI',sans-serif";const w=Math.min(244,x.measureText(txt).width+34);x.fillStyle='rgba(8,14,26,.82)';x.beginPath();x.roundRect(128-w/2,8,w,48,24);x.fill();
+ x.strokeStyle=col||'#ffb347';x.lineWidth=3;x.stroke();x.fillStyle='#fff';x.textAlign='center';x.textBaseline='middle';x.fillText(txt,128,33);
+ const sp=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),transparent:true,depthTest:false,depthWrite:false}));sp.renderOrder=20;labs.push(sp);return sp}
+function swapModel(n,ch,label,col){const old=n.g;ch.root.position.copy(old.position);ch.root.rotation.copy(old.rotation);sc.add(ch.root);sc.remove(old);
+ if(n.lab&&n.lab.parent)n.lab.parent.remove(n.lab);const lab=mkLab(label,col);lab.position.y=ch.h+.42;ch.root.add(lab);n.lab=lab;n.g=ch.root;n.h=ch.h;n.ch=ch;
+ let px=n.x,pz=n.z,spd=0;
+ n.rm=(dt,mv)=>{const far=Math.hypot(n.x-pl.x,n.z-pl.z)>100;ch.rig.visible=!far;if(far)return;
+  const inst=dt>0?Math.hypot(n.x-px,n.z-pz)/dt:0;px=n.x;pz=n.z;spd+=(inst-spd)*Math.min(1,dt*8);
+  const f=n.fs;ch.bendT=(f&&f.tgt&&f.pause>0)?1:0;ch.update(dt,mv,spd)}}
+async function dressUp(){const C=window.__NSSCH;if(!C)return;
+ await Promise.all(team.map(async(n,i)=>{try{const s=SPEC.team[i],ch=await C.make(s.kind,{h:s.h,tint:s.tint,tintAll:s.tintAll});C.addVest(ch,0xff7a00,0xf4f1e6);swapModel(n,ch,s.name)}catch(e){console.warn('NSS teammate model failed',e)}}));
+ try{const ch=await C.make('colonel',{h:SPEC.cmd.h});C.addVest(ch,0x14306e,0xf4f1e6);swapModel(cmd,ch,'NSS Commander','#7fd0ff');
+  const an=ch.P.anims,idle=an.find(a=>a.name==='idle'),sal=an.find(a=>a.name==='salute');
+  if(idle&&sal){ch.mix.stopAllAction();const ai=ch.mix.clipAction(idle),as=ch.mix.clipAction(sal);ai.setLoop(T.LoopRepeat,Infinity);ai.time=rnd()*idle.duration;ai.play();as.setLoop(T.LoopOnce,1);as.clampWhenFinished=true;
+   let sl=false,prev=cmd.st;const doSal=()=>{if(sl)return;sl=true;as.reset();as.enabled=true;as.crossFadeFrom(ai,.3,false);as.play()};
+   ch.mix.addEventListener('finished',e=>{if(e.action===as){sl=false;ai.enabled=true;ai.crossFadeFrom(as,.3,false);ai.play()}});cmd.salute=doSal;
+   cmd.rm=dt=>{if(cmd.st!==prev){if(cmd.st==='salute'||cmd.st==='talk')doSal();prev=cmd.st}const far=Math.hypot(cmd.x-pl.x,cmd.z-pl.z)>100;ch.rig.visible=!far;if(!far)ch.mix.update(dt)};
+   setTimeout(doSal,1500)}}catch(e){console.warn('NSS commander model failed',e)}}
+dressUp();
 
 /* ---- start positions at the basketball ground ---- */
 const CX=g.wx(300),CZ=g.wz(282.5);
@@ -83,6 +112,7 @@ const okPt=(x,z,list)=>{if(x<g.wx(40)||x>g.wx(388)||z<g.wz(44)||z>g.wz(470))retu
  if(g.groundHeightAt(x,z)>.6)return false;
  if(Math.hypot(x-cmd.x,z-cmd.z)<5)return false;
  return !list.some(t=>Math.hypot(t.x-x,t.z-z)<2.6)};
+const SPOTS=['bask','blocks','roads'],YOUR_SPOT='ncc',spotOf=i=>SPOTS[i%3],spotLabel=k=>ZONES.find(z=>z.k===k).label;
 const rr=(a,b)=>a+rnd()*(b-a);
 const sampler={
  bask:()=>[rr(263,337),rr(254,311)],
@@ -133,12 +163,13 @@ function dropBag(b){const n=bag;bag=0;dropped+=n;binThunk();if(b.lid){b.lid.posi
 
 /* ---- HUD ---- */
 const hudEl=document.createElement('div');hudEl.id='nss-hud';hudEl.setAttribute('data-testid','nss-hud');
-hudEl.innerHTML='<div class="r1"><span class="pill" id="nss-time" data-testid="nss-timer"></span><span class="pill g" id="nss-count" data-testid="nss-trash-counter"></span><span class="pill b" id="nss-bag" data-testid="nss-bag-counter"></span></div><div class="zs" id="nss-zs" data-testid="nss-zones"></div><div class="who" id="nss-who" data-testid="nss-team-score"></div>';
+hudEl.innerHTML='<div class="r1"><span class="pill" id="nss-time" data-testid="nss-timer"></span><span class="pill g" id="nss-count" data-testid="nss-trash-counter"></span><span class="pill b" id="nss-bag" data-testid="nss-bag-counter"></span></div><div class="zs" id="nss-zs" data-testid="nss-zones"></div><div class="who" id="nss-spot" data-testid="nss-spot">YOUR SPOT: NCC GROUND  \u00B7  FRIENDS: BASKETBALL / BLOCKS / ROADS</div><div class="who" id="nss-who" data-testid="nss-team-score"></div>';
 document.body.appendChild(hudEl);
 const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
 function hud(){$('nss-time').textContent='TIME '+fmt(Math.max(0,left));$('nss-time').classList.toggle('low',left<60);
  $('nss-count').textContent='TRASH '+total()+' / '+N;$('nss-bag').textContent='BAG '+bag+' / '+BAG_MAX;$('nss-bag').classList.toggle('full',bag>=BAG_MAX);
- $('nss-zs').innerHTML=ZONES.map(z=>'<span class="z'+(zoneGot[z.k]>=zoneTot[z.k]?' ok':'')+'" data-testid="nss-zone-'+z.k+'">'+z.short+' '+zoneGot[z.k]+'/'+zoneTot[z.k]+'</span>').join('');
+ $('nss-zs').innerHTML=ZONES.map(z=>{const tot=zoneTot[z.k]||1,pc=Math.round(zoneGot[z.k]/tot*100),who=z.k===YOUR_SPOT?'YOU':team.map((n,i)=>spotOf(i)===z.k?n.name.replace(/\s*\(.*$/,''):null).filter(Boolean).join(', ');
+  return '<span class="z'+(zoneGot[z.k]>=zoneTot[z.k]?' ok':'')+(z.k===YOUR_SPOT?' you':'')+'" style="--p:'+pc+'%" data-testid="nss-zone-'+z.k+'">'+z.short+' '+zoneGot[z.k]+'/'+zoneTot[z.k]+' ('+pc+'%)<span class="w">'+who+'</span></span>'}).join('')
  $('nss-who').textContent='YOU '+youN+'  \u00B7  TEAM OF 6: '+teamN+'  \u00B7  BIN BONUS +'+(dropped*BIN_PTS)+'  \u00B7  SCORE '+score()}
 
 /* ---- friends (team of 6 follow and help) ---- */
@@ -149,19 +180,20 @@ function mkCtl(n,i){n.fs={tgt:null,t:0,pause:0,ban:new Map()};
   if(phase!=='clean')return;
   const now=performance.now();
   if(f.tgt&&!f.tgt.alive){f.tgt=null}
-  if(!f.tgt){let best=null,bd=1e9;for(const it of items){if(!it.alive||it.by!==null)continue;const b=f.ban.get(it);if(b&&b>now)continue;
-    if(Math.hypot(it.x-pl.x,it.z-pl.z)>16)continue;const d=Math.hypot(it.x-n.x,it.z-n.z);if(d<bd&&d<22){bd=d;best=it}}
-   if(best){f.tgt=best;best.by=i;f.t=0;f.pause=0}}
+  if(!f.tgt){const mine=spotOf(i),pick=zs=>{let best=null,bd=1e9;for(const it of items){if(!it.alive||it.by!==null||!zs.includes(it.zone))continue;const b=f.ban.get(it);if(b&&b>now)continue;const d=Math.hypot(it.x-n.x,it.z-n.z);if(d<bd){bd=d;best=it}}return best};
+   const best=pick([mine])||pick([YOUR_SPOT])||pick(['bask','blocks','roads']);
+   if(best){f.tgt=best;best.by=i;f.t=0;f.pause=0;f.help=best.zone!==mine}}
   let tx,tz,sp;
-  if(f.tgt){tx=f.tgt.x;tz=f.tgt.z;sp=FRIEND_SPEED;f.t+=dt;
-   if(Math.hypot(tx-n.x,tz-n.z)<.85){f.pause+=dt;if(f.pause>.55){const it=f.tgt;f.tgt=null;remove(it,'team');banter(n)}return}
-   if(f.t>9||Math.hypot(tx-pl.x,tz-pl.z)>24){f.tgt.by=null;f.ban.set(f.tgt,now+20000);f.tgt=null;return}}
+  if(f.tgt){tx=f.tgt.x;tz=f.tgt.z;const dd=Math.hypot(tx-n.x,tz-n.z);sp=dd>12?6.5:dd>4?4.4:FRIEND_SPEED;f.t+=dt;
+   if(dd<.85){f.pause+=dt;if(f.pause>.55){const it=f.tgt;f.tgt=null;remove(it,'team');banter(n)}return}
+   if(f.t>35){f.tgt.by=null;f.ban.set(f.tgt,now+20000);f.tgt=null;return}}
   else{const a=(i/6)*Math.PI*2+Math.PI/6,R=2.7;tx=pl.x+Math.cos(a)*R;tz=pl.z+Math.sin(a)*R;const d=Math.hypot(tx-n.x,tz-n.z);sp=d>14?7:d>5?4.6:2.3;if(d<.9)return;
-   if(d>45){n.x=tx;n.z=tz;return}}
+   if(d>60){n.x=tx;n.z=tz;return}}
   const dx=tx-n.x,dz=tz-n.z,d=Math.hypot(dx,dz);if(d<.05)return;const st=Math.min(d,sp*dt);n.x+=dx/d*st;n.z+=dz/d*st;n.yaw=Math.atan2(dx,dz);
   const ox=n.x,oz=n.z;g.push(n,.4,false);if(Math.hypot(n.x-ox,n.z-oz)>st*1.5){n.x=ox;n.z=oz}
   n.mv=true}}
 team.forEach((n,i)=>mkCtl(n,i));
+window.__nssAssign=team.map((n,i)=>n.name+' -> '+spotLabel(spotOf(i)));
 function release(f){if(f.tgt){f.tgt.by=null;f.tgt=null}}
 
 /* ---- minimap dots ---- */
@@ -201,17 +233,53 @@ function drawCert(c){const W=1414,H=1000,x=c.getContext('2d');c.width=W;c.height
  x.font='600 24px Georgia,serif';x.fillStyle='#14306e';x.fillText('Date: '+result.date,260,880);
  x.strokeStyle='#14306e';x.beginPath();x.moveTo(W-470,862);x.lineTo(W-150,862);x.stroke();x.fillText('NSS Commander',W-310,895);
  x.save();x.translate(W/2,850);x.fillStyle='#14306e';x.beginPath();x.arc(0,0,66,0,7);x.fill();x.strokeStyle='#d4a62a';x.lineWidth=5;x.beginPath();x.arc(0,0,56,0,7);x.stroke();x.fillStyle='#fff';x.font='900 40px Georgia,serif';x.fillText('NSS',0,14);x.restore()}
-function showCert(){endEl.style.display='none';certEl.innerHTML='<canvas id="nss-cert-canvas" data-testid="nss-certificate"></canvas><div class="bt"><button id="nss-dl" data-testid="nss-download-certificate-btn">DOWNLOAD PNG</button><button class="g2" id="nss-done" data-testid="nss-continue-btn">CONTINUE</button></div>';
+
+function drawPhoto(c){const W=1600,H=1000,x=c.getContext('2d');c.width=W;c.height=H;
+ const sky=x.createLinearGradient(0,0,0,640);sky.addColorStop(0,'#7cc4ff');sky.addColorStop(1,'#e6f4ff');x.fillStyle=sky;x.fillRect(0,0,W,H);
+ x.fillStyle='#fff';[[200,120,90],[1350,90,110],[1100,200,70]].forEach(([a,b,r])=>{x.globalAlpha=.8;x.beginPath();x.arc(a,b,r*.5,0,7);x.arc(a+r*.5,b+8,r*.4,0,7);x.arc(a-r*.5,b+10,r*.4,0,7);x.fill()});x.globalAlpha=1;
+ x.fillStyle='#d9c9a8';x.fillRect(120,420,1360,160);x.fillStyle='#b8a888';for(let i=0;i<9;i++)x.fillRect(160+i*150,460,70,90);
+ const gr=x.createLinearGradient(0,560,0,H);gr.addColorStop(0,'#5fae4a');gr.addColorStop(1,'#2f7a32');x.fillStyle=gr;x.fillRect(0,560,W,H-560);
+ x.textAlign='center';x.fillStyle='#14306e';x.font='900 44px Georgia,serif';x.fillText('NSS TEAM ANITS \u00B7 CAMPUS CLEANING DRIVE',W/2,60);
+ x.fillStyle='#8a1c1c';x.font='italic 26px Georgia,serif';x.fillText('Not Me, But You!  \u00B7  '+result.date,W/2,98);
+ const cv=document.createElement('canvas');drawCert(cv);const cw=560,ch=cw*cv.height/cv.width,cx=W/2-cw/2,cy=122;
+ x.fillStyle='#6b4a2a';x.fillRect(cx-8,cy-8,cw+16,ch+16);x.save();x.shadowColor='rgba(0,0,0,.4)';x.shadowBlur=20;x.drawImage(cv,cx,cy,cw,ch);x.restore();
+ const cols=['#2b7bd6','#e0883a','#3a8a7a','#c2563f','#7b5ac0','#30a0a8','#b08a30'];
+ const names=[pname()+' (You)'].concat(team.map(n=>n.name.replace(/\s*\(.*$/,'')));
+ const slots=[[W/2-640,845,.86],[W/2-440,860,.92],[W/2-230,880,1],[W/2,905,1.12],[W/2+230,880,1],[W/2+440,860,.92],[W/2+640,845,.86]];
+ const who=[3,2,1,'you',4,5,6];
+ slots.forEach((sl,j)=>{const w=who[j],isYou=w==='you',nm=isYou?names[0]:names[w],col=isYou?cols[0]:cols[w];person(x,sl[0],sl[1],sl[2],col,nm,isYou)})}
+function person(x,cx,by,k,col,nm,you){x.save();x.translate(cx,by);x.scale(k,k);
+ x.fillStyle='rgba(0,0,0,.25)';x.beginPath();x.ellipse(0,0,70,14,0,0,7);x.fill();
+ x.fillStyle='#22304a';x.fillRect(-30,-120,24,120);x.fillRect(6,-120,24,120);x.fillStyle='#111';x.fillRect(-34,-10,30,10);x.fillRect(4,-10,30,10);
+ x.fillStyle=col;x.beginPath();x.roundRect(-46,-250,92,140,16);x.fill();
+ x.fillStyle='#ff7a00';x.beginPath();x.roundRect(-40,-244,80,128,12);x.fill();x.fillStyle='#fff';x.fillRect(-40,-190,80,10);
+ x.fillStyle=you?'#ffd54a':'#14306e';x.font='900 20px Georgia,serif';x.textAlign='center';x.fillText(you?'YOU':'NSS',0,-150);
+ x.fillStyle='#c98f66';x.beginPath();x.arc(-58,-215,13,0,7);x.arc(58,-215,13,0,7);x.fill();x.fillRect(-64,-240,12,34);x.fillRect(52,-240,12,34);
+ x.beginPath();x.arc(0,-290,38,0,7);x.fill();x.fillStyle='#14306e';x.beginPath();x.arc(0,-298,40,Math.PI,0);x.fill();x.fillRect(-42,-300,84,8);
+ x.fillStyle='#111';x.beginPath();x.arc(-13,-288,4,0,7);x.arc(13,-288,4,0,7);x.fill();x.strokeStyle='#7a3b2a';x.lineWidth=3;x.beginPath();x.arc(0,-278,13,.2,Math.PI-.2);x.stroke();
+ x.restore();
+ x.fillStyle='rgba(8,14,26,.8)';x.font='700 22px Georgia,serif';const tw=x.measureText(nm).width+24;x.beginPath();x.roundRect(cx-tw/2,by+14,tw,34,17);x.fill();x.fillStyle=you?'#ffd54a':'#fff';x.textAlign='center';x.fillText(nm,cx,by+38)}
+function showPhoto(){endEl.style.display='none';certEl.style.display='none';window.__nssPhotoErr=null;
+ if(!window.__NSSPHOTO){showPhoto2D();return}
+ window.__NSSPHOTO.open({date:result.date,onBack:showCert});
+ const t0=performance.now(),w=setInterval(()=>{if(window.__nssPhotoErr){clearInterval(w);window.__NSSPHOTO.close();showPhoto2D()}else if(window.__nssPhotoReady||performance.now()-t0>25000)clearInterval(w)},300)}
+function showPhoto2D(){endEl.style.display='none';certEl.innerHTML='<canvas id="nss-photo-canvas" data-testid="nss-team-photo"></canvas><div class="bt"><button id="nss-pdl" data-testid="nss-download-photo-btn">DOWNLOAD PHOTO</button><button class="o" id="nss-pback" data-testid="nss-photo-back-btn" style="background:transparent;color:#fff;border:1.5px solid #6cc0ff">BACK TO CERTIFICATE</button></div>';
+ const cv=$('nss-photo-canvas');drawPhoto(cv);certEl.style.display='flex';
+ $('nss-pdl').onclick=()=>{const a=document.createElement('a');a.download='NSS-Team-Photo-'+pname()+'.png';a.href=cv.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove()};
+ $('nss-pback').onclick=showCert}
+function showCert(){endEl.style.display='none';certEl.innerHTML='<canvas id="nss-cert-canvas" data-testid="nss-certificate"></canvas><div class="bt"><button id="nss-dl" data-testid="nss-download-certificate-btn">DOWNLOAD PNG</button><button id="nss-photo-btn" data-testid="nss-team-photo-btn" style="background:#4fc0ff">TEAM PHOTO</button><button class="g2" id="nss-done" data-testid="nss-continue-btn">CONTINUE</button></div>';
  const cv=$('nss-cert-canvas');drawCert(cv);certEl.style.display='flex';
+ $('nss-photo-btn').onclick=showPhoto;
  $('nss-dl').onclick=()=>{const a=document.createElement('a');a.download='NSS-Participation-Certificate-'+pname()+'.png';a.href=cv.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove()};
  $('nss-done').onclick=()=>{certEl.style.display='none';g.next();setTimeout(()=>{const ov=$('ov');if(!ov)return;const b=document.createElement('button');b.textContent='View Certificate';b.setAttribute('data-testid','nss-view-certificate-btn');b.onclick=showCert;const box=$('lvl-btns');(box||ov).appendChild(b)},200)}}
 
 /* ---- main loop ---- */
-let last=performance.now(),started=false;
+let last=performance.now(),started=false;const LV=new T.Vector3();
 function tick(){requestAnimationFrame(tick);const now=performance.now(),dt=Math.min(.05,(now-last)/1000);last=now;
  if(window.__paused||!g.started||g.done||finished)return;
+ for(const L of labs){if(!L.visible||!L.parent)continue;L.getWorldPosition(LV);const d=g.cam.position.distanceTo(LV),w=Math.max(.8,Math.min(2.6,d*.085));L.scale.set(w,w/4,1)}
  const si=g.si;
- if(phase==='brief'&&si>=1){phase='clean';left=TIME;hudEl.style.display='flex';hud();cmd.L.d=["Keep going, volunteers! Every piece of trash counts.","Not Me, But You!"]}
+ if(phase==='brief'&&si>=1){phase='clean';left=TIME;hudEl.style.display='flex';hud();g.say('Spots assigned: YOU at NCC Ground. Friends: Basketball, Blocks, Roads.');cmd.L.d=["Keep going, volunteers! Every piece of trash counts.","Not Me, But You!"]}
  if(phase!=='clean')return;
  left-=dt;
  for(const it of items){if(!it.alive)continue;if(Math.abs(it.x-pl.x)<PICK_R&&Math.abs(it.z-pl.z)<PICK_R&&Math.hypot(it.x-pl.x,it.z-pl.z)<PICK_R){if(bag>=BAG_MAX){if(now-lastFull>4000){lastFull=now;g.say('Your bag is full! Drop it in a green dustbin first.')}continue}if(it.by!==null&&team[it.by])release(team[it.by].fs);remove(it,'you')}}
@@ -220,6 +288,6 @@ function tick(){requestAnimationFrame(tick);const now=performance.now(),dt=Math.
  hud();
  if(total()>=N)endCamp(true);else if(left<=0){left=0;hud();endCamp(false)}}
 hud();tick();
-window.__nss={items,team,get state(){return{phase,left,you:youN,team:teamN,total:total(),N}},end:()=>endCamp(total()>=N)};
+window.__nss={items,team,assign:()=>window.__nssAssign,get state(){return{phase,left,you:youN,team:teamN,total:total(),N}},end:()=>endCamp(total()>=N)};
 }
 })();
